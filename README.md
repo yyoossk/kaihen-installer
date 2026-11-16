@@ -43,19 +43,7 @@ Screenshots are from build 20261117-0327, Japanese (left) and English
 スクリーンショットは build 20261117-0327 のもので、日本語 (左) と英語
 (右) を横並びにしています。
 
-### 1. First launch — consent / 初回起動時の同意
-
-The first launch shows a consent dialog explaining the risks. Agreeing is
-remembered, so it appears only once.
-
-初回起動時は、リスクを説明する同意ダイアログが出ます。同意は記録され、
-次回からは表示されません。
-
-| 日本語 | English |
-| --- | --- |
-| ![Consent dialog (Japanese)](docs/screenshots/01-consent.png) | ![Consent dialog (English)](docs/screenshots/01-consent-en.svg) |
-
-### 2. Home / ホーム
+### 1. Home / ホーム
 
 The top page. Pick what you want to do: install kaiHEN, set up the
 autoloader, or install homebrew. The build stamp at the top identifies the
@@ -68,7 +56,7 @@ version.
 | --- | --- |
 | ![Home (Japanese)](docs/screenshots/02-home.png) | ![Home (English)](docs/screenshots/02-home-en.svg) |
 
-### 3. Install kaiHEN / kaiHEN を導入
+### 2. Install kaiHEN / kaiHEN を導入
 
 The main page, in order: the first-time steps (flash the Pico UF2), the
 console network settings (90DNS), the in-game autosave setting, the router
@@ -87,7 +75,7 @@ dialog, and failures say why.
 | --- | --- |
 | ![Install kaiHEN (Japanese)](docs/screenshots/03-kaihen.png) | ![Install kaiHEN (English)](docs/screenshots/03-kaihen-en.svg) |
 
-### 4. Autoloader / オートローダー
+### 3. Autoloader / オートローダー
 
 Sets up the autoloader save. After this one-time setup, starting kaiHEN is
 just **Load Game** on the console — the save runs everything by itself.
@@ -106,7 +94,7 @@ instead of hanging.
 | --- | --- |
 | ![Autoloader (Japanese)](docs/screenshots/04-autoloader.png) | ![Autoloader (English)](docs/screenshots/04-autoloader-en.svg) |
 
-### 5. Install homebrew / 自作ソフトをインストール
+### 4. Install homebrew / 自作ソフトをインストール
 
 Two ways to put homebrew on the console: drag & drop `.nro` files or
 folders onto the page, or pick from the catalog list — the app downloads
@@ -122,7 +110,7 @@ Updates are detected automatically.
 | --- | --- |
 | ![Install homebrew (Japanese)](docs/screenshots/05-homebrew.png) | ![Install homebrew (English)](docs/screenshots/05-homebrew-en.svg) |
 
-### 6. Switch from the IZ launcher / IZランチャーから乗り換え
+### 5. Switch from the IZ launcher / IZランチャーから乗り換え
 
 For consoles that used the older IZ launcher: this page replaces the
 loader save with the plain one and starts kaiHEN, all on one page.
@@ -135,7 +123,7 @@ loader save with the plain one and starts kaiHEN, all on one page.
 | --- | --- |
 | ![Switch from IZ (Japanese)](docs/screenshots/06-iz-switch.png) | ![Switch from IZ (English)](docs/screenshots/06-iz-switch-en.svg) |
 
-### 7. SWFence (router isolation) / SWFence (ルーターで隔離)
+### 6. SWFence (router isolation) / SWFence (ルーターで隔離)
 
 Installs SWFence on an OpenWrt router so the console can talk to your LAN
 (this tool) but never to the internet — stronger than DNS-based blocking.
@@ -146,16 +134,6 @@ OpenWrt ルーターに SWFence を入れ、本体を LAN 内だけに隔離す�
 | 日本語 | English |
 | --- | --- |
 | ![SWFence (Japanese)](docs/screenshots/07-swfence.png) | ![SWFence (English)](docs/screenshots/07-swfence-en.svg) |
-
-### 8. Credits / クレジット
-
-The authors of kaiHEN, the loader, the engine, and every bundled tool.
-
-kaiHEN・ローダー・エンジン・同梱ツールの作者一覧です。
-
-| 日本語 | English |
-| --- | --- |
-| ![Credits (Japanese)](docs/screenshots/08-credits.png) | ![Credits (English)](docs/screenshots/08-credits-en.svg) |
 
 ## Requirements / 前提
 
@@ -206,3 +184,24 @@ verification. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 The app code in this repository is MIT (see [LICENSE](LICENSE)).
 Third-party components are under their own licenses — see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Credits / クレジット
+
+This software is built on the work of the following people.
+このソフトは、次の方々の成果物を使って作られています。
+
+- **ouncebrew** — kaiHEN
+- **Gezine** — CivSwitch Remote JS Loader (core.js)
+- **YotsuhaMeru** — CivSwitch-JPN fork (JIS keyboard and IME support / 日本語キーボードと IME 対応)
+- **mza1010** — CivSwitch Kit (the kaiHEN launch engine / kaiHEN の起動エンジン)
+- **SeanHeuc** — CivSwitchFS and civ-autoloader (the autoloader / オートローダー)
+- **kurumuz** — ns2jb
+- **byizmysh** — SWFence
+- **TheNxtBigThing8** — Offline WAN Emulator
+- **misshexa66** — OunceCake
+- **Node.js** (OpenJS Foundation) — bundled runtime / 同梱ランタイム
+
+The homebrew apps in the catalog are the work of their respective
+authors; see the in-app credits page and each app's release page.
+カタログの自作ソフトは各作者の成果物です。アプリ内のクレジットと
+各ソフトの配布ページをご覧ください。
