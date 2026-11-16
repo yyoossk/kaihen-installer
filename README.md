@@ -38,8 +38,10 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
 ## Screen guide / 画面紹介
 
-Screenshots are from build 20261117-0327 (Japanese UI).
-スクリーンショットは build 20261117-0327 のものです。
+Screenshots are from build 20261117-0327, Japanese (left) and English
+(right) side by side.
+スクリーンショットは build 20261117-0327 のもので、日本語 (左) と英語
+(右) を横並びにしています。
 
 ### 1. First launch — consent / 初回起動時の同意
 
@@ -49,7 +51,9 @@ remembered, so it appears only once.
 初回起動時は、リスクを説明する同意ダイアログが出ます。同意は記録され、
 次回からは表示されません。
 
-![Consent dialog](docs/screenshots/01-consent.png)
+| 日本語 | English |
+| --- | --- |
+| ![Consent dialog (Japanese)](docs/screenshots/01-consent.png) | ![Consent dialog (English)](docs/screenshots/01-consent-en.png) |
 
 ### 2. Home / ホーム
 
@@ -60,7 +64,9 @@ version.
 トップページです。「kaiHEN を導入」「オートローダー」「自作ソフトを
 インストール」から選びます。上部の表示がバージョン (build) です。
 
-![Home](docs/screenshots/02-home.png)
+| 日本語 | English |
+| --- | --- |
+| ![Home (Japanese)](docs/screenshots/02-home.png) | ![Home (English)](docs/screenshots/02-home-en.png) |
 
 ### 3. Install kaiHEN / kaiHEN を導入
 
@@ -77,7 +83,9 @@ dialog, and failures say why.
 自動起動をオンにすると、ローダーを検知して全部自動で実行します。結果は
 ダイアログで表示され、失敗時は理由も出ます。
 
-![Install kaiHEN](docs/screenshots/03-kaihen.png)
+| 日本語 | English |
+| --- | --- |
+| ![Install kaiHEN (Japanese)](docs/screenshots/03-kaihen.png) | ![Install kaiHEN (English)](docs/screenshots/03-kaihen-en.png) |
 
 ### 4. Autoloader / オートローダー
 
@@ -94,7 +102,9 @@ instead of hanging.
 書いてあります。改良版ペイロードは**成功したタイミングを学習**して
 次回から再利用し、固まるときはメッセージを出して安全に止まります。
 
-![Autoloader](docs/screenshots/04-autoloader.png)
+| 日本語 | English |
+| --- | --- |
+| ![Autoloader (Japanese)](docs/screenshots/04-autoloader.png) | ![Autoloader (English)](docs/screenshots/04-autoloader-en.png) |
 
 ### 5. Install homebrew / 自作ソフトをインストール
 
@@ -108,7 +118,9 @@ Updates are detected automatically.
 ダウンロードして FTP (OunceShell) で本体へ送ります。更新の確認も
 自動です。
 
-![Install homebrew](docs/screenshots/05-homebrew.png)
+| 日本語 | English |
+| --- | --- |
+| ![Install homebrew (Japanese)](docs/screenshots/05-homebrew.png) | ![Install homebrew (English)](docs/screenshots/05-homebrew-en.png) |
 
 ### 6. Switch from the IZ launcher / IZランチャーから乗り換え
 
@@ -119,7 +131,9 @@ loader save with the plain one and starts kaiHEN, all on one page.
 素の状態に入れ直して kaiHEN を起動するところまで、このページだけで
 完結します。
 
-![Switch from IZ](docs/screenshots/06-iz-switch.png)
+| 日本語 | English |
+| --- | --- |
+| ![Switch from IZ (Japanese)](docs/screenshots/06-iz-switch.png) | ![Switch from IZ (English)](docs/screenshots/06-iz-switch-en.png) |
 
 ### 7. SWFence (router isolation) / SWFence (ルーターで隔離)
 
@@ -129,7 +143,9 @@ Installs SWFence on an OpenWrt router so the console can talk to your LAN
 OpenWrt ルーターに SWFence を入れ、本体を LAN 内だけに隔離するページ
 です。DNS で止める方式より確実にインターネットを遮断できます。
 
-![SWFence](docs/screenshots/07-swfence.png)
+| 日本語 | English |
+| --- | --- |
+| ![SWFence (Japanese)](docs/screenshots/07-swfence.png) | ![SWFence (English)](docs/screenshots/07-swfence-en.png) |
 
 ### 8. Credits / クレジット
 
@@ -137,7 +153,9 @@ The authors of kaiHEN, the loader, the engine, and every bundled tool.
 
 kaiHEN・ローダー・エンジン・同梱ツールの作者一覧です。
 
-![Credits](docs/screenshots/08-credits.png)
+| 日本語 | English |
+| --- | --- |
+| ![Credits (Japanese)](docs/screenshots/08-credits.png) | ![Credits (English)](docs/screenshots/08-credits-en.png) |
 
 ## Requirements / 前提
 
