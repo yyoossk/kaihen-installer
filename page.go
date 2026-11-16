@@ -742,13 +742,23 @@ async function doCheck() {
   try {
     const r = await fetch("/api/check", {method: "POST", body: JSON.stringify({ip: ip(), lang: LANG})});
     const j = await r.json();
-    ok = !!j.ok;
-    addLog(ok ? t("connected") : t("conn_fail"));
-    if (!ok && j.detail) addLog(j.detail);
-    addLog(j.ping ? t("ping_ok") : t("ping_ng"));
-    connText = ok ? t("chk_ok") : t("chk_ng");
-    pingText = j.ping ? t("ping_ok") : t("ping_ng");
-    if (!ok && j.ping) hintText = t("chk_hint");
+    if (curView === "backup") {
+      // Homebrew install page: installing over FTP only needs the console
+      // reachable, so a successful ping counts as connected here.
+      ok = !!j.ping;
+      addLog(ok ? t("connected") : t("conn_fail"));
+      addLog(j.ping ? t("ping_ok") : t("ping_ng"));
+      connText = ok ? t("chk_ok") : t("chk_ng");
+      pingText = "";
+    } else {
+      ok = !!j.ok;
+      addLog(ok ? t("connected") : t("conn_fail"));
+      if (!ok && j.detail) addLog(j.detail);
+      addLog(j.ping ? t("ping_ok") : t("ping_ng"));
+      connText = ok ? t("chk_ok") : t("chk_ng");
+      pingText = j.ping ? t("ping_ok") : t("ping_ng");
+      if (!ok && j.ping) hintText = t("chk_hint");
+    }
   } catch (e) {}
   showChk(connText, pingText, ok, hintText);
 }
