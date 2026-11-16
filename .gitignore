@@ -1,0 +1,18 @@
+# Binaries and runtime state
+*.exe
+civinstaller
+civinstaller-linux
+gui.log
+gui.pid
+consent-agreed.txt
+
+# Downloaded caches and staged runtime files
+apps-cache/
+autoloader-sd/
+kaihen/
+loader/
+assets/
+pico/
+
+# Local tooling
+node_modules/

@@ -1,0 +1,972 @@
+package main
+
+import "fmt"
+
+// Server-side log/result messages in all 12 UI languages.
+var msgs = map[string]map[string]string{
+	"ja": {
+
+		"done":          "=== 成功しました",
+		"failed":        "=== 失敗しました: ",
+		"stageOk":       "stage 作成 OK (hex %d 文字)",
+		"loaderReadErr": "loader/core.js が読めません",
+		"stageErr":      "stage 圧縮に失敗",
+		"tplReadErr":    "assets/save_template.bin が読めません",
+		"tplBad":        "save_template.bin が不正です",
+		"connErr":       "ローダーに接続できません",
+		"chunkSendErr":  "テンプレート送信に失敗 (chunk %d/%d)",
+		"tplSent":       "テンプレート送信完了: %d chunks, %.0fs",
+		"applyErr":      "適用ペイロードの送信に失敗",
+		"noDone":        "本体側で INSTALL DONE が返りませんでした",
+
+		"ipInvalid":     "IP の形式が違います",
+		"chkDetailErr":  "詳細: ローダーと通信できませんでした (%s)",
+		"chkDetailNone": "詳細: ローダーは接続を受けましたが、何も返しませんでした",
+		"chkDetailDiff": "詳細: 応答はありましたが、ローダーの合図ではありませんでした (応答: %s)",
+
+		"fetching": "取得中: %s",
+		"dlErr":    "ダウンロードできません",
+
+		"badContent": "ダウンロードした内容が正しくないため、中止しました",
+
+		"zipErr":     "ダウンロードした zip が読めません",
+		"missingReq": "最新版に必要なファイルがありません",
+		"writeErr":   "書き込みに失敗しました",
+
+		"jsBadFile": "ペイロードファイルが読めません",
+
+		"jsBusy": "ほかの処理が実行中です",
+
+		"apiErr": "GitHub に接続できません",
+
+		"ftpErr": "FTP 送信に失敗しました",
+
+		"appNotFound": "登録が見つかりません",
+		"appNoAsset":  "最新のリリースに合うファイルがありません",
+		"appBadURL":   "GitHub の URL として読めませんでした",
+
+		"khDl":      "kaiHEN をダウンロードしています…",
+		"alDl":      "オートローダーのファイルをダウンロードしています…",
+		"alSdReady": "SD 用ファイルを用意しました: %s",
+		"alNoReady": "ローダーから Installer ready が返りませんでした",
+		"alNoDone":  "本体側でインストール完了が返りませんでした",
+		"alBadHb":   "ダウンロードした hbmenu が想定と違うため、中止しました",
+		"khDlFail":  "kaiHEN をダウンロードできませんでした",
+		"khDlDone":  "kaiHEN の準備ができました",
+		"khFtpConn": "OunceShell の FTP に接続できません。OunceShell で SELECT (− ボタン) を押して FTP サーバーを開始したか確認してください",
+		"khBadNro":  ".nro ファイルが不正です",
+
+		"badSum": "ダウンロードの検証 (SHA-256) に失敗しました",
+
+		"fSSH":         "ルーターへの SSH 接続に失敗しました",
+		"oweDl":        "Offline WAN Emulator のスクリプトをダウンロードしています…",
+		"oweConn":      "Raspberry Pi に SSH で接続しています…",
+		"oweSSH":       "Pi への SSH 接続に失敗しました (IP・ユーザー名・パスワードと、SSH が有効かを確認してください): ",
+		"oweUp":        "スクリプトを Pi に送信しています…",
+		"oweRun":       "セットアップスクリプトを実行しています…",
+		"oweStaged":    "ステージングが完了しました。次は下の手順 (ルーター設定とケーブルの差し替え) に進んでください",
+		"oweNoStage":   "完了マーカー (STAGED SUCCESSFULLY) が確認できませんでした。上のログを確認してください",
+		"oweVerifyRun": "検証スクリプトを実行しています…",
+		"oweBadInput":  "Pi の IP アドレスとユーザー名が必要です",
+		"fUnsup":       "対応していないルーターです (OpenWrt 24.10.x / 25.12.x が必要です)",
+		"fNoMac":       "本体の MAC アドレスが指定されていません",
+		"fTag":         "最新版を取得しました: ",
+		"fTagFail":     "GitHub から最新版の情報を取得できませんでした",
+		"fBkFail":      "ルーター設定のバックアップに失敗しました",
+		"fBackup":      "ルーターの設定をバックアップしました: ",
+		"fOff":         "フローオフロードを無効にしました",
+		"fInst":        "SWFence をインストールしています (数分かかることがあります)",
+		"fNoSw":        "SWFence のインストールを確認できませんでした",
+		"fCfg":         "本体の MAC と許可する範囲を設定しています",
+		"fCfgFail":     "SWFence の設定に失敗しました",
+		"fVer":         "保護が効いているか確認しています",
+		"fVerFail":     "保護の有効化を確認できませんでした",
+	},
+	"en": {
+
+		"done":          "=== Success",
+		"failed":        "=== Failed: ",
+		"stageOk":       "Stage built OK (hex %d chars)",
+		"loaderReadErr": "Cannot read loader/core.js",
+		"stageErr":      "Stage compression failed",
+		"tplReadErr":    "Cannot read assets/save_template.bin",
+		"tplBad":        "save_template.bin is invalid",
+		"connErr":       "Cannot connect to the loader",
+		"chunkSendErr":  "Template send failed (chunk %d/%d)",
+		"tplSent":       "Template sent: %d chunks, %.0fs",
+		"applyErr":      "Failed to send the apply payload",
+		"noDone":        "The console did not return INSTALL DONE",
+
+		"ipInvalid":     "Invalid IP format",
+		"chkDetailErr":  "Detail: could not exchange data with the loader (%s)",
+		"chkDetailNone": "Detail: the loader accepted the connection but sent nothing back",
+		"chkDetailDiff": "Detail: something answered, but it was not the loader's echo (reply: %s)",
+
+		"fetching": "Downloading: %s",
+		"dlErr":    "Download failed",
+
+		"badContent": "The downloaded content looks wrong; aborted",
+
+		"zipErr":     "Cannot read the downloaded zip",
+		"missingReq": "Required files are missing in the latest version",
+		"writeErr":   "Write failed",
+
+		"jsBadFile": "Cannot read the payload file",
+
+		"jsBusy": "Another operation is running",
+
+		"apiErr": "Cannot reach GitHub",
+
+		"ftpErr": "FTP upload failed",
+
+		"appNotFound": "App not registered",
+		"appNoAsset":  "No matching file in the latest release",
+		"appBadURL":   "Could not parse that GitHub URL",
+
+		"khDl":      "Downloading kaiHEN...",
+		"alDl":      "Downloading the autoloader files...",
+		"alSdReady": "SD card files are ready in: %s",
+		"alNoReady": "The loader did not answer \"Installer ready.\"",
+		"alNoDone":  "The console did not confirm the installation",
+		"alBadHb":   "The downloaded hbmenu did not match the expected file, so the operation was stopped",
+		"khDlFail":  "Could not download kaiHEN",
+		"khDlDone":  "kaiHEN is ready",
+		"khFtpConn": "Could not connect to OunceShell's FTP. In OunceShell, press SELECT (the - button) to start the FTP server, then try again",
+		"khBadNro":  "The file is not a valid .nro",
+
+		"badSum": "Download verification (SHA-256) failed",
+
+		"fSSH":         "SSH connection to the router failed",
+		"oweDl":        "Downloading the Offline WAN Emulator scripts…",
+		"oweConn":      "Connecting to the Raspberry Pi over SSH…",
+		"oweSSH":       "SSH connection to the Pi failed (check the IP, username, password and that SSH is enabled): ",
+		"oweUp":        "Uploading the scripts to the Pi…",
+		"oweRun":       "Running the setup script…",
+		"oweStaged":    "Staging completed. Continue with the steps below (router settings and moving the cable)",
+		"oweNoStage":   "The completion marker (STAGED SUCCESSFULLY) was not found. Check the log above",
+		"oweVerifyRun": "Running the verification script…",
+		"oweBadInput":  "The Pi's IP address and username are required",
+		"fUnsup":       "Unsupported router (OpenWrt 24.10.x / 25.12.x required)",
+		"fNoMac":       "No console MAC address was given",
+		"fTag":         "Latest release: ",
+		"fTagFail":     "Could not fetch the latest release from GitHub",
+		"fBkFail":      "Router configuration backup failed",
+		"fBackup":      "Router configuration backed up: ",
+		"fOff":         "Flow offloading disabled",
+		"fInst":        "Installing SWFence (this can take a few minutes)",
+		"fNoSw":        "The SWFence installation could not be confirmed",
+		"fCfg":         "Applying the console MAC and allowed subnet",
+		"fCfgFail":     "SWFence configuration failed",
+		"fVer":         "Verifying that protection is active",
+		"fVerFail":     "Protection could not be confirmed active",
+	},
+	"fr": {
+
+		"chkDetailErr":  "Détail : impossible d'échanger des données avec le chargeur (%s)",
+		"chkDetailNone": "Détail : le chargeur a accepté la connexion mais n'a rien renvoyé",
+		"chkDetailDiff": "Détail : quelque chose a répondu, mais ce n'était pas l'écho du chargeur (réponse : %s)",
+
+		"done":          "=== Succès",
+		"failed":        "=== Échec : ",
+		"stageOk":       "Étape construite OK (hex %d caractères)",
+		"loaderReadErr": "Impossible de lire loader/core.js",
+		"stageErr":      "Échec de la compression de l'étape",
+		"tplReadErr":    "Impossible de lire assets/save_template.bin",
+		"tplBad":        "save_template.bin est invalide",
+		"connErr":       "Impossible de se connecter au chargeur",
+		"chunkSendErr":  "Échec de l'envoi du modèle (morceau %d/%d)",
+		"tplSent":       "Modèle envoyé : %d morceaux, %.0fs",
+		"applyErr":      "Échec de l'envoi de la charge d'application",
+		"noDone":        "La console n'a pas renvoyé INSTALL DONE",
+
+		"ipInvalid": "Format d'IP invalide",
+
+		"fetching": "Téléchargement : %s",
+		"dlErr":    "Échec du téléchargement",
+
+		"badContent": "Le contenu téléchargé semble incorrect ; abandon",
+
+		"zipErr":     "Impossible de lire le zip téléchargé",
+		"missingReq": "Des fichiers requis manquent dans la dernière version",
+		"writeErr":   "Échec de l'écriture",
+
+		"jsBadFile": "Impossible de lire le fichier de charge",
+
+		"jsBusy": "Une autre opération est en cours",
+
+		"apiErr": "Impossible de joindre GitHub",
+
+		"ftpErr": "Échec de l'envoi FTP",
+
+		"appNotFound": "Application non enregistrée",
+		"appNoAsset":  "Aucun fichier correspondant dans la dernière version",
+		"appBadURL":   "Impossible d'analyser cette URL GitHub",
+
+		"khDl":      "Téléchargement de kaiHEN...",
+		"alDl":      "Téléchargement des fichiers de l'autoloader...",
+		"alSdReady": "Fichiers pour la carte SD prêts dans : %s",
+		"alNoReady": "Le chargeur n'a pas répondu « Installer ready. »",
+		"alNoDone":  "La console n'a pas confirmé l'installation",
+		"alBadHb":   "Le hbmenu téléchargé ne correspond pas au fichier attendu ; opération annulée",
+		"khDlFail":  "Impossible de télécharger kaiHEN",
+		"khDlDone":  "kaiHEN est prêt",
+		"khFtpConn": "Impossible de se connecter au FTP d'OunceShell. Dans OunceShell, appuyez sur SELECT (bouton -) pour démarrer le serveur FTP, puis réessayez",
+		"khBadNro":  "Le fichier n'est pas un .nro valide",
+
+		"badSum": "Échec de la vérification du téléchargement (SHA-256)",
+
+		"fSSH":         "Échec de la connexion SSH au routeur",
+		"oweDl":        "Téléchargement des scripts Offline WAN Emulator…",
+		"oweConn":      "Connexion SSH au Raspberry Pi…",
+		"oweSSH":       "Échec de la connexion SSH au Pi (vérifiez l'IP, l'utilisateur, le mot de passe et que SSH est activé) : ",
+		"oweUp":        "Envoi des scripts vers le Pi…",
+		"oweRun":       "Exécution du script d'installation…",
+		"oweStaged":    "Préparation terminée. Passez aux étapes ci-dessous (réglages du routeur et déplacement du câble)",
+		"oweNoStage":   "Le marqueur de fin (STAGED SUCCESSFULLY) n'a pas été trouvé. Vérifiez le journal ci-dessus",
+		"oweVerifyRun": "Exécution du script de vérification…",
+		"oweBadInput":  "L'adresse IP et le nom d'utilisateur du Pi sont requis",
+		"fUnsup":       "Routeur non pris en charge (OpenWrt 24.10.x / 25.12.x requis)",
+		"fNoMac":       "Aucune adresse MAC de console n'a été fournie",
+		"fTag":         "Dernière version : ",
+		"fTagFail":     "Impossible de récupérer la dernière version depuis GitHub",
+		"fBkFail":      "Échec de la sauvegarde de la configuration du routeur",
+		"fBackup":      "Configuration du routeur sauvegardée : ",
+		"fOff":         "Offloading de flux désactivé",
+		"fInst":        "Installation de SWFence (cela peut prendre quelques minutes)",
+		"fNoSw":        "L'installation de SWFence n'a pas pu être confirmée",
+		"fCfg":         "Application de la MAC de la console et du sous-réseau autorisé",
+		"fCfgFail":     "Échec de la configuration de SWFence",
+		"fVer":         "Vérification que la protection est active",
+		"fVerFail":     "Impossible de confirmer que la protection est active",
+	},
+	"de": {
+
+		"chkDetailErr":  "Detail: Datenaustausch mit dem Loader nicht möglich (%s)",
+		"chkDetailNone": "Detail: Der Loader hat die Verbindung angenommen, aber nichts zurückgesendet",
+		"chkDetailDiff": "Detail: Es hat etwas geantwortet, aber es war nicht das Echo des Loaders (Antwort: %s)",
+
+		"done":          "=== Erfolg",
+		"failed":        "=== Fehlgeschlagen: ",
+		"stageOk":       "Stage OK gebaut (Hex %d Zeichen)",
+		"loaderReadErr": "loader/core.js kann nicht gelesen werden",
+		"stageErr":      "Stage-Komprimierung fehlgeschlagen",
+		"tplReadErr":    "assets/save_template.bin kann nicht gelesen werden",
+		"tplBad":        "save_template.bin ist ungültig",
+		"connErr":       "Keine Verbindung zum Loader",
+		"chunkSendErr":  "Template-Senden fehlgeschlagen (Chunk %d/%d)",
+		"tplSent":       "Template gesendet: %d Chunks, %.0fs",
+		"applyErr":      "Apply-Payload konnte nicht gesendet werden",
+		"noDone":        "Die Konsole hat kein INSTALL DONE zurückgegeben",
+
+		"ipInvalid": "Ungültiges IP-Format",
+
+		"fetching": "Download: %s",
+		"dlErr":    "Download fehlgeschlagen",
+
+		"badContent": "Der heruntergeladene Inhalt sieht falsch aus; abgebrochen",
+
+		"zipErr":     "Die heruntergeladene ZIP kann nicht gelesen werden",
+		"missingReq": "Erforderliche Dateien fehlen in der neuesten Version",
+		"writeErr":   "Schreiben fehlgeschlagen",
+
+		"jsBadFile": "Die Payload-Datei kann nicht gelesen werden",
+
+		"jsBusy": "Ein anderer Vorgang läuft",
+
+		"apiErr": "GitHub nicht erreichbar",
+
+		"ftpErr": "FTP-Upload fehlgeschlagen",
+
+		"appNotFound": "App nicht registriert",
+		"appNoAsset":  "Keine passende Datei im neuesten Release",
+		"appBadURL":   "Diese GitHub-URL konnte nicht gelesen werden",
+
+		"khDl":      "kaiHEN wird heruntergeladen...",
+		"alDl":      "Autoloader-Dateien werden heruntergeladen...",
+		"alSdReady": "SD-Dateien bereit in: %s",
+		"alNoReady": "Der Loader hat nicht mit „Installer ready.“ geantwortet",
+		"alNoDone":  "Die Konsole hat die Installation nicht bestätigt",
+		"alBadHb":   "Das heruntergeladene hbmenu entspricht nicht der erwarteten Datei; Vorgang abgebrochen",
+		"khDlFail":  "kaiHEN konnte nicht heruntergeladen werden",
+		"khDlDone":  "kaiHEN ist bereit",
+		"khFtpConn": "Keine Verbindung zum FTP von OunceShell. Starten Sie in OunceShell mit SELECT (Taste -) den FTP-Server und versuchen Sie es erneut",
+		"khBadNro":  "Die Datei ist keine gültige .nro",
+
+		"badSum": "Download-Prüfung (SHA-256) fehlgeschlagen",
+
+		"fSSH":         "SSH-Verbindung zum Router fehlgeschlagen",
+		"oweDl":        "Die Offline-WAN-Emulator-Skripte werden heruntergeladen…",
+		"oweConn":      "SSH-Verbindung zum Raspberry Pi…",
+		"oweSSH":       "SSH-Verbindung zum Pi fehlgeschlagen (prüfen Sie IP, Benutzername, Passwort und ob SSH aktiviert ist): ",
+		"oweUp":        "Die Skripte werden auf den Pi hochgeladen…",
+		"oweRun":       "Das Setup-Skript wird ausgeführt…",
+		"oweStaged":    "Staging abgeschlossen. Fahren Sie mit den Schritten unten fort (Router-Einstellungen und Kabel umstecken)",
+		"oweNoStage":   "Die Abschlussmarkierung (STAGED SUCCESSFULLY) wurde nicht gefunden. Prüfen Sie das Protokoll oben",
+		"oweVerifyRun": "Das Prüfskript wird ausgeführt…",
+		"oweBadInput":  "IP-Adresse und Benutzername des Pi sind erforderlich",
+		"fUnsup":       "Nicht unterstützter Router (OpenWrt 24.10.x / 25.12.x erforderlich)",
+		"fNoMac":       "Keine Konsolen-MAC-Adresse angegeben",
+		"fTag":         "Neuestes Release: ",
+		"fTagFail":     "Neuestes Release konnte nicht von GitHub abgerufen werden",
+		"fBkFail":      "Sicherung der Router-Konfiguration fehlgeschlagen",
+		"fBackup":      "Router-Konfiguration gesichert: ",
+		"fOff":         "Flow Offloading deaktiviert",
+		"fInst":        "SWFence wird installiert (kann einige Minuten dauern)",
+		"fNoSw":        "Die SWFence-Installation konnte nicht bestätigt werden",
+		"fCfg":         "Konsolen-MAC und erlaubtes Subnetz werden angewendet",
+		"fCfgFail":     "SWFence-Konfiguration fehlgeschlagen",
+		"fVer":         "Prüfe, ob der Schutz aktiv ist",
+		"fVerFail":     "Schutz konnte nicht als aktiv bestätigt werden",
+	},
+	"it": {
+
+		"chkDetailErr":  "Dettaglio: impossibile scambiare dati con il loader (%s)",
+		"chkDetailNone": "Dettaglio: il loader ha accettato la connessione ma non ha risposto nulla",
+		"chkDetailDiff": "Dettaglio: qualcosa ha risposto, ma non era l'eco del loader (risposta: %s)",
+
+		"done":          "=== Successo",
+		"failed":        "=== Non riuscito: ",
+		"stageOk":       "Stage creato OK (hex %d caratteri)",
+		"loaderReadErr": "Impossibile leggere loader/core.js",
+		"stageErr":      "Compressione dello stage non riuscita",
+		"tplReadErr":    "Impossibile leggere assets/save_template.bin",
+		"tplBad":        "save_template.bin non è valido",
+		"connErr":       "Impossibile connettersi al loader",
+		"chunkSendErr":  "Invio del template non riuscito (blocco %d/%d)",
+		"tplSent":       "Template inviato: %d blocchi, %.0fs",
+		"applyErr":      "Invio del payload di applicazione non riuscito",
+		"noDone":        "La console non ha restituito INSTALL DONE",
+
+		"ipInvalid": "Formato IP non valido",
+
+		"fetching": "Download: %s",
+		"dlErr":    "Download non riuscito",
+
+		"badContent": "Il contenuto scaricato sembra errato; annullato",
+
+		"zipErr":     "Impossibile leggere lo zip scaricato",
+		"missingReq": "Nella versione più recente mancano file necessari",
+		"writeErr":   "Scrittura non riuscita",
+
+		"jsBadFile": "Impossibile leggere il file di payload",
+
+		"jsBusy": "Un'altra operazione è in corso",
+
+		"apiErr": "Impossibile raggiungere GitHub",
+
+		"ftpErr": "Caricamento FTP non riuscito",
+
+		"appNotFound": "App non registrata",
+		"appNoAsset":  "Nessun file corrispondente nella versione più recente",
+		"appBadURL":   "Impossibile interpretare quell'URL GitHub",
+
+		"khDl":      "Download di kaiHEN...",
+		"alDl":      "Download dei file dell'autoloader...",
+		"alSdReady": "File per la scheda SD pronti in: %s",
+		"alNoReady": "Il loader non ha risposto \"Installer ready.\"",
+		"alNoDone":  "La console non ha confermato l'installazione",
+		"alBadHb":   "L'hbmenu scaricato non corrisponde al file previsto; operazione annullata",
+		"khDlFail":  "Impossibile scaricare kaiHEN",
+		"khDlDone":  "kaiHEN è pronto",
+		"khFtpConn": "Impossibile connettersi all'FTP di OunceShell. In OunceShell, premi SELECT (pulsante -) per avviare il server FTP e riprova",
+		"khBadNro":  "Il file non è un .nro valido",
+
+		"badSum": "Verifica del download (SHA-256) non riuscita",
+
+		"fSSH":         "Connessione SSH al router non riuscita",
+		"oweDl":        "Download degli script di Offline WAN Emulator…",
+		"oweConn":      "Connessione SSH al Raspberry Pi…",
+		"oweSSH":       "Connessione SSH al Pi non riuscita (controlla IP, nome utente, password e che SSH sia abilitato): ",
+		"oweUp":        "Caricamento degli script sul Pi…",
+		"oweRun":       "Esecuzione dello script di installazione…",
+		"oweStaged":    "Preparazione completata. Prosegui con i passaggi qui sotto (impostazioni del router e spostamento del cavo)",
+		"oweNoStage":   "Il marcatore di completamento (STAGED SUCCESSFULLY) non è stato trovato. Controlla il registro qui sopra",
+		"oweVerifyRun": "Esecuzione dello script di verifica…",
+		"oweBadInput":  "Servono l'indirizzo IP e il nome utente del Pi",
+		"fUnsup":       "Router non supportato (richiesto OpenWrt 24.10.x / 25.12.x)",
+		"fNoMac":       "Nessun indirizzo MAC della console è stato fornito",
+		"fTag":         "Versione più recente: ",
+		"fTagFail":     "Impossibile recuperare la versione più recente da GitHub",
+		"fBkFail":      "Backup della configurazione del router non riuscito",
+		"fBackup":      "Configurazione del router salvata: ",
+		"fOff":         "Offloading dei flussi disattivato",
+		"fInst":        "Installazione di SWFence (può richiedere qualche minuto)",
+		"fNoSw":        "Impossibile confermare l'installazione di SWFence",
+		"fCfg":         "Applicazione della MAC della console e della sottorete consentita",
+		"fCfgFail":     "Configurazione di SWFence non riuscita",
+		"fVer":         "Verifica che la protezione sia attiva",
+		"fVerFail":     "Impossibile confermare che la protezione sia attiva",
+	},
+	"es": {
+
+		"chkDetailErr":  "Detalle: no se pudieron intercambiar datos con el cargador (%s)",
+		"chkDetailNone": "Detalle: el cargador aceptó la conexión pero no devolvió nada",
+		"chkDetailDiff": "Detalle: algo respondió, pero no era el eco del cargador (respuesta: %s)",
+
+		"done":          "=== Éxito",
+		"failed":        "=== Error: ",
+		"stageOk":       "Stage creado correctamente (hex %d caracteres)",
+		"loaderReadErr": "No se puede leer loader/core.js",
+		"stageErr":      "La compresión del stage falló",
+		"tplReadErr":    "No se puede leer assets/save_template.bin",
+		"tplBad":        "save_template.bin no es válido",
+		"connErr":       "No se puede conectar con el cargador",
+		"chunkSendErr":  "El envío de la plantilla falló (bloque %d/%d)",
+		"tplSent":       "Plantilla enviada: %d bloques, %.0fs",
+		"applyErr":      "No se pudo enviar la carga de aplicación",
+		"noDone":        "La consola no devolvió INSTALL DONE",
+
+		"ipInvalid": "Formato de IP no válido",
+
+		"fetching": "Descargando: %s",
+		"dlErr":    "La descarga falló",
+
+		"badContent": "El contenido descargado parece incorrecto; cancelado",
+
+		"zipErr":     "No se puede leer el zip descargado",
+		"missingReq": "Faltan archivos necesarios en la versión más reciente",
+		"writeErr":   "La escritura falló",
+
+		"jsBadFile": "No se puede leer el archivo de carga",
+
+		"jsBusy": "Hay otra operación en curso",
+
+		"apiErr": "No se puede contactar con GitHub",
+
+		"ftpErr": "La subida FTP falló",
+
+		"appNotFound": "App no registrada",
+		"appNoAsset":  "No hay un archivo coincidente en la versión más reciente",
+		"appBadURL":   "No se pudo interpretar esa URL de GitHub",
+
+		"khDl":      "Descargando kaiHEN...",
+		"alDl":      "Descargando los archivos del autoloader...",
+		"alSdReady": "Archivos para la tarjeta SD listos en: %s",
+		"alNoReady": "El cargador no respondió \"Installer ready.\"",
+		"alNoDone":  "La consola no confirmó la instalación",
+		"alBadHb":   "El hbmenu descargado no coincide con el archivo esperado; operación cancelada",
+		"khDlFail":  "No se pudo descargar kaiHEN",
+		"khDlDone":  "kaiHEN está listo",
+		"khFtpConn": "No se pudo conectar al FTP de OunceShell. En OunceShell, pulsa SELECT (botón -) para iniciar el servidor FTP e inténtalo de nuevo",
+		"khBadNro":  "El archivo no es un .nro válido",
+
+		"badSum": "La verificación de la descarga (SHA-256) falló",
+
+		"fSSH":         "La conexión SSH con el router falló",
+		"oweDl":        "Descargando los scripts de Offline WAN Emulator…",
+		"oweConn":      "Conectando por SSH a la Raspberry Pi…",
+		"oweSSH":       "Falló la conexión SSH a la Pi (comprueba la IP, el usuario, la contraseña y que SSH esté activado): ",
+		"oweUp":        "Subiendo los scripts a la Pi…",
+		"oweRun":       "Ejecutando el script de instalación…",
+		"oweStaged":    "Preparación completada. Continúa con los pasos de abajo (ajustes del router y cambio del cable)",
+		"oweNoStage":   "No se encontró el marcador de finalización (STAGED SUCCESSFULLY). Revisa el registro de arriba",
+		"oweVerifyRun": "Ejecutando el script de verificación…",
+		"oweBadInput":  "Se necesitan la dirección IP y el usuario de la Pi",
+		"fUnsup":       "Router no compatible (se requiere OpenWrt 24.10.x / 25.12.x)",
+		"fNoMac":       "No se proporcionó la dirección MAC de la consola",
+		"fTag":         "Versión más reciente: ",
+		"fTagFail":     "No se pudo obtener la versión más reciente de GitHub",
+		"fBkFail":      "La copia de la configuración del router falló",
+		"fBackup":      "Configuración del router guardada: ",
+		"fOff":         "Descarga de flujo (flow offloading) desactivada",
+		"fInst":        "Instalando SWFence (puede tardar unos minutos)",
+		"fNoSw":        "No se pudo confirmar la instalación de SWFence",
+		"fCfg":         "Aplicando la MAC de la consola y la subred permitida",
+		"fCfgFail":     "La configuración de SWFence falló",
+		"fVer":         "Verificando que la protección esté activa",
+		"fVerFail":     "No se pudo confirmar que la protección esté activa",
+	},
+	"ru": {
+
+		"chkDetailErr":  "Подробно: не удалось обменяться данными с загрузчиком (%s)",
+		"chkDetailNone": "Подробно: загрузчик принял соединение, но ничего не вернул",
+		"chkDetailDiff": "Подробно: что-то ответило, но это было не эхо загрузчика (ответ: %s)",
+
+		"done":          "=== Успешно",
+		"failed":        "=== Ошибка: ",
+		"stageOk":       "Стейдж собран OK (hex %d символов)",
+		"loaderReadErr": "Не удаётся прочитать loader/core.js",
+		"stageErr":      "Сжатие стейджа не удалось",
+		"tplReadErr":    "Не удаётся прочитать assets/save_template.bin",
+		"tplBad":        "save_template.bin недействителен",
+		"connErr":       "Не удаётся подключиться к загрузчику",
+		"chunkSendErr":  "Отправка шаблона не удалась (блок %d/%d)",
+		"tplSent":       "Шаблон отправлен: %d блоков, %.0fs",
+		"applyErr":      "Не удалось отправить apply-payload",
+		"noDone":        "Консоль не вернула INSTALL DONE",
+
+		"ipInvalid": "Неверный формат IP",
+
+		"fetching": "Загрузка: %s",
+		"dlErr":    "Загрузка не удалась",
+
+		"badContent": "Загруженное содержимое выглядит неверным; отменено",
+
+		"zipErr":     "Не удаётся прочитать загруженный zip",
+		"missingReq": "В новейшей версии не хватает нужных файлов",
+		"writeErr":   "Запись не удалась",
+
+		"jsBadFile": "Не удаётся прочитать файл полезной нагрузки",
+
+		"jsBusy": "Выполняется другая операция",
+
+		"apiErr": "Не удаётся связаться с GitHub",
+
+		"ftpErr": "Загрузка по FTP не удалась",
+
+		"appNotFound": "Приложение не зарегистрировано",
+		"appNoAsset":  "В новейшем релизе нет подходящего файла",
+		"appBadURL":   "Не удалось разобрать этот URL GitHub",
+
+		"khDl":      "Загрузка kaiHEN...",
+		"alDl":      "Загрузка файлов автозагрузчика...",
+		"alSdReady": "Файлы для SD-карты готовы: %s",
+		"alNoReady": "Загрузчик не ответил «Installer ready.»",
+		"alNoDone":  "Консоль не подтвердила установку",
+		"alBadHb":   "Загруженный hbmenu не совпал с ожидаемым файлом; операция отменена",
+		"khDlFail":  "Не удалось загрузить kaiHEN",
+		"khDlDone":  "kaiHEN готов",
+		"khFtpConn": "Не удалось подключиться к FTP OunceShell. В OunceShell нажмите SELECT (кнопка -), чтобы запустить FTP-сервер, и попробуйте снова",
+		"khBadNro":  "Файл не является допустимым .nro",
+
+		"badSum": "Проверка загрузки (SHA-256) не удалась",
+
+		"fSSH":         "SSH-подключение к роутеру не удалось",
+		"oweDl":        "Загрузка скриптов Offline WAN Emulator…",
+		"oweConn":      "Подключение к Raspberry Pi по SSH…",
+		"oweSSH":       "Не удалось подключиться к Pi по SSH (проверьте IP, имя пользователя, пароль и включён ли SSH): ",
+		"oweUp":        "Отправка скриптов на Pi…",
+		"oweRun":       "Выполнение скрипта установки…",
+		"oweStaged":    "Подготовка завершена. Переходите к шагам ниже (настройки роутера и перестановка кабеля)",
+		"oweNoStage":   "Маркер завершения (STAGED SUCCESSFULLY) не найден. Проверьте журнал выше",
+		"oweVerifyRun": "Выполнение скрипта проверки…",
+		"oweBadInput":  "Нужны IP-адрес и имя пользователя Pi",
+		"fUnsup":       "Неподдерживаемый роутер (нужен OpenWrt 24.10.x / 25.12.x)",
+		"fNoMac":       "MAC-адрес консоли не был указан",
+		"fTag":         "Новейший релиз: ",
+		"fTagFail":     "Не удалось получить новейший релиз с GitHub",
+		"fBkFail":      "Резервная копия конфигурации роутера не удалась",
+		"fBackup":      "Конфигурация роутера сохранена: ",
+		"fOff":         "Flow offloading отключён",
+		"fInst":        "Установка SWFence (может занять несколько минут)",
+		"fNoSw":        "Установку SWFence не удалось подтвердить",
+		"fCfg":         "Применение MAC консоли и разрешённой подсети",
+		"fCfgFail":     "Настройка SWFence не удалась",
+		"fVer":         "Проверка, что защита активна",
+		"fVerFail":     "Не удалось подтвердить, что защита активна",
+	},
+	"pt": {
+
+		"chkDetailErr":  "Detalhe: não foi possível trocar dados com o carregador (%s)",
+		"chkDetailNone": "Detalhe: o carregador aceitou a conexão, mas não enviou nada de volta",
+		"chkDetailDiff": "Detalhe: algo respondeu, mas não era o eco do carregador (resposta: %s)",
+
+		"done":          "=== Sucesso",
+		"failed":        "=== Falha: ",
+		"stageOk":       "Stage construído OK (hex %d caracteres)",
+		"loaderReadErr": "Não é possível ler loader/core.js",
+		"stageErr":      "A compressão do stage falhou",
+		"tplReadErr":    "Não é possível ler assets/save_template.bin",
+		"tplBad":        "save_template.bin é inválido",
+		"connErr":       "Não é possível ligar ao loader",
+		"chunkSendErr":  "O envio do modelo falhou (bloco %d/%d)",
+		"tplSent":       "Modelo enviado: %d blocos, %.0fs",
+		"applyErr":      "Falha ao enviar o payload de aplicação",
+		"noDone":        "O console não devolveu INSTALL DONE",
+
+		"ipInvalid": "Formato de IP inválido",
+
+		"fetching": "A descarregar: %s",
+		"dlErr":    "A transferência falhou",
+
+		"badContent": "O conteúdo transferido parece errado; abortado",
+
+		"zipErr":     "Não é possível ler o zip transferido",
+		"missingReq": "Faltam ficheiros necessários na versão mais recente",
+		"writeErr":   "A escrita falhou",
+
+		"jsBadFile": "Não é possível ler o ficheiro de payload",
+
+		"jsBusy": "Outra operação está em curso",
+
+		"apiErr": "Não é possível contactar o GitHub",
+
+		"ftpErr": "O envio FTP falhou",
+
+		"appNotFound": "App não registada",
+		"appNoAsset":  "Nenhum ficheiro correspondente na versão mais recente",
+		"appBadURL":   "Não foi possível interpretar esse URL do GitHub",
+
+		"khDl":      "Baixando o kaiHEN...",
+		"alDl":      "Baixando os arquivos do autoloader...",
+		"alSdReady": "Arquivos do cartão SD prontos em: %s",
+		"alNoReady": "O loader não respondeu \"Installer ready.\"",
+		"alNoDone":  "O console não confirmou a instalação",
+		"alBadHb":   "O hbmenu baixado não corresponde ao arquivo esperado; operação cancelada",
+		"khDlFail":  "Não foi possível baixar o kaiHEN",
+		"khDlDone":  "kaiHEN está pronto",
+		"khFtpConn": "Não foi possível conectar ao FTP do OunceShell. No OunceShell, prima SELECT (botão -) para iniciar o servidor FTP e tente de novo",
+		"khBadNro":  "O ficheiro não é um .nro válido",
+
+		"badSum": "A verificação da transferência (SHA-256) falhou",
+
+		"fSSH":         "A ligação SSH ao roteador falhou",
+		"oweDl":        "A transferir os scripts do Offline WAN Emulator…",
+		"oweConn":      "A ligar ao Raspberry Pi por SSH…",
+		"oweSSH":       "A ligação SSH ao Pi falhou (verifique o IP, o utilizador, a palavra-passe e se o SSH está ativado): ",
+		"oweUp":        "A enviar os scripts para o Pi…",
+		"oweRun":       "A executar o script de instalação…",
+		"oweStaged":    "Preparação concluída. Continue com os passos abaixo (definições do roteador e mudança do cabo)",
+		"oweNoStage":   "O marcador de conclusão (STAGED SUCCESSFULLY) não foi encontrado. Verifique o registo acima",
+		"oweVerifyRun": "A executar o script de verificação…",
+		"oweBadInput":  "São necessários o endereço IP e o nome de utilizador do Pi",
+		"fUnsup":       "Roteador não suportado (é necessário OpenWrt 24.10.x / 25.12.x)",
+		"fNoMac":       "Não foi fornecido o endereço MAC do console",
+		"fTag":         "Versão mais recente: ",
+		"fTagFail":     "Não foi possível obter a versão mais recente do GitHub",
+		"fBkFail":      "A cópia da configuração do roteador falhou",
+		"fBackup":      "Configuração do roteador guardada: ",
+		"fOff":         "Flow offloading desativado",
+		"fInst":        "A instalar o SWFence (pode demorar alguns minutos)",
+		"fNoSw":        "Não foi possível confirmar a instalação do SWFence",
+		"fCfg":         "A aplicar a MAC do console e a sub-rede permitida",
+		"fCfgFail":     "A configuração do SWFence falhou",
+		"fVer":         "A verificar se a proteção está ativa",
+		"fVerFail":     "Não foi possível confirmar que a proteção está ativa",
+	},
+	"pl": {
+
+		"chkDetailErr":  "Szczegóły: nie udało się wymienić danych z loaderem (%s)",
+		"chkDetailNone": "Szczegóły: loader przyjął połączenie, ale nic nie odesłał",
+		"chkDetailDiff": "Szczegóły: coś odpowiedziało, ale nie było to echo loadera (odpowiedź: %s)",
+
+		"done":          "=== Sukces",
+		"failed":        "=== Błąd: ",
+		"stageOk":       "Stage zbudowany OK (hex %d znaków)",
+		"loaderReadErr": "Nie można odczytać loader/core.js",
+		"stageErr":      "Kompresja stage nie powiodła się",
+		"tplReadErr":    "Nie można odczytać assets/save_template.bin",
+		"tplBad":        "save_template.bin jest nieprawidłowy",
+		"connErr":       "Nie można połączyć się z loaderem",
+		"chunkSendErr":  "Wysyłanie szablonu nie powiodło się (blok %d/%d)",
+		"tplSent":       "Szablon wysłany: %d bloków, %.0fs",
+		"applyErr":      "Nie udało się wysłać payloadu apply",
+		"noDone":        "Konsola nie zwróciła INSTALL DONE",
+
+		"ipInvalid": "Nieprawidłowy format IP",
+
+		"fetching": "Pobieranie: %s",
+		"dlErr":    "Pobieranie nie powiodło się",
+
+		"badContent": "Pobrana zawartość wygląda na błędną; przerwano",
+
+		"zipErr":     "Nie można odczytać pobranego zipa",
+		"missingReq": "W najnowszej wersji brakuje wymaganych plików",
+		"writeErr":   "Zapis nie powiódł się",
+
+		"jsBadFile": "Nie można odczytać pliku payloadu",
+
+		"jsBusy": "Inna operacja jest w toku",
+
+		"apiErr": "Nie można połączyć się z GitHubem",
+
+		"ftpErr": "Wysyłanie FTP nie powiodło się",
+
+		"appNotFound": "Aplikacja niezarejestrowana",
+		"appNoAsset":  "Brak pasującego pliku w najnowszym wydaniu",
+		"appBadURL":   "Nie udało się odczytać tego adresu URL GitHub",
+
+		"khDl":      "Pobieranie kaiHEN...",
+		"alDl":      "Pobieranie plików autoloadera...",
+		"alSdReady": "Pliki na kartę SD gotowe w: %s",
+		"alNoReady": "Loader nie odpowiedział „Installer ready.”",
+		"alNoDone":  "Konsola nie potwierdziła instalacji",
+		"alBadHb":   "Pobrany hbmenu nie odpowiada oczekiwanemu plikowi; operacja przerwana",
+		"khDlFail":  "Nie udało się pobrać kaiHEN",
+		"khDlDone":  "kaiHEN jest gotowy",
+		"khFtpConn": "Nie można połączyć się z FTP OunceShell. W OunceShell naciśnij SELECT (przycisk -), aby uruchomić serwer FTP, i spróbuj ponownie",
+		"khBadNro":  "Plik nie jest prawidłowym .nro",
+
+		"badSum": "Weryfikacja pobrania (SHA-256) nie powiodła się",
+
+		"fSSH":         "Połączenie SSH z routerem nie powiodło się",
+		"oweDl":        "Pobieranie skryptów Offline WAN Emulator…",
+		"oweConn":      "Łączenie z Raspberry Pi przez SSH…",
+		"oweSSH":       "Połączenie SSH z Pi nie powiodło się (sprawdź IP, nazwę użytkownika, hasło i czy SSH jest włączone): ",
+		"oweUp":        "Wysyłanie skryptów na Pi…",
+		"oweRun":       "Uruchamianie skryptu instalacyjnego…",
+		"oweStaged":    "Przygotowanie zakończone. Przejdź do kroków poniżej (ustawienia routera i przepięcie kabla)",
+		"oweNoStage":   "Nie znaleziono znacznika zakończenia (STAGED SUCCESSFULLY). Sprawdź dziennik powyżej",
+		"oweVerifyRun": "Uruchamianie skryptu weryfikacyjnego…",
+		"oweBadInput":  "Wymagane są adres IP i nazwa użytkownika Pi",
+		"fUnsup":       "Nieobsługiwany router (wymagany OpenWrt 24.10.x / 25.12.x)",
+		"fNoMac":       "Nie podano adresu MAC konsoli",
+		"fTag":         "Najnowsze wydanie: ",
+		"fTagFail":     "Nie udało się pobrać najnowszego wydania z GitHub",
+		"fBkFail":      "Kopia konfiguracji routera nie powiodła się",
+		"fBackup":      "Konfiguracja routera zapisana: ",
+		"fOff":         "Flow offloading wyłączony",
+		"fInst":        "Instalowanie SWFence (może potrwać kilka minut)",
+		"fNoSw":        "Nie udało się potwierdzić instalacji SWFence",
+		"fCfg":         "Stosowanie adresu MAC konsoli i dozwolonej podsieci",
+		"fCfgFail":     "Konfiguracja SWFence nie powiodła się",
+		"fVer":         "Sprawdzanie, czy ochrona jest aktywna",
+		"fVerFail":     "Nie udało się potwierdzić, że ochrona jest aktywna",
+	},
+	"ko": {
+
+		"chkDetailErr":  "상세: 로더와 데이터를 주고받을 수 없었습니다 (%s)",
+		"chkDetailNone": "상세: 로더가 연결을 수락했지만 아무것도 돌려보내지 않았습니다",
+		"chkDetailDiff": "상세: 무언가 응답했지만 로더의 에코가 아니었습니다 (응답: %s)",
+
+		"done":          "=== 성공",
+		"failed":        "=== 실패: ",
+		"stageOk":       "스테이지 빌드 OK (hex %d자)",
+		"loaderReadErr": "loader/core.js를 읽을 수 없습니다",
+		"stageErr":      "스테이지 압축에 실패했습니다",
+		"tplReadErr":    "assets/save_template.bin을 읽을 수 없습니다",
+		"tplBad":        "save_template.bin이 올바르지 않습니다",
+		"connErr":       "로더에 연결할 수 없습니다",
+		"chunkSendErr":  "템플릿 전송 실패 (청크 %d/%d)",
+		"tplSent":       "템플릿 전송 완료: %d 청크, %.0f초",
+		"applyErr":      "적용 페이로드 전송에 실패했습니다",
+		"noDone":        "본체가 INSTALL DONE을 반환하지 않았습니다",
+
+		"ipInvalid": "IP 형식이 올바르지 않습니다",
+
+		"fetching": "다운로드 중: %s",
+		"dlErr":    "다운로드에 실패했습니다",
+
+		"badContent": "다운로드한 내용이 이상합니다. 중단했습니다",
+
+		"zipErr":     "다운로드한 zip을 읽을 수 없습니다",
+		"missingReq": "최신 버전에 필요한 파일이 없습니다",
+		"writeErr":   "쓰기에 실패했습니다",
+
+		"jsBadFile": "페이로드 파일을 읽을 수 없습니다",
+
+		"jsBusy": "다른 작업이 실행 중입니다",
+
+		"apiErr": "GitHub에 연결할 수 없습니다",
+
+		"ftpErr": "FTP 업로드에 실패했습니다",
+
+		"appNotFound": "등록되지 않은 앱입니다",
+		"appNoAsset":  "최신 릴리스에 맞는 파일이 없습니다",
+		"appBadURL":   "그 GitHub URL을 해석할 수 없습니다",
+
+		"khDl":      "kaiHEN 다운로드 중...",
+		"alDl":      "오토로더 파일을 다운로드 중...",
+		"alSdReady": "SD 카드용 파일 준비 완료: %s",
+		"alNoReady": "로더가 \"Installer ready.\"라고 응답하지 않았습니다",
+		"alNoDone":  "본체가 설치 완료를 확인하지 않았습니다",
+		"alBadHb":   "다운로드한 hbmenu가 예상 파일과 달라 중단했습니다",
+		"khDlFail":  "kaiHEN을 다운로드할 수 없습니다",
+		"khDlDone":  "kaiHEN 준비 완료",
+		"khFtpConn": "OunceShell의 FTP에 연결할 수 없습니다. OunceShell에서 SELECT(− 버튼)를 눌러 FTP 서버를 시작한 뒤 다시 시도하세요",
+		"khBadNro":  "올바른 .nro 파일이 아닙니다",
+
+		"badSum": "다운로드 검증 (SHA-256) 에 실패했습니다",
+
+		"fSSH":         "라우터에 대한 SSH 연결에 실패했습니다",
+		"oweDl":        "Offline WAN Emulator 스크립트를 다운로드하고 있습니다…",
+		"oweConn":      "Raspberry Pi에 SSH로 연결하고 있습니다…",
+		"oweSSH":       "Pi에 대한 SSH 연결에 실패했습니다(IP, 사용자 이름, 비밀번호와 SSH 활성화 여부를 확인하세요): ",
+		"oweUp":        "스크립트를 Pi에 전송하고 있습니다…",
+		"oweRun":       "설치 스크립트를 실행하고 있습니다…",
+		"oweStaged":    "스테이징이 완료되었습니다. 아래 절차(라우터 설정과 케이블 교체)로 진행하세요",
+		"oweNoStage":   "완료 마커(STAGED SUCCESSFULLY)를 확인하지 못했습니다. 위 로그를 확인하세요",
+		"oweVerifyRun": "검증 스크립트를 실행하고 있습니다…",
+		"oweBadInput":  "Pi의 IP 주소와 사용자 이름이 필요합니다",
+		"fUnsup":       "지원되지 않는 라우터입니다 (OpenWrt 24.10.x / 25.12.x 필요)",
+		"fNoMac":       "본체 MAC 주소가 입력되지 않았습니다",
+		"fTag":         "최신 릴리스: ",
+		"fTagFail":     "GitHub에서 최신 릴리스를 가져올 수 없습니다",
+		"fBkFail":      "라우터 설정 백업에 실패했습니다",
+		"fBackup":      "라우터 설정을 백업했습니다: ",
+		"fOff":         "플로우 오프로딩을 껐습니다",
+		"fInst":        "SWFence 설치 중 (몇 분 걸릴 수 있습니다)",
+		"fNoSw":        "SWFence 설치를 확인할 수 없습니다",
+		"fCfg":         "본체 MAC와 허용 서브넷을 적용 중",
+		"fCfgFail":     "SWFence 설정에 실패했습니다",
+		"fVer":         "보호가 켜져 있는지 확인 중",
+		"fVerFail":     "보호가 켜져 있는지 확인할 수 없습니다",
+	},
+	"zh-Hans": {
+
+		"chkDetailErr":  "详情: 无法与加载器交换数据 (%s)",
+		"chkDetailNone": "详情: 加载器接受了连接，但没有返回任何内容",
+		"chkDetailDiff": "详情: 有回应，但不是加载器的回显 (回应: %s)",
+
+		"done":          "=== 成功",
+		"failed":        "=== 失败: ",
+		"stageOk":       "Stage 构建 OK (hex %d 字符)",
+		"loaderReadErr": "无法读取 loader/core.js",
+		"stageErr":      "Stage 压缩失败",
+		"tplReadErr":    "无法读取 assets/save_template.bin",
+		"tplBad":        "save_template.bin 无效",
+		"connErr":       "无法连接到加载器",
+		"chunkSendErr":  "模板发送失败 (块 %d/%d)",
+		"tplSent":       "模板已发送: %d 块, %.0f秒",
+		"applyErr":      "应用载荷发送失败",
+		"noDone":        "主机没有返回 INSTALL DONE",
+
+		"ipInvalid": "IP 格式无效",
+
+		"fetching": "正在下载: %s",
+		"dlErr":    "下载失败",
+
+		"badContent": "下载的内容似乎不对,已中止",
+
+		"zipErr":     "无法读取下载的 zip",
+		"missingReq": "最新版本缺少必需文件",
+		"writeErr":   "写入失败",
+
+		"jsBadFile": "无法读取载荷文件",
+
+		"jsBusy": "另一个操作正在运行",
+
+		"apiErr": "无法连接 GitHub",
+
+		"ftpErr": "FTP 上传失败",
+
+		"appNotFound": "应用未注册",
+		"appNoAsset":  "最新版本中没有匹配的文件",
+		"appBadURL":   "无法解析该 GitHub URL",
+
+		"khDl":      "正在下载 kaiHEN…",
+		"alDl":      "正在下载自动加载器文件…",
+		"alSdReady": "SD 卡文件已准备好:%s",
+		"alNoReady": "加载器没有返回 \"Installer ready.\"",
+		"alNoDone":  "主机没有确认安装完成",
+		"alBadHb":   "下载的 hbmenu 与预期文件不一致,已中止",
+		"khDlFail":  "无法下载 kaiHEN",
+		"khDlDone":  "kaiHEN 已准备好",
+		"khFtpConn": "无法连接到 OunceShell 的 FTP。请在 OunceShell 中按 SELECT(− 键)启动 FTP 服务器后重试",
+		"khBadNro":  "不是有效的 .nro 文件",
+
+		"badSum": "下载校验 (SHA-256) 失败",
+
+		"fSSH":         "与路由器的 SSH 连接失败",
+		"oweDl":        "正在下载 Offline WAN Emulator 脚本…",
+		"oweConn":      "正在通过 SSH 连接 Raspberry Pi…",
+		"oweSSH":       "SSH 连接 Pi 失败(请确认 IP、用户名、密码以及 SSH 是否已启用):",
+		"oweUp":        "正在把脚本发送到 Pi…",
+		"oweRun":       "正在运行安装脚本…",
+		"oweStaged":    "预置已完成。请继续下面的步骤(路由器设置与更换线缆)",
+		"oweNoStage":   "未确认到完成标记(STAGED SUCCESSFULLY)。请查看上面的日志",
+		"oweVerifyRun": "正在运行验证脚本…",
+		"oweBadInput":  "需要 Pi 的 IP 地址和用户名",
+		"fUnsup":       "不支持的路由器 (需要 OpenWrt 24.10.x / 25.12.x)",
+		"fNoMac":       "没有提供主机的 MAC 地址",
+		"fTag":         "最新版本: ",
+		"fTagFail":     "无法从 GitHub 获取最新版本",
+		"fBkFail":      "路由器配置备份失败",
+		"fBackup":      "路由器配置已备份: ",
+		"fOff":         "已关闭流量卸载 (flow offloading)",
+		"fInst":        "正在安装 SWFence (可能需要几分钟)",
+		"fNoSw":        "无法确认 SWFence 的安装",
+		"fCfg":         "正在应用主机 MAC 和允许的子网",
+		"fCfgFail":     "SWFence 配置失败",
+		"fVer":         "正在验证保护是否生效",
+		"fVerFail":     "无法确认保护已生效",
+	},
+	"zh-Hant": {
+
+		"chkDetailErr":  "詳情: 無法與載入器交換資料 (%s)",
+		"chkDetailNone": "詳情: 載入器接受了連線，但沒有回傳任何內容",
+		"chkDetailDiff": "詳情: 有回應，但不是載入器的回顯 (回應: %s)",
+
+		"done":          "=== 成功",
+		"failed":        "=== 失敗: ",
+		"stageOk":       "Stage 建構 OK (hex %d 字元)",
+		"loaderReadErr": "無法讀取 loader/core.js",
+		"stageErr":      "Stage 壓縮失敗",
+		"tplReadErr":    "無法讀取 assets/save_template.bin",
+		"tplBad":        "save_template.bin 無效",
+		"connErr":       "無法連線到載入器",
+		"chunkSendErr":  "範本傳送失敗 (塊 %d/%d)",
+		"tplSent":       "範本已傳送: %d 塊, %.0f秒",
+		"applyErr":      "套用載荷傳送失敗",
+		"noDone":        "主機沒有返回 INSTALL DONE",
+
+		"ipInvalid": "IP 格式無效",
+
+		"fetching": "正在下載: %s",
+		"dlErr":    "下載失敗",
+
+		"badContent": "下載的內容似乎不對,已中止",
+
+		"zipErr":     "無法讀取下載的 zip",
+		"missingReq": "最新版本缺少必需檔案",
+		"writeErr":   "寫入失敗",
+
+		"jsBadFile": "無法讀取載荷檔案",
+
+		"jsBusy": "另一個操作正在執行",
+
+		"apiErr": "無法連線 GitHub",
+
+		"ftpErr": "FTP 上傳失敗",
+
+		"appNotFound": "應用未註冊",
+		"appNoAsset":  "最新版本中沒有相符的檔案",
+		"appBadURL":   "無法解析該 GitHub URL",
+
+		"khDl":      "正在下載 kaiHEN…",
+		"alDl":      "正在下載自動載入器檔案…",
+		"alSdReady": "SD 卡檔案已準備好:%s",
+		"alNoReady": "載入器沒有返回 \"Installer ready.\"",
+		"alNoDone":  "主機沒有確認安裝完成",
+		"alBadHb":   "下載的 hbmenu 與預期檔案不一致,已中止",
+		"khDlFail":  "無法下載 kaiHEN",
+		"khDlDone":  "kaiHEN 已準備好",
+		"khFtpConn": "無法連線到 OunceShell 的 FTP。請在 OunceShell 中按 SELECT(− 鍵)啟動 FTP 伺服器後重試",
+		"khBadNro":  "不是有效的 .nro 檔案",
+
+		"badSum": "下載驗證 (SHA-256) 失敗",
+
+		"fSSH":         "與路由器的 SSH 連線失敗",
+		"oweDl":        "正在下載 Offline WAN Emulator 腳本…",
+		"oweConn":      "正在透過 SSH 連接 Raspberry Pi…",
+		"oweSSH":       "SSH 連接 Pi 失敗(請確認 IP、使用者名稱、密碼以及 SSH 是否已啟用):",
+		"oweUp":        "正在把腳本傳送到 Pi…",
+		"oweRun":       "正在執行安裝腳本…",
+		"oweStaged":    "預置已完成。請繼續下面的步驟(路由器設定與更換線纜)",
+		"oweNoStage":   "未確認到完成標記(STAGED SUCCESSFULLY)。請查看上面的日誌",
+		"oweVerifyRun": "正在執行驗證腳本…",
+		"oweBadInput":  "需要 Pi 的 IP 位址和使用者名稱",
+		"fUnsup":       "不支援的路由器 (需要 OpenWrt 24.10.x / 25.12.x)",
+		"fNoMac":       "沒有提供主機的 MAC 位址",
+		"fTag":         "最新版本: ",
+		"fTagFail":     "無法從 GitHub 取得最新版本",
+		"fBkFail":      "路由器設定備份失敗",
+		"fBackup":      "路由器設定已備份: ",
+		"fOff":         "已關閉流量卸載 (flow offloading)",
+		"fInst":        "正在安裝 SWFence (可能需要幾分鐘)",
+		"fNoSw":        "無法確認 SWFence 的安裝",
+		"fCfg":         "正在套用主機 MAC 和允許的子網路",
+		"fCfgFail":     "SWFence 設定失敗",
+		"fVer":         "正在驗證保護是否生效",
+		"fVerFail":     "無法確認保護已生效",
+	},
+}
+
+func normalizeLang(s string) string {
+	switch s {
+	case "ja", "en", "fr", "de", "it", "es", "ru", "pt", "pl", "ko", "zh-Hans", "zh-Hant":
+		return s
+	}
+	return "en"
+}
+
+func tr(lang, key string, args ...any) string {
+	s, ok := msgs[normalizeLang(lang)][key]
+	if !ok {
+		s = msgs["en"][key]
+	}
+	if len(args) > 0 {
+		return fmt.Sprintf(s, args...)
+	}
+	return s
+}
