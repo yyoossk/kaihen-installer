@@ -53,7 +53,7 @@ remembered, so it appears only once.
 
 | 日本語 | English |
 | --- | --- |
-| ![Consent dialog (Japanese)](docs/screenshots/01-consent.png) | ![Consent dialog (English)](docs/screenshots/01-consent-en.png) |
+| ![Consent dialog (Japanese)](docs/screenshots/01-consent.png) | ![Consent dialog (English)](docs/screenshots/01-consent-en.svg) |
 
 ### 2. Home / ホーム
 
@@ -66,7 +66,7 @@ version.
 
 | 日本語 | English |
 | --- | --- |
-| ![Home (Japanese)](docs/screenshots/02-home.png) | ![Home (English)](docs/screenshots/02-home-en.png) |
+| ![Home (Japanese)](docs/screenshots/02-home.png) | ![Home (English)](docs/screenshots/02-home-en.svg) |
 
 ### 3. Install kaiHEN / kaiHEN を導入
 
@@ -85,7 +85,7 @@ dialog, and failures say why.
 
 | 日本語 | English |
 | --- | --- |
-| ![Install kaiHEN (Japanese)](docs/screenshots/03-kaihen.png) | ![Install kaiHEN (English)](docs/screenshots/03-kaihen-en.png) |
+| ![Install kaiHEN (Japanese)](docs/screenshots/03-kaihen.png) | ![Install kaiHEN (English)](docs/screenshots/03-kaihen-en.svg) |
 
 ### 4. Autoloader / オートローダー
 
@@ -104,7 +104,7 @@ instead of hanging.
 
 | 日本語 | English |
 | --- | --- |
-| ![Autoloader (Japanese)](docs/screenshots/04-autoloader.png) | ![Autoloader (English)](docs/screenshots/04-autoloader-en.png) |
+| ![Autoloader (Japanese)](docs/screenshots/04-autoloader.png) | ![Autoloader (English)](docs/screenshots/04-autoloader-en.svg) |
 
 ### 5. Install homebrew / 自作ソフトをインストール
 
@@ -120,7 +120,7 @@ Updates are detected automatically.
 
 | 日本語 | English |
 | --- | --- |
-| ![Install homebrew (Japanese)](docs/screenshots/05-homebrew.png) | ![Install homebrew (English)](docs/screenshots/05-homebrew-en.png) |
+| ![Install homebrew (Japanese)](docs/screenshots/05-homebrew.png) | ![Install homebrew (English)](docs/screenshots/05-homebrew-en.svg) |
 
 ### 6. Switch from the IZ launcher / IZランチャーから乗り換え
 
@@ -133,7 +133,7 @@ loader save with the plain one and starts kaiHEN, all on one page.
 
 | 日本語 | English |
 | --- | --- |
-| ![Switch from IZ (Japanese)](docs/screenshots/06-iz-switch.png) | ![Switch from IZ (English)](docs/screenshots/06-iz-switch-en.png) |
+| ![Switch from IZ (Japanese)](docs/screenshots/06-iz-switch.png) | ![Switch from IZ (English)](docs/screenshots/06-iz-switch-en.svg) |
 
 ### 7. SWFence (router isolation) / SWFence (ルーターで隔離)
 
@@ -145,7 +145,7 @@ OpenWrt ルーターに SWFence を入れ、本体を LAN 内だけに隔離す�
 
 | 日本語 | English |
 | --- | --- |
-| ![SWFence (Japanese)](docs/screenshots/07-swfence.png) | ![SWFence (English)](docs/screenshots/07-swfence-en.png) |
+| ![SWFence (Japanese)](docs/screenshots/07-swfence.png) | ![SWFence (English)](docs/screenshots/07-swfence-en.svg) |
 
 ### 8. Credits / クレジット
 
@@ -155,7 +155,7 @@ kaiHEN・ローダー・エンジン・同梱ツールの作者一覧です。
 
 | 日本語 | English |
 | --- | --- |
-| ![Credits (Japanese)](docs/screenshots/08-credits.png) | ![Credits (English)](docs/screenshots/08-credits-en.png) |
+| ![Credits (Japanese)](docs/screenshots/08-credits.png) | ![Credits (English)](docs/screenshots/08-credits-en.svg) |
 
 ## Requirements / 前提
 
