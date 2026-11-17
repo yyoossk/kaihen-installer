@@ -19,6 +19,10 @@ import (
 type logFn func(string)
 
 func setupExeDir() {
+	if h := os.Getenv("KAIHEN_HOME"); h != "" {
+		exeDir = h
+		return
+	}
 	if h := os.Getenv("CIVINSTALLER_HOME"); h != "" {
 		exeDir = h
 		return
@@ -33,6 +37,9 @@ func setupExeDir() {
 
 
 func nodeExe() string {
+	if p := os.Getenv("KAIHEN_NODE"); p != "" {
+		return p
+	}
 	if p := os.Getenv("CIVINSTALLER_NODE"); p != "" {
 		return p
 	}

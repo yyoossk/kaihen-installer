@@ -1,13 +1,15 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
 	"crypto/rand"
-	_ "embed"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,9 +24,10 @@ import (
 // network. The save is installed through the already-running loader on
 // :9026, using the exact protocol of the fork's tools/persist-install.mjs:
 //
-//   1. send the persist bootstrap (build artifact of SeanHeuc/CivSwitchFS
-//      @59a1ea6; it is not published anywhere downloadable, so it is
-//      embedded here and pinned by SHA-256),
+//   1. send the persist bootstrap (the improved build — timing learning
+//      and the IPC freeze fix — published as a release asset of the
+//      yyoossk/CivSwitchFS fork; downloaded on use, with the zip and the
+//      bootstrap inside it both pinned by SHA-256),
 //   2. send the pristine save template (downloaded from the same fork,
 //      pinned by size + SHA-256) as base64 chunks of 400,000 chars,
 //   3. call installFromTemplate() and wait for the completion marker.
@@ -41,11 +44,15 @@ import (
 // replacing the `ldr w0, [sp, #0x1c]` at file offset 0xa5608 with
 // `mov w0, #0`, exactly the patch verified against the bundled binary.
 
-//go:embed autoloader_bootstrap.js
-var autoloaderBootstrap []byte
-
 const (
 	autoloaderBootstrapSHA = "8179c983aa2853ca4f56fa3f4bd9315eb1f304e85ec5fd6562145b9332082b9b"
+
+	// The improved persist bundle (persist-bootstrap.js + save template)
+	// as published on the yyoossk/CivSwitchFS fork's release page. The
+	// whole zip is hash-pinned, and the bootstrap extracted from it is
+	// hash-pinned again before use.
+	autoloaderImprovedZipURL = "https://github.com/yyoossk/CivSwitchFS/releases/download/improved-20261117/civswitchfs-persist-improved-20261117.zip"
+	autoloaderImprovedZipSHA = "be0979e27c9482f38b57a8aed462cf93bba3edf6ef09b4743fcd05abddf56c0a"
 
 	autoloaderTplURL  = "https://raw.githubusercontent.com/SeanHeuc/CivSwitchFS/59a1ea6667944583b2305412472ec319deeee009/persist/save_template.bin"
 	autoloaderTplSize = 1159730
@@ -91,12 +98,57 @@ func fileSHA(path string) string {
 	return sha256Hex(raw)
 }
 
+// ensureAutoloaderBootstrap returns the improved persist bootstrap,
+// downloading it (once, hash-pinned) from the yyoossk/CivSwitchFS fork
+// release when no verified copy is cached yet:
+// autoloader/persist-bootstrap.js beside the exe.
+func ensureAutoloaderBootstrap(log logFn, lang string) ([]byte, error) {
+	bsPath := pathOf("autoloader", "persist-bootstrap.js")
+	if raw, err := os.ReadFile(bsPath); err == nil && sha256Hex(raw) == autoloaderBootstrapSHA {
+		return raw, nil
+	}
+	log(tr(lang, "alDl"))
+	zipRaw, err := httpGet(autoloaderImprovedZipURL)
+	if err != nil {
+		return nil, errors.New(tr(lang, "dlErr"))
+	}
+	if sha256Hex(zipRaw) != autoloaderImprovedZipSHA {
+		return nil, errors.New(tr(lang, "badContent"))
+	}
+	zr, err := zip.NewReader(bytes.NewReader(zipRaw), int64(len(zipRaw)))
+	if err != nil {
+		return nil, errors.New(tr(lang, "badContent"))
+	}
+	var bs []byte
+	for _, f := range zr.File {
+		if f.Name != "persist-bootstrap.js" {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return nil, errors.New(tr(lang, "badContent"))
+		}
+		bs, err = io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			return nil, errors.New(tr(lang, "badContent"))
+		}
+	}
+	if sha256Hex(bs) != autoloaderBootstrapSHA {
+		return nil, errors.New(tr(lang, "alBadHb"))
+	}
+	if err := os.MkdirAll(filepath.Dir(bsPath), 0o755); err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(bsPath, bs, 0o644); err != nil {
+		return nil, err
+	}
+	return bs, nil
+}
+
 // ensureAutoloaderTemplate downloads (once, hash-pinned) the save template
 // used by the install protocol: autoloader/save_template.bin beside the exe.
 func ensureAutoloaderTemplate(log logFn, lang string) error {
-	if sha256Hex(autoloaderBootstrap) != autoloaderBootstrapSHA {
-		return errors.New(tr(lang, "alBadHb"))
-	}
 	tplPath := pathOf("autoloader", "save_template.bin")
 	if fileSHA(tplPath) == autoloaderTplSHA {
 		return nil
@@ -189,6 +241,10 @@ func installFailedLine(out string) string {
 // autoloaderInstall is the /api/autoloader job: prepare the save template,
 // then run the persist-install protocol against the loader on the console.
 func autoloaderInstall(ip, lang string, log logFn) error {
+	bootstrap, err := ensureAutoloaderBootstrap(log, lang)
+	if err != nil {
+		return err
+	}
 	if err := ensureAutoloaderTemplate(log, lang); err != nil {
 		return err
 	}
@@ -197,7 +253,7 @@ func autoloaderInstall(ip, lang string, log logFn) error {
 		return errors.New(tr(lang, "badContent"))
 	}
 
-	out, err := sendCode(ip, string(autoloaderBootstrap)+"\nlog(\"Installer ready.\");", 120*time.Second)
+	out, err := sendCode(ip, string(bootstrap)+"\nlog(\"Installer ready.\");", 120*time.Second)
 	if err != nil {
 		return errors.New(tr(lang, "connErr"))
 	}

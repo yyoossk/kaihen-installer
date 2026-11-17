@@ -149,6 +149,9 @@ func killProcessTree(cmd *exec.Cmd) {
 		exec.Command("taskkill", "/PID", strconv.Itoa(cmd.Process.Pid), "/T", "/F").Run()
 		return
 	}
+	if killProcGroup(cmd.Process.Pid) {
+		return
+	}
 	cmd.Process.Kill()
 }
 
@@ -232,6 +235,7 @@ func kaihenStartHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cmd := exec.Command(nodeExe(), script, "--dir", kaihenDistDir(), pcIP)
+	setProcGroup(cmd)
 	cmd.Dir = pathOf("assets", "kaihen")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

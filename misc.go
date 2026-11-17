@@ -95,6 +95,7 @@ func openFolderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	os.MkdirAll(dir, 0o755)
+	mirrorFolderExternal(dir)
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
