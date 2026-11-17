@@ -154,7 +154,8 @@ func fenceChkHandler(w http.ResponseWriter, r *http.Request) {
 
 func fenceLatestTag() (string, error) {
 	cl := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   30 * time.Second,
+		Transport: webTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},

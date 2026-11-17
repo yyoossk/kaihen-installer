@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -14,6 +15,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -195,13 +197,63 @@ func ipconfigHandler(w http.ResponseWriter, r *http.Request) {
 
 // --- updates ----------------------------------------------------------------
 
+// dnsServers lists the DNS servers named by KAIHEN_DNS. The Android
+// shell sets it from the phone's active network: Android has no
+// /etc/resolv.conf, so Go's built-in resolver falls back to
+// 127.0.0.1:53 there and every download fails with a name error.
+// Desktop builds never set it and keep the system resolver.
+var dnsServers = func() []string {
+	s := os.Getenv("KAIHEN_DNS")
+	if s == "" {
+		return nil
+	}
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}()
+
+var dnsRotate uint32
+
+// webTransport is the shared transport for downloads: proxy-aware like
+// the default transport, plus an explicit DNS resolver when KAIHEN_DNS
+// names the servers to ask.
+var webTransport = func() *http.Transport {
+	tr := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		TLSHandshakeTimeout:   30 * time.Second,
+		ResponseHeaderTimeout: 60 * time.Second,
+	}
+	if len(dnsServers) > 0 {
+		resolver := &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				i := atomic.AddUint32(&dnsRotate, 1)
+				d := net.Dialer{Timeout: 6 * time.Second}
+				return d.DialContext(ctx, "udp", net.JoinHostPort(dnsServers[int(i)%len(dnsServers)], "53"))
+			},
+		}
+		tr.DialContext = (&net.Dialer{Timeout: 30 * time.Second, Resolver: resolver}).DialContext
+	} else {
+		tr.DialContext = (&net.Dialer{Timeout: 30 * time.Second}).DialContext
+	}
+	return tr
+}()
+
+func webClient() *http.Client {
+	return &http.Client{Timeout: 120 * time.Second, Transport: webTransport}
+}
+
 func httpGet(url string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", "CivInstaller")
-	cl := &http.Client{Timeout: 120 * time.Second}
+	cl := webClient()
 	resp, err := cl.Do(req)
 	if err != nil {
 		return nil, err
@@ -221,7 +273,7 @@ func httpGetFinal(u string) ([]byte, string, error) {
 		return nil, "", err
 	}
 	req.Header.Set("User-Agent", "CivInstaller")
-	cl := &http.Client{Timeout: 120 * time.Second}
+	cl := webClient()
 	resp, err := cl.Do(req)
 	if err != nil {
 		return nil, "", err

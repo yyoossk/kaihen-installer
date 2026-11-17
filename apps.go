@@ -616,7 +616,7 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 		// kaiHEN homebrew: make sure the latest release is downloaded,
 		// then push it to the console through OunceShell's FTP server.
 		appsMu.Lock()
-		refreshAppLocked(a, true, send)
+		rerr := refreshAppLocked(a, true, send)
 		appsMu.Unlock()
 		rootDir := filepath.Join(appCacheDir(id), "root")
 		if _, err := os.Stat(rootDir); err == nil {
@@ -635,7 +635,14 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else {
-			fail(errors.New(tr(lang, "appNoAsset")))
+			// Nothing downloaded and nothing cached: report the
+			// refresh error itself (e.g. GitHub unreachable) rather
+			// than claiming the release has no matching file.
+			if rerr != nil {
+				fail(rerr)
+			} else {
+				fail(errors.New(tr(lang, "appNoAsset")))
+			}
 			return
 		}
 		appsMu.Lock()
