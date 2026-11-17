@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -20,7 +20,7 @@ import (
 
 type appEntry struct {
 	ID            string `json:"id"`
-	Kind          string `json:"kind"` // "nro"
+	Kind          string `json:"kind"`           // "nro"
 	Host          string `json:"host,omitempty"` // "" = GitHub, "gitlab" = GitLab
 	Builtin       bool   `json:"builtin"`
 	Name          string `json:"name,omitempty"`
@@ -333,9 +333,10 @@ func downloadAppLocked(a *appEntry, log logFn) error {
 // were not known in advance. Three shapes occur in the hblist catalog:
 // a single .nro at the zip root (cached as one file, installed into
 // /switch), several .nro files (installed into /switch), and a tree meant
-// to be extracted at the SD root (paths under switch/ or kaihen/, e.g.
-// RetroArch or the FTPD plugin) which is extracted verbatim into the
-// cache's root/ folder and uploaded path by path.
+// to be extracted at the SD root (paths under switch/ or kaihen/, or a
+// top-level retroarch/ data folder, e.g. RetroArch or the FTPD plugin)
+// which is extracted verbatim into the cache's root/ folder and uploaded
+// path by path.
 func downloadNroZipLocked(a *appEntry, raw []byte) error {
 	zr, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
 	if err != nil {
@@ -357,7 +358,17 @@ func downloadNroZipLocked(a *appEntry, raw []byte) error {
 		}
 		parts := strings.Split(name, "/")
 		segAt := -1
+		if parts[0] == "retroarch" {
+			// RetroArch keeps its data (assets, cores, info) in a
+			// folder at the SD root next to switch/. Without it the
+			// menu has no fonts (non-Latin languages garble) and no
+			// cores load, so keep the whole tree.
+			segAt = 0
+		}
 		for i, p := range parts {
+			if segAt >= 0 {
+				break
+			}
 			if p == "switch" || p == "kaihen" {
 				segAt = i
 				break
