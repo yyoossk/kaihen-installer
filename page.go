@@ -33,6 +33,16 @@ const pageHTML = `<!DOCTYPE html>
  .approw .appname { flex: 1 1 auto; }
  .approw button { margin: 0; min-width: 7em; }
  .approw .appver { min-width: 11em; }
+ body.dark { background: #121417; color: #e8e8e8; }
+ body.dark .note { color: #a8adb5; }
+ body.dark h2 { border-left-color: #666; }
+ body.dark .langbar { background: #121417; border-bottom-color: #333; }
+ body.dark button { background: #2b2f36; color: #eee; border: 1px solid #565d66; border-radius: 4px; }
+ body.dark input, body.dark select { background: #1d2025; color: #eee; border: 1px solid #565d66; border-radius: 4px; }
+ body.dark #chkmodal .chkbox, body.dark #quitmodal .chkbox, body.dark #cfmodal .chkbox, body.dark #consent .chkbox { background: #1d2025; color: #eee; }
+ body.dark #chkline3 { color: #a8adb5; }
+ body.dark .drop { border-color: #666; }
+ body.dark .approw { border-bottom-color: #333; }
  @media (max-width: 640px) {
   body { margin: .8em auto; padding: 0 .6em; }
   button { padding: .55em .7em; }
@@ -66,6 +76,12 @@ const pageHTML = `<!DOCTYPE html>
   <option value="ko">한국어</option>
   <option value="zh-Hans">简体中文</option>
   <option value="zh-Hant">繁體中文</option>
+</select></span>
+<span id="themewrap" style="display:none"><span data-i18n="theme_label">テーマ</span>:
+<select id="themeSel" onchange="themeSet(this.value)">
+  <option value="light" data-i18n="theme_light">ライト</option>
+  <option value="dark" data-i18n="theme_dark">ダーク</option>
+  <option value="auto" data-i18n="theme_auto">端末に合わせる</option>
 </select></span>
 <span class="note">build __BUILDSTAMP__</span> <span><button id="topquit" onclick="quitApp()" data-i18n="quit_btn">ソフトを終了</button><button id="topback" onclick="backTop()" data-i18n="back_btn" style="display:none">← 戻る</button></span></p>
 <h1 id="apptitle" data-i18n="title">kaiHEN Installer</h1>
@@ -283,6 +299,8 @@ var MD = {"ja": {tab_mig: "IZランチャーからkaiHENへ乗り換え", mig_b1
 for (var k8 in MD) { if (I18N[k8]) { for (var kk8 in MD[k8]) I18N[k8][kk8] = MD[k8][kk8]; } }
 var AD = {"ja": {app_open: "自作ソフトをインストール", back_btn: "← 戻る",       }, "en": {app_open: "Install homebrew", back_btn: "← Back",       }, "fr": {app_open: "Installer des homebrew", back_btn: "← Retour",       }, "de": {app_open: "Homebrew installieren", back_btn: "← Zurück",       }, "it": {app_open: "Installa homebrew", back_btn: "← Indietro",       }, "es": {app_open: "Instalar homebrew", back_btn: "← Volver",       }, "ru": {app_open: "Установить homebrew", back_btn: "← Назад",       }, "pt": {app_open: "Instalar homebrew", back_btn: "← Voltar",       }, "pl": {app_open: "Instaluj homebrew", back_btn: "← Wstecz",       }, "ko": {app_open: "자작 소프트웨어 설치", back_btn: "← 돌아가기",       }, "zh-Hans": {app_open: "安装自制软件", back_btn: "← 返回",       }, "zh-Hant": {app_open: "安裝自製軟體", back_btn: "← 返回",       }};
 for (var k9 in AD) { if (I18N[k9]) { for (var kk9 in AD[k9]) I18N[k9][kk9] = AD[k9][kk9]; } }
+var TH = {"ja": {theme_label: "テーマ", theme_light: "ライト", theme_dark: "ダーク", theme_auto: "端末に合わせる"}, "en": {theme_label: "Theme", theme_light: "Light", theme_dark: "Dark", theme_auto: "Match device"}, "fr": {theme_label: "Thème", theme_light: "Clair", theme_dark: "Sombre", theme_auto: "Selon l'appareil"}, "de": {theme_label: "Design", theme_light: "Hell", theme_dark: "Dunkel", theme_auto: "Geräteeinstellung"}, "it": {theme_label: "Tema", theme_light: "Chiaro", theme_dark: "Scuro", theme_auto: "Segui dispositivo"}, "es": {theme_label: "Tema", theme_light: "Claro", theme_dark: "Oscuro", theme_auto: "Según el dispositivo"}, "ru": {theme_label: "Тема", theme_light: "Светлая", theme_dark: "Тёмная", theme_auto: "Как на устройстве"}, "pt": {theme_label: "Tema", theme_light: "Claro", theme_dark: "Escuro", theme_auto: "Seguir o dispositivo"}, "pl": {theme_label: "Motyw", theme_light: "Jasny", theme_dark: "Ciemny", theme_auto: "Jak na urządzeniu"}, "ko": {theme_label: "테마", theme_light: "라이트", theme_dark: "다크", theme_auto: "기기 설정에 맞춤"}, "zh-Hans": {theme_label: "主题", theme_light: "浅色", theme_dark: "深色", theme_auto: "跟随设备"}, "zh-Hant": {theme_label: "主題", theme_light: "淺色", theme_dark: "深色", theme_auto: "跟隨裝置"}};
+for (var kT in TH) { if (I18N[kT]) { for (var kkT in TH[kT]) I18N[kT][kkT] = TH[kT][kkT]; } }
 var AE = {
 ja: { app_add: "追加", app_check: "更新を確認", app_install: "インストール", app_delete: "削除", app_update_badge: "更新あり", app_update_found: "更新があります (ダウンロード済み)", app_got: "本体の版", app_none2: "まだ登録がありません" },
 en: { app_add: "Add", app_check: "Check for updates", app_install: "Install", app_delete: "Remove", app_update_badge: "Update", app_update_found: "Update available (downloaded)", app_got: "On console", app_none2: "Nothing registered yet" },
@@ -1148,10 +1166,40 @@ async function consentDisagree() {
   try { await fetch("/api/quit", {method: "POST"}); } catch (e) {}
   window.close();
 }
+var IS_ANDROID = /Android/.test(navigator.userAgent || "");
+function themeMode() { try { return localStorage.getItem("ci_theme") || "light"; } catch (e) { return "light"; } }
+function themeApply() {
+  var mode = themeMode();
+  var mq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
+  var dark = mode === "dark" || (mode === "auto" && (window.__sysDark === true || (mq && mq.matches)));
+  document.body.classList.toggle("dark", !!dark);
+  try { document.documentElement.style.colorScheme = dark ? "dark" : ""; } catch (e) {}
+  var sel = document.getElementById("themeSel");
+  if (sel) sel.value = mode;
+}
+function themeSet(v) { try { localStorage.setItem("ci_theme", v); } catch (e) {} themeApply(); }
+window.__applyTheme = themeApply;
+function themeInit() {
+  if (IS_ANDROID) {
+    var tw = document.getElementById("themewrap");
+    if (tw) tw.style.display = "";
+    document.addEventListener("click", function(e) {
+      if (e.target && e.target.closest && e.target.closest("button, select, input, a")) {
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch (err) {}
+      }
+    }, true);
+  }
+  themeApply();
+  if (window.matchMedia) {
+    var mq2 = matchMedia("(prefers-color-scheme: dark)");
+    try { mq2.addEventListener("change", themeApply); } catch (e) { try { mq2.addListener(themeApply); } catch (e2) {} }
+  }
+}
 document.getElementById("langSel").addEventListener("change", function() { applyLang(this.value, true); });
 document.getElementById("langSel2").innerHTML = document.getElementById("langSel").innerHTML;
 document.getElementById("langSel2").addEventListener("change", function() { applyLang(this.value, true); });
 applyLang(detectLang(), false);
+themeInit();
 initConsent();
 oweInit();
 autoKhInit();
