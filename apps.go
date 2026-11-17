@@ -83,6 +83,7 @@ func builtinApps() []*appEntry {
 		{ID: "MegaCadeDev/dolphin-nx2", Kind: "nro", Builtin: true, Name: "Dolphin NX2", Source: "release"},
 		{ID: "Azkali/moonlight-nx2", Host: "gitlab", Kind: "nro", Builtin: true, Name: "Moonlight", Source: "release"},
 		{ID: "XITRIX/Moonlight-Switch", Kind: "nro", Builtin: true, Name: "Moonlight-Switch", Source: "release"},
+		{ID: "Olmectron/dekopon", Kind: "nro", Builtin: true, Name: "Dekopon for SW2", Source: "release"},
 	}
 }
 
