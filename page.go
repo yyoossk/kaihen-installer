@@ -1187,6 +1187,8 @@ function themeInit() {
     if (tw) tw.style.display = "";
     var bs = document.getElementById("buildstamp");
     if (bs) bs.style.display = "none";
+    var dz = document.getElementById("drop-nro");
+    if (dz) dz.style.display = "none";
     document.addEventListener("click", function(e) {
       if (e.target && e.target.closest && e.target.closest("button, select, input, a")) {
         try { if (navigator.vibrate) navigator.vibrate(10); } catch (err) {}
