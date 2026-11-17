@@ -6,6 +6,7 @@ const pageHTML = `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-i18n="title">kaiHEN Installer</title>
 <style>
  body { font-family: sans-serif; margin: 2em auto; max-width: 720px; padding: 0 1em; }
@@ -32,6 +33,21 @@ const pageHTML = `<!DOCTYPE html>
  .approw .appname { flex: 1 1 auto; }
  .approw button { margin: 0; min-width: 7em; }
  .approw .appver { min-width: 11em; }
+ @media (max-width: 640px) {
+  body { margin: .8em auto; padding: 0 .6em; }
+  button { padding: .55em .7em; }
+  .langbar { flex-wrap: wrap; gap: .3em .6em; }
+  .langbar .note { white-space: nowrap; }
+  .langbar > span:last-child { flex: 1 1 100%; }
+  .langbar > span:last-child button { width: 100%; white-space: nowrap; margin: 0; }
+  input[type=text] { width: 100%; max-width: 16em; }
+  #log { height: 220px; }
+  #consent .chkbox, #chkmodal .chkbox, #quitmodal .chkbox, #cfmodal .chkbox { min-width: 0; width: 92vw; box-sizing: border-box; padding: 1.2em 1em; }
+  .approw { flex-wrap: wrap; row-gap: .3em; margin: .7em 0; padding-bottom: .7em; border-bottom: 1px solid #eee; }
+  .approw .appname { flex: 1 1 100%; font-size: 1.05em; }
+  .approw button { flex: 1 1 auto; min-width: 0; white-space: nowrap; padding: .55em .4em; }
+  .approw .appver { flex: 1 1 100%; min-width: 0; font-size: .9em; color: #555; }
+ }
 </style>
 </head>
 <body>
@@ -192,6 +208,9 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 <p><button onclick="run('autoloader')" data-i18n="al_btn">オートローダーセーブを入れる</button></p>
 <p class="note" data-i18n="al_fail">「ゲームをロード」した後の画面の見方: "TIMING: recorded schedule loaded" と出たら、前回成功したときのタイミングを読み込んで開始しています。そのまま待ってください。"Checking the canary window..." と出た後は、その回のチェックが終わるまで新しい行が出ません。通常は数秒〜数十秒で終わりますが、波の合流が悪いと1波あたり最大1分半ほどかかり、数分間この表示のままのこともあります。自動で試行を繰り返すため、全体で数十分かかることもあります。"Canary did not flip." や "No valid canary window was found." と出たら、その回は失敗ですが、自動で次の試行が始まります。5分以上新しい行が出ない場合は、固まっている可能性が高いです。シヴィライゼーション7 を終了して起動し直してください。</p>
 <p class="note" data-i18n="al_s3">成功の合図: "CANARY FLIPPED" と出たら、canary のチェックを通過しています。そのまま待ってください。その後 "AUTOLOADER: kaiHEN installation complete. You can close Civ7 now." と出たら成功です。シヴィライゼーション7 を終了し (電源は切らないでください)、Switch 2 のゲームを R を押しながら起動してください (1回目は記録のみ)。もう一度 R を押しながら起動すると hbmenu が開きます。"AUTOLOADER: TIMING: winning schedule recorded" と出ていたら、成功したタイミングを学習して記録した合図です。"Stopped after" で始まる行が出たら、今回は失敗です。シヴィライゼーション7 を終了して起動し直し、「ゲームをロード」してください。繰り返す場合は本体の電源を完全に切って入れ直し、それでもダメならこのページでセーブを入れ直してください。"AUTOLOADER: kaiHEN prepare failed" と出たら、SD カードのファイルが読み取れていません。手順1のファイルを SD カードのルートに入れたか確認してください。</p>
+
+<h2 data-i18n="app_open">自作ソフトをインストール</h2>
+<p><button class="widebtn" onclick="showPage('backup')">kaiHEN</button></p>
 </div>
 <div id="page-mig" style="display:none">
 <div class="migip">
