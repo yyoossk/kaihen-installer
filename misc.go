@@ -51,8 +51,15 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewDecoder(r.Body).Decode(&body)
 	if !validIP(body.IP) {
-		jsonOK(w, map[string]any{"ok": false, "conn": false, "ping": false, "detail": tr(body.Lang, "ipInvalid")})
+		jsonOK(w, map[string]any{"ok": false, "conn": false, "ping": false, "ftp": false, "detail": tr(body.Lang, "ipInvalid")})
 		return
+	}
+	// OunceShell's FTP server (port 1337) is what homebrew installs
+	// talk to; the homebrew page reports whether it is listening.
+	ftp := false
+	if c, err := net.DialTimeout("tcp", net.JoinHostPort(body.IP, "1337"), 1500*time.Millisecond); err == nil {
+		c.Close()
+		ftp = true
 	}
 	ok, why := probeLoader(body.IP)
 	detail := ""
@@ -66,7 +73,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 			detail = tr(body.Lang, "chkDetailDiff", strings.TrimPrefix(why, "mismatch:"))
 		}
 	}
-	jsonOK(w, map[string]any{"ok": ok, "conn": ok, "ping": pingHost(body.IP), "detail": detail})
+	jsonOK(w, map[string]any{"ok": ok, "conn": ok, "ping": pingHost(body.IP), "ftp": ftp, "detail": detail})
 }
 
 func quitHandler(w http.ResponseWriter, r *http.Request) {
