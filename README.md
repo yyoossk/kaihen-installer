@@ -1,12 +1,13 @@
 # kaiHEN Installer
 
-A no-install Windows GUI that sets up **kaiHEN** — the homebrew enabler by
-[ouncebrew](https://github.com/ouncebrew) — on a Nintendo Switch 2, using
-**Civilization VII (Switch 1 version, v1.0.0)** as the entry point.
+A no-install GUI — for **Windows and Android** — that sets up **kaiHEN**,
+the homebrew enabler by [ouncebrew](https://github.com/ouncebrew), on a
+Nintendo Switch 2, using **Civilization VII (Switch 1 version, v1.0.0)**
+as the entry point.
 
 Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライゼーション7
-(Switch 1 版 v1.0.0) を入口にして **kaiHEN** を導入するための、インストール
-不要の Windows 用 GUI です。
+(Switch 1 版 v1.0.0) を入口にして **kaiHEN** を導入するための、
+インストール不要の GUI です。**Windows 版と Android 版**があります。
 
 > [!WARNING]
 > The console firmware must be **exactly 23.0.1**. Never accept a system
@@ -20,15 +21,32 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 > NAND を含む全権限を与えるため、悪意のある自作ソフトを実行すると本体が
 > 起動しなくなる恐れがあります。すべて自己責任で使用してください。
 
+> [!CAUTION]
+> **Android version: starting kaiHEN from the phone has not been tested
+> yet.** The GUI, downloads and homebrew installation from the Android
+> app are verified on real hardware, but the kaiHEN launch itself
+> (the phone runs the launch engine internally) is still unconfirmed.
+> If it does not work, use the Windows version to start kaiHEN.
+>
+> **Android 版について: スマホからの kaiHEN 起動はまだ試せていません。**
+> Android 版の画面表示、ダウンロード、自作ソフトのインストールは実機で
+> 確認済みですが、kaiHEN の起動そのもの (スマホ内部で起動エンジンが
+> 動きます) は未確認です。うまくいかない場合は Windows 版で kaiHEN を
+> 起動してください。
+
 ## What it does / できること
 
 - **Installs kaiHEN in a few clicks** — install the loader save, then start
   kaiHEN with the bundled CivSwitch Kit engine (retries are automatic).
 - **Autoloader** — after a one-time setup, kaiHEN starts from **Load Game**
-  alone: no PC, no Pico, no network. Includes the improved CivSwitchFS
-  (timing learning + freeze fix) from the companion fork.
+  alone: no PC, no phone, no Pico, no network. Includes the improved
+  CivSwitchFS (timing learning + freeze fix) from the companion fork.
 - **Homebrew catalog** — install compatible homebrew to the console over
-  FTP (OunceShell), or drag & drop your own `.nro` files and folders.
+  FTP (OunceShell), or send your own `.nro` files and folders.
+- **Self-update** — the app checks this repository's releases at startup.
+  On Windows it replaces itself and restarts (your settings and
+  downloaded files are kept). On Android it downloads the new APK and
+  opens the phone's standard installer.
 - **Network safety helpers** — 90DNS guidance, SWFence router isolation,
   and an Offline WAN Emulator installer for Raspberry Pi.
 - **Pico UF2 included** — ipfix3 loader firmware for Pico 1 / Pico 2,
@@ -36,21 +54,53 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 - **12 languages** — 日本語 / English / Français / Deutsch / Italiano /
   Español / Русский / Português / Polski / 한국어 / 简体中文 / 繁體中文.
 
+## Download / ダウンロード
+
+Get the files from the
+[Releases](https://github.com/yyoossk/kaihen-installer/releases) page.
+
+Releases ページからダウンロードしてください。
+
+### Windows
+
+Download `kaiHEN Installer.zip`, unzip, and run `kaiHEN Installer.exe`.
+No installation, and no Python or Node is required.
+
+`kaiHEN Installer.zip` をダウンロードして展開し、`kaiHEN Installer.exe`
+を実行するだけです。Python や Node のインストールは不要です。
+
+### Android
+
+Download `kaiHEN-Installer-Android.apk` (Android 8.0 or later) and open
+it to install (sideload). The Android app has the same screens and
+features as the Windows version, plus a dark theme. Large files are not
+bundled: kaiHEN and homebrew are downloaded when you use them, exactly
+like on Windows.
+
+`kaiHEN-Installer-Android.apk` (Android 8.0 以上) をダウンロードして
+開くとインストールできます (サイドロード)。画面と機能は Windows 版と
+同じで、ダークテーマもあります。大きなファイルは同梱されておらず、
+kaiHEN や自作ソフトは Windows 版と同じく使うときにダウンロードします。
+
 ## Screen guide / 画面紹介
 
-Screenshots are from build 20261117-0327, Japanese (left) and English
-(right) side by side.
-スクリーンショットは build 20261117-0327 のもので、日本語 (左) と英語
-(右) を横並びにしています。
+Desktop screenshots are from build 20261117-0327, Japanese (left) and
+English (right) side by side. Android screenshots are from build
+20261117-2112.
+
+PC 版のスクリーンショットは build 20261117-0327 のもので、日本語 (左)
+と英語 (右) を横並びにしています。Android 版は build 20261117-2112 の
+ものです。
 
 ### 1. Home / ホーム
 
 The top page. Pick what you want to do: install kaiHEN, set up the
-autoloader, or install homebrew. The build stamp at the top identifies the
-version.
+autoloader, or install homebrew. The build stamp at the top identifies
+the version (hidden in the Android app).
 
 トップページです。「kaiHEN を導入」「オートローダー」「自作ソフトを
-インストール」から選びます。上部の表示がバージョン (build) です。
+インストール」から選びます。上部の表示がバージョン (build) です
+(Android 版では非表示)。
 
 | 日本語 | English |
 | --- | --- |
@@ -59,11 +109,11 @@ version.
 ### 2. Install kaiHEN / kaiHEN を導入
 
 The main page, in order: the first-time steps (flash the Pico UF2), the
-console network settings (90DNS), the in-game autosave setting, the router
-isolation tools, the connection check, and the two big buttons — **install
-the loader save**, then **start kaiHEN**. An optional auto-start watches
-for the loader and runs everything by itself. Results are shown in a
-dialog, and failures say why.
+console network settings (90DNS), the in-game autosave setting, the
+router isolation tools, the connection check, and the two big buttons —
+**install the loader save**, then **start kaiHEN**. An optional
+auto-start watches for the loader and runs everything by itself.
+Results are shown in a dialog, and failures say why.
 
 中心のページです。初回手順 (Pico への UF2 書き込み)、本体のネットワーク
 設定 (90DNS)、ゲーム内のオートセーブ設定、ルーター隔離ツール、接続確認、
@@ -77,18 +127,18 @@ dialog, and failures say why.
 
 ### 3. Autoloader / オートローダー
 
-Sets up the autoloader save. After this one-time setup, starting kaiHEN is
-just **Load Game** on the console — the save runs everything by itself.
-The page explains what each on-screen message means and what to do when a
-run fails. The improved payload **learns the winning timing** and reuses
-it on the next boot, and a frozen run now stops safely with a message
-instead of hanging.
+Sets up the autoloader save. After this one-time setup, starting kaiHEN
+is just **Load Game** on the console — the save runs everything by
+itself. The page explains what each on-screen message means and what to
+do when a run fails. The improved payload **learns the winning timing**
+and reuses it on the next boot, and a frozen run now stops safely with a
+message instead of hanging.
 
 オートローダーのセーブを入れるページです。初回だけ設定すれば、あとは
-本体で「ゲームをロード」するだけで kaiHEN が起動します (PC・Pico・
-ネットワーク不要)。画面に出る文言ごとの意味と、失敗したときの対処も
-書いてあります。改良版ペイロードは**成功したタイミングを学習**して
-次回から再利用し、固まるときはメッセージを出して安全に止まります。
+本体で「ゲームをロード」するだけで kaiHEN が起動します (PC・スマホ・
+Pico・ネットワーク不要)。画面に出る文言ごとの意味と、失敗したときの
+対処も書いてあります。改良版ペイロードは**成功したタイミングを学習**
+して次回から再利用し、固まるときはメッセージを出して安全に止まります。
 
 | 日本語 | English |
 | --- | --- |
@@ -96,15 +146,16 @@ instead of hanging.
 
 ### 4. Install homebrew / 自作ソフトをインストール
 
-Two ways to put homebrew on the console: drag & drop `.nro` files or
-folders onto the page, or pick from the catalog list — the app downloads
-the latest release and sends it to the console over FTP (OunceShell).
-Updates are detected automatically.
+Two ways to put homebrew on the console: pick from the catalog list —
+the app downloads the latest release and sends it to the console over
+FTP (OunceShell) — or send your own `.nro` files and folders (drag &
+drop on Windows). The page's connection check also reports whether
+OunceShell's FTP server is answering.
 
-自作ソフトを本体に入れるページです。`.nro` ファイルやフォルダを
-ドラッグ&ドロップするか、カタログの一覧から選ぶと、最新版を
-ダウンロードして FTP (OunceShell) で本体へ送ります。更新の確認も
-自動です。
+自作ソフトを本体に入れるページです。カタログの一覧から選ぶと、最新版を
+ダウンロードして FTP (OunceShell) で本体へ送ります。自分の `.nro`
+ファイルやフォルダを送ることもできます (Windows 版はドラッグ&ドロップ
+可)。接続確認では OunceShell の FTP の応答も表示します。
 
 | 日本語 | English |
 | --- | --- |
@@ -125,8 +176,9 @@ loader save with the plain one and starts kaiHEN, all on one page.
 
 ### 6. SWFence (router isolation) / SWFence (ルーターで隔離)
 
-Installs SWFence on an OpenWrt router so the console can talk to your LAN
-(this tool) but never to the internet — stronger than DNS-based blocking.
+Installs SWFence on an OpenWrt router so the console can talk to your
+LAN (this tool) but never to the internet — stronger than DNS-based
+blocking.
 
 OpenWrt ルーターに SWFence を入れ、本体を LAN 内だけに隔離するページ
 です。DNS で止める方式より確実にインターネットを遮断できます。
@@ -135,25 +187,64 @@ OpenWrt ルーターに SWFence を入れ、本体を LAN 内だけに隔離す�
 | --- | --- |
 | ![SWFence (Japanese)](docs/screenshots/07-swfence.png) | ![SWFence (English)](docs/screenshots/07-swfence-en.svg) |
 
+### 7. Android app / Android 版
+
+The same screens on the phone. Left: the home page (light theme).
+Right: the homebrew page in the dark theme. The language and theme
+selectors sit in one row, and the app follows the phone's language on
+first launch.
+
+スマホでも同じ画面です。左はホーム (ライトテーマ)、右はダークテーマの
+自作ソフトのページです。言語とテーマの選択は横並びで、初回起動時は
+スマホの言語に合わせます。
+
+| 日本語 | English |
+| --- | --- |
+| ![Android home (Japanese)](docs/screenshots/09-android-home.svg) | ![Android home (English)](docs/screenshots/09-android-home-en.svg) |
+| ![Android homebrew, dark (Japanese)](docs/screenshots/10-android-homebrew.svg) | ![Android homebrew, dark (English)](docs/screenshots/10-android-homebrew-en.svg) |
+
+## Updates / 更新
+
+At startup the app checks the latest release of this repository. If a
+newer build exists, a dialog offers the update:
+
+- **Windows** — the new zip is downloaded, the program and its bundled
+  files are replaced, and the app restarts by itself. Files you created
+  (settings, downloaded homebrew, the kaiHEN folder, staged SD files)
+  are **not** deleted. The previous program is kept as
+  `kaiHEN Installer.exe.old` until the next launch, so you can undo an
+  update by renaming it back.
+- **Android** — the new APK is downloaded inside the app; when the
+  download finishes, the phone's standard install screen opens and you
+  install it there. App data is kept, as with any APK update.
+
+起動時に、このリポジトリの最新リリースを確認します。新しい版があると
+ダイアログが出ます。
+
+- **Windows** — 新しい zip をダウンロードしてプログラムと同梱ファイルを
+  入れ替え、自動で再起動します。設定やダウンロード済みのファイル
+  (自作ソフト、kaiHEN フォルダ、用意した SD ファイル) は**消えません**。
+  前のプログラムは次回起動まで `kaiHEN Installer.exe.old` として残る
+  ので、名前を戻せば更新を取り消せます。
+- **Android** — 新しい APK をアプリ内でダウンロードし、完了すると
+  スマホ標準のインストール画面が開くので、そこでインストールします。
+  アプリのデータは通常の APK 更新と同じく保持されます。
+
 ## Requirements / 前提
 
 - Nintendo Switch 2 on firmware **exactly 23.0.1** (never update)
 - Civilization VII **Switch 1 version, cartridge v1.0.0** (no game updates)
-- A Windows PC on the same network as the console
-- For the first setup: a Raspberry Pi Pico or Pico 2 (not needed afterwards
-  when using the autoloader)
+- A Windows PC, or an Android phone (8.0+), on the same network as the
+  console
+- For the first setup: a Raspberry Pi Pico or Pico 2 (not needed
+  afterwards when using the autoloader)
 - Recommended: wired LAN (dock) + 90DNS on the console
 
-## Download / ダウンロード
-
-Get `kaiHEN Installer.zip` from the
-[Releases](https://github.com/yyoossk/kaihen-installer/releases) page,
-unzip, and run `kaiHEN Installer.exe`. No installation, no Python or Node
-required.
-
-Releases ページから `kaiHEN Installer.zip` をダウンロードして展開し、
-`kaiHEN Installer.exe` を実行するだけです。Python や Node のインストール
-は不要です。
+- Nintendo Switch 2、本体のファームウェアは **23.0.1 ちょうど** (更新禁止)
+- シヴィライゼーション7 **Switch 1 版、カード v1.0.0** (ゲームの更新なし)
+- 本体と同じネットワークにある Windows PC、または Android スマホ (8.0 以上)
+- 初回設定用に Raspberry Pi Pico / Pico 2 (オートローダー使用後は不要)
+- 推奨: 有線 LAN (ドック) + 本体に 90DNS
 
 ## Build from source / ビルド
 
@@ -165,7 +256,9 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build \
 The executable expects its runtime files beside it (`loader/`, `assets/`,
 `pico/`, `apps.json`); the release package contains the full layout. Most
 payloads are downloaded at runtime from their original releases with hash
-verification. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+verification. The Android APK packages the same Go server (built for
+android/arm64) in a thin WebView shell with the launch engine's Node.js
+runtime bundled. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Related projects / 関連プロジェクト
 
