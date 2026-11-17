@@ -46,7 +46,9 @@ const pageHTML = `<!DOCTYPE html>
  @media (max-width: 640px) {
   body { margin: .8em auto; padding: 0 .6em; }
   button { padding: .55em .7em; }
-  .langbar { flex-wrap: wrap; gap: .3em .6em; }
+  .langbar { flex-wrap: wrap; gap: .45em .6em; }
+  .langbar > span:not(:last-child) { display: flex; align-items: center; gap: .4em; flex: 1 1 100%; }
+  .langbar select { flex: 1 1 auto; min-width: 0; }
   .langbar .note { white-space: nowrap; }
   .langbar > span:last-child { flex: 1 1 100%; }
   .langbar > span:last-child button { width: 100%; white-space: nowrap; margin: 0; }
@@ -83,7 +85,7 @@ const pageHTML = `<!DOCTYPE html>
   <option value="dark" data-i18n="theme_dark">ダーク</option>
   <option value="auto" data-i18n="theme_auto">端末に合わせる</option>
 </select></span>
-<span class="note">build __BUILDSTAMP__</span> <span><button id="topquit" onclick="quitApp()" data-i18n="quit_btn">ソフトを終了</button><button id="topback" onclick="backTop()" data-i18n="back_btn" style="display:none">← 戻る</button></span></p>
+<span class="note" id="buildstamp">build __BUILDSTAMP__</span> <span><button id="topquit" onclick="quitApp()" data-i18n="quit_btn">ソフトを終了</button><button id="topback" onclick="backTop()" data-i18n="back_btn" style="display:none">← 戻る</button></span></p>
 <h1 id="apptitle" data-i18n="title">kaiHEN Installer</h1>
 
 
@@ -1183,6 +1185,8 @@ function themeInit() {
   if (IS_ANDROID) {
     var tw = document.getElementById("themewrap");
     if (tw) tw.style.display = "";
+    var bs = document.getElementById("buildstamp");
+    if (bs) bs.style.display = "none";
     document.addEventListener("click", function(e) {
       if (e.target && e.target.closest && e.target.closest("button, select, input, a")) {
         try { if (navigator.vibrate) navigator.vibrate(10); } catch (err) {}
