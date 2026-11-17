@@ -38,21 +38,38 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
 - **Installs kaiHEN in a few clicks** — install the loader save, then start
   kaiHEN with the bundled CivSwitch Kit engine (retries are automatic).
+  **数クリックで kaiHEN を導入** — ローダーのセーブを入れて、同梱の
+  CivSwitch Kit エンジンで kaiHEN を起動します (リトライは自動)。
 - **Autoloader** — after a one-time setup, kaiHEN starts from **Load Game**
   alone: no PC, no phone, no Pico, no network. Includes the improved
   CivSwitchFS (timing learning + freeze fix) from the companion fork.
+  **オートローダー** — 初回だけ設定すれば、あとは**ゲームをロード**する
+  だけで kaiHEN が起動します (PC・スマホ・Pico・ネットワーク不要)。
+  改良版 CivSwitchFS (タイミング学習+フリーズ修正) を同梱。
 - **Homebrew catalog** — install compatible homebrew to the console over
   FTP (OunceShell), or send your own `.nro` files and folders.
+  **自作ソフトのカタログ** — 対応ソフトを FTP (OunceShell) で本体に
+  インストールできます。自分の `.nro` ファイルやフォルダを送ることも
+  できます。
 - **Self-update** — the app checks this repository's releases at startup.
   On Windows it replaces itself and restarts (your settings and
   downloaded files are kept). On Android it downloads the new APK and
   opens the phone's standard installer.
+  **自動更新** — 起動時にこのリポジトリの最新リリースを確認します。
+  Windows ではプログラムを入れ替えて自動で再起動します (設定や
+  ダウンロード済みのファイルは保持)。Android では新しい APK を
+  ダウンロードして、スマホ標準のインストール画面を開きます。
 - **Network safety helpers** — 90DNS guidance, SWFence router isolation,
   and an Offline WAN Emulator installer for Raspberry Pi.
+  **ネットワークの安全策** — 90DNS の案内、SWFence によるルーター隔離、
+  Raspberry Pi 用 Offline WAN Emulator の導入機能。
 - **Pico UF2 included** — ipfix3 loader firmware for Pico 1 / Pico 2,
   JIS (Japanese) and US layouts.
+  **Pico 用 UF2 同梱** — ipfix3 ローダーのファームウェアです
+  (Pico 1 / Pico 2 用、JIS・US 配列)。
 - **12 languages** — 日本語 / English / Français / Deutsch / Italiano /
   Español / Русский / Português / Polski / 한국어 / 简体中文 / 繁體中文.
+  **12言語対応**です。
 
 ## Download / ダウンロード
 
