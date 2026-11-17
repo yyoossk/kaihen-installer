@@ -22,10 +22,12 @@ const pageHTML = `<!DOCTYPE html>
 .tabs button.active { font-weight: bold; border-bottom: 3px solid #2a7; }
 .drop { border: 2px dashed #888; padding: 18px; text-align: center; margin: 8px 0; } .drop.over { border-color: #2a7; background: rgba(42,170,119,.08); }
  .widebtn { display: block; width: 100%; margin: .3em 0; }
- #chkmodal, #quitmodal, #cfmodal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
+ #chkmodal, #quitmodal, #cfmodal, #updmodal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
  #consent { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 10000; }
  #consent .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; min-width: 340px; max-width: 600px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
- #chkmodal .chkbox, #quitmodal .chkbox, #cfmodal .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; text-align: center; min-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
+ #chkmodal .chkbox, #quitmodal .chkbox, #cfmodal .chkbox, #updmodal .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; text-align: center; min-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
+ #updline1 { font-size: 1.4em; font-weight: bold; margin-bottom: .4em; }
+ #updline2 { font-size: 1.05em; margin-bottom: 1em; white-space: pre-line; }
  #chkline1 { font-size: 1.5em; font-weight: bold; margin-bottom: .4em; }
  #chkline2 { font-size: 1.15em; margin-bottom: 1em; }
  #chkline3 { font-size: 1em; margin-bottom: 1em; color: #555; white-space: pre-line; }
@@ -39,7 +41,7 @@ const pageHTML = `<!DOCTYPE html>
  body.dark .langbar { background: #121417; border-bottom-color: #333; }
  body.dark button { background: #2b2f36; color: #eee; border: 1px solid #565d66; border-radius: 4px; }
  body.dark input, body.dark select { background: #1d2025; color: #eee; border: 1px solid #565d66; border-radius: 4px; }
- body.dark #chkmodal .chkbox, body.dark #quitmodal .chkbox, body.dark #cfmodal .chkbox, body.dark #consent .chkbox { background: #1d2025; color: #eee; }
+ body.dark #chkmodal .chkbox, body.dark #quitmodal .chkbox, body.dark #cfmodal .chkbox, body.dark #updmodal .chkbox, body.dark #consent .chkbox { background: #1d2025; color: #eee; }
  body.dark #chkline3 { color: #a8adb5; }
  body.dark .drop { border-color: #666; }
  body.dark .langbar .cap { color: #a8adb5; }
@@ -288,6 +290,7 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 </div>
 <div id="chkmodal"><div class="chkbox"><div id="chkline1"></div><div id="chkline2"></div><div id="chkline3"></div><p><button onclick="hideChk()" data-i18n="dlg_ok">OK</button></p></div></div>
 <div id="quitmodal"><div class="chkbox"><div style="font-size:1.25em" data-i18n="quit_q">本当に終了しますか？</div><p><button onclick="quitDo()" data-i18n="quit_yes">終了する</button> <button onclick="quitCancel()" data-i18n="quit_cancel">キャンセル</button></p></div></div>
+<div id="updmodal"><div class="chkbox"><div id="updline1"></div><div id="updline2"></div><p><button onclick="updApply()" data-i18n="upd_now">更新する</button> <button onclick="updHide()" data-i18n="upd_later">あとで</button></p></div></div>
 <div id="cfmodal"><div class="chkbox"><div style="font-size:1.25em" data-i18n="app_del_list_q">本当にリストから削除しますか？</div><div id="cfname" class="note"></div><p><button onclick="cfAnswer(true)" data-i18n="cf_yes">はい</button> <button onclick="cfAnswer(false)" data-i18n="cf_no">いいえ</button></p></div></div>
 <script>
 var I18N = {"ja":{"title":"kaiHEN Installer","prep_h":"インストール方法","ip_label":"本体の IP アドレス","check_btn":"接続を確認する","log_h":"実行ログ","lang_label":"言語","checking":"--- 接続の確認: ","connected":"ローダーに接続できました","conn_fail":"接続できません: ","enter_ip":"IP アドレスを入力してください","started":" 開始: ","nameA":"手順1","st_bytes":" バイト"},"en":{"title":"kaiHEN Installer","prep_h":"How to install","ip_label":"Console IP address","check_btn":"Check connection","log_h":"Log","lang_label":"Language","checking":"--- Checking connection: ","connected":"Connected to the loader","conn_fail":"Could not connect: ","enter_ip":"Please enter an IP address","started":" started: ","nameA":"Step 1","st_bytes":" bytes"},"fr":{"title":"kaiHEN Installer","prep_h":"Méthode d'installation","ip_label":"Adresse IP de la console","check_btn":"Vérifier la connexion","log_h":"Journal","lang_label":"Langue","checking":"--- Vérification de la connexion : ","connected":"Connecté au chargeur","conn_fail":"Connexion impossible : ","enter_ip":"Veuillez saisir une adresse IP","started":" démarré : ","nameA":"Étape 1","st_bytes":" octets"},"de":{"title":"kaiHEN Installer","prep_h":"Installationsmethode","ip_label":"IP-Adresse der Konsole","check_btn":"Verbindung prüfen","log_h":"Protokoll","lang_label":"Sprache","checking":"--- Verbindung wird geprüft: ","connected":"Mit dem Loader verbunden","conn_fail":"Keine Verbindung: ","enter_ip":"Bitte eine IP-Adresse eingeben","started":" gestartet: ","nameA":"Schritt 1","st_bytes":" Bytes"},"it":{"title":"kaiHEN Installer","prep_h":"Metodo di installazione","ip_label":"Indirizzo IP della console","check_btn":"Verifica connessione","log_h":"Registro","lang_label":"Lingua","checking":"--- Verifica connessione: ","connected":"Connesso al loader","conn_fail":"Connessione impossibile: ","enter_ip":"Inserisci un indirizzo IP","started":" avviato: ","nameA":"Passo 1","st_bytes":" byte"},"es":{"title":"kaiHEN Installer","prep_h":"Método de instalación","ip_label":"Dirección IP de la consola","check_btn":"Comprobar conexión","log_h":"Registro","lang_label":"Idioma","checking":"--- Comprobando conexión: ","connected":"Conectado al cargador","conn_fail":"No se pudo conectar: ","enter_ip":"Introduce una dirección IP","started":" iniciado: ","nameA":"Paso 1","st_bytes":" bytes"},"ru":{"title":"kaiHEN Installer","prep_h":"Способ установки","ip_label":"IP-адрес консоли","check_btn":"Проверить соединение","log_h":"Журнал","lang_label":"Язык","checking":"--- Проверка соединения: ","connected":"Подключено к загрузчику","conn_fail":"Не удалось подключиться: ","enter_ip":"Введите IP-адрес","started":" запущено: ","nameA":"Шаг 1","st_bytes":" байт"},"pt":{"title":"kaiHEN Installer","prep_h":"Método de instalação","ip_label":"Endereço IP do console","check_btn":"Verificar conexão","log_h":"Log","lang_label":"Idioma","checking":"--- Verificando conexão: ","connected":"Conectado ao loader","conn_fail":"Não foi possível conectar: ","enter_ip":"Digite um endereço IP","started":" iniciado: ","nameA":"Passo 1","st_bytes":" bytes"},"pl":{"title":"kaiHEN Installer","prep_h":"Sposób instalacji","ip_label":"Adres IP konsoli","check_btn":"Sprawdź połączenie","log_h":"Dziennik","lang_label":"Język","checking":"--- Sprawdzanie połączenia: ","connected":"Połączono z loaderem","conn_fail":"Nie udało się połączyć: ","enter_ip":"Wpisz adres IP","started":" rozpoczęto: ","nameA":"Krok 1","st_bytes":" bajtów"},"ko":{"title":"kaiHEN Installer","prep_h":"설치 방법","ip_label":"본체 IP 주소","check_btn":"연결 확인","log_h":"실행 로그","lang_label":"언어","checking":"--- 연결 확인: ","connected":"로더에 연결되었습니다","conn_fail":"연결할 수 없습니다: ","enter_ip":"IP 주소를 입력하세요","started":" 시작: ","nameA":"1단계","st_bytes":" 바이트"},"zh-Hans":{"title":"kaiHEN Installer","prep_h":"安装方法","ip_label":"主机 IP 地址","check_btn":"检查连接","log_h":"执行日志","lang_label":"语言","checking":"--- 检查连接: ","connected":"已连接到加载器","conn_fail":"无法连接: ","enter_ip":"请输入 IP 地址","started":" 开始: ","nameA":"步骤1","st_bytes":" 字节"},"zh-Hant":{"title":"kaiHEN Installer","prep_h":"安裝方法","ip_label":"主機 IP 位址","check_btn":"檢查連線","log_h":"執行日誌","lang_label":"語言","checking":"--- 檢查連線: ","connected":"已連線到載入器","conn_fail":"無法連線: ","enter_ip":"請輸入 IP 位址","started":" 開始: ","nameA":"步驟1","st_bytes":" 位元組"}};
@@ -308,6 +311,8 @@ var AD = {"ja": {app_open: "自作ソフトをインストール", back_btn: "�
 for (var k9 in AD) { if (I18N[k9]) { for (var kk9 in AD[k9]) I18N[k9][kk9] = AD[k9][kk9]; } }
 var TH = {"ja": {theme_label: "テーマ", theme_light: "ライト", theme_dark: "ダーク", theme_auto: "端末に合わせる"}, "en": {theme_label: "Theme", theme_light: "Light", theme_dark: "Dark", theme_auto: "Match device"}, "fr": {theme_label: "Thème", theme_light: "Clair", theme_dark: "Sombre", theme_auto: "Selon l'appareil"}, "de": {theme_label: "Design", theme_light: "Hell", theme_dark: "Dunkel", theme_auto: "Geräteeinstellung"}, "it": {theme_label: "Tema", theme_light: "Chiaro", theme_dark: "Scuro", theme_auto: "Segui dispositivo"}, "es": {theme_label: "Tema", theme_light: "Claro", theme_dark: "Oscuro", theme_auto: "Según el dispositivo"}, "ru": {theme_label: "Тема", theme_light: "Светлая", theme_dark: "Тёмная", theme_auto: "Как на устройстве"}, "pt": {theme_label: "Tema", theme_light: "Claro", theme_dark: "Escuro", theme_auto: "Seguir o dispositivo"}, "pl": {theme_label: "Motyw", theme_light: "Jasny", theme_dark: "Ciemny", theme_auto: "Jak na urządzeniu"}, "ko": {theme_label: "테마", theme_light: "라이트", theme_dark: "다크", theme_auto: "기기 설정에 맞춤"}, "zh-Hans": {theme_label: "主题", theme_light: "浅色", theme_dark: "深色", theme_auto: "跟随设备"}, "zh-Hant": {theme_label: "主題", theme_light: "淺色", theme_dark: "深色", theme_auto: "跟隨裝置"}};
 for (var kT in TH) { if (I18N[kT]) { for (var kkT in TH[kT]) I18N[kT][kkT] = TH[kT][kkT]; } }
+var UP = {"ja": {upd_title: "新しい版があります", upd_cur: "現在の版: ", upd_new: "新しい版: ", upd_now: "更新する", upd_later: "あとで", upd_reopen: "自動で再起動しない場合は、アプリを開き直してください。", upd_install: "ダウンロードしました。このあとスマホのインストール画面が開くので、画面の指示に従ってインストールしてください。"}, "en": {upd_title: "An update is available", upd_cur: "Current: ", upd_new: "New: ", upd_now: "Update now", upd_later: "Later", upd_reopen: "If the app does not restart on its own, please reopen it.", upd_install: "Downloaded. The phone's install screen will open next; follow its instructions to install."}, "fr": {upd_title: "Une mise à jour est disponible", upd_cur: "Version actuelle : ", upd_new: "Nouvelle : ", upd_now: "Mettre à jour", upd_later: "Plus tard", upd_reopen: "Si l'application ne redémarre pas toute seule, rouvrez-la.", upd_install: "Téléchargement terminé. L'écran d'installation du téléphone va s'ouvrir ; suivez ses instructions."}, "de": {upd_title: "Ein Update ist verfügbar", upd_cur: "Aktuell: ", upd_new: "Neu: ", upd_now: "Jetzt aktualisieren", upd_later: "Später", upd_reopen: "Wenn die App nicht von selbst neu startet, öffnen Sie sie bitte erneut.", upd_install: "Heruntergeladen. Der Installationsbildschirm des Telefons öffnet sich gleich; folgen Sie den Anweisungen."}, "it": {upd_title: "È disponibile un aggiornamento", upd_cur: "Attuale: ", upd_new: "Nuova: ", upd_now: "Aggiorna ora", upd_later: "Più tardi", upd_reopen: "Se l'app non si riavvia da sola, riaprila.", upd_install: "Download completato. Si aprirà la schermata di installazione del telefono; segui le sue istruzioni."}, "es": {upd_title: "Hay una actualización disponible", upd_cur: "Actual: ", upd_new: "Nueva: ", upd_now: "Actualizar ahora", upd_later: "Más tarde", upd_reopen: "Si la app no se reinicia sola, vuelve a abrirla.", upd_install: "Descargado. A continuación se abrirá la pantalla de instalación del teléfono; sigue sus instrucciones."}, "ru": {upd_title: "Доступно обновление", upd_cur: "Текущая: ", upd_new: "Новая: ", upd_now: "Обновить", upd_later: "Позже", upd_reopen: "Если приложение не перезапустится само, откройте его снова.", upd_install: "Загружено. Далее откроется экран установки телефона; следуйте его инструкциям."}, "pt": {upd_title: "Há uma atualização disponível", upd_cur: "Atual: ", upd_new: "Nova: ", upd_now: "Atualizar agora", upd_later: "Depois", upd_reopen: "Se o app não reiniciar sozinho, abra-o novamente.", upd_install: "Download concluído. A tela de instalação do telefone será aberta; siga as instruções."}, "pl": {upd_title: "Dostępna jest aktualizacja", upd_cur: "Obecna: ", upd_new: "Nowa: ", upd_now: "Aktualizuj teraz", upd_later: "Później", upd_reopen: "Jeśli aplikacja nie uruchomi się ponownie sama, otwórz ją jeszcze raz.", upd_install: "Pobrano. Za chwilę otworzy się ekran instalacji telefonu; postępuj zgodnie z instrukcjami."}, "ko": {upd_title: "새 버전이 있습니다", upd_cur: "현재: ", upd_new: "새 버전: ", upd_now: "업데이트", upd_later: "나중에", upd_reopen: "앱이 자동으로 다시 시작되지 않으면 앱을 다시 열어 주세요.", upd_install: "다운로드했습니다. 이어서 휴대전화의 설치 화면이 열리니 안내에 따라 설치해 주세요."}, "zh-Hans": {upd_title: "有新版本可用", upd_cur: "当前版本：", upd_new: "新版本：", upd_now: "立即更新", upd_later: "以后再说", upd_reopen: "如果应用没有自动重启，请重新打开它。", upd_install: "已下载。接下来会打开手机的安装界面，请按界面提示安装。"}, "zh-Hant": {upd_title: "有新版本可用", upd_cur: "目前版本：", upd_new: "新版本：", upd_now: "立即更新", upd_later: "稍後", upd_reopen: "如果應用程式沒有自動重新啟動，請重新開啟它。", upd_install: "已下載。接下來會開啟手機的安裝畫面，請依畫面指示安裝。"}};
+for (var kU in UP) { if (I18N[kU]) { for (var kkU in UP[kU]) I18N[kU][kkU] = UP[kU][kkU]; } }
 var AE = {
 ja: { app_add: "追加", app_check: "更新を確認", app_install: "インストール", app_delete: "削除", app_update_badge: "更新あり", app_update_found: "更新があります (ダウンロード済み)", app_got: "本体の版", app_none2: "まだ登録がありません" },
 en: { app_add: "Add", app_check: "Check for updates", app_install: "Install", app_delete: "Remove", app_update_badge: "Update", app_update_found: "Update available (downloaded)", app_got: "On console", app_none2: "Nothing registered yet" },
@@ -1159,21 +1164,70 @@ function oweVerify() { oweRun("/api/oweverify", "owe_verify"); }
 function hideConsent() { document.getElementById("consent").style.display = "none"; }
 async function syncConsentFile() { try { await fetch("/api/consentAgree", {method: "POST"}); } catch (e) {} }
 async function initConsent() {
-  if (localStorage.getItem("ci_consent") === "1") { hideConsent(); syncConsentFile(); return; }
+  if (localStorage.getItem("ci_consent") === "1") { hideConsent(); syncConsentFile(); updCheck(); return; }
   try {
     var r = await fetch("/api/consentState");
     var j = await r.json();
-    if (j.given) { localStorage.setItem("ci_consent", "1"); hideConsent(); }
+    if (j.given) { localStorage.setItem("ci_consent", "1"); hideConsent(); updCheck(); }
   } catch (e) {}
 }
 async function consentAgree() {
   localStorage.setItem("ci_consent", "1");
   await syncConsentFile();
   hideConsent();
+  updCheck();
 }
 async function consentDisagree() {
   try { await fetch("/api/quit", {method: "POST"}); } catch (e) {}
   window.close();
+}
+var updLatest = "";
+async function updCheck() {
+  if (window._updChecked) return;
+  window._updChecked = true;
+  try {
+    var r = await fetch("/api/update/check");
+    var j = await r.json();
+    if (!j.available) return;
+    updLatest = j.latest;
+    document.getElementById("updline1").textContent = t("upd_title");
+    document.getElementById("updline2").textContent = t("upd_cur") + j.current + "\n" + t("upd_new") + j.latest;
+    document.getElementById("updmodal").style.display = "flex";
+  } catch (e) {}
+}
+function updHide() { document.getElementById("updmodal").style.display = "none"; }
+function updApply() {
+  updHide();
+  window._updApk = "";
+  var es = new EventSource("/api/update/apply?lang=" + encodeURIComponent(LANG));
+  var res = null;
+  es.onmessage = function(e) {
+    if (e.data.indexOf("UPDATEAPK|") === 0) { window._updApk = e.data.slice(10); return; }
+    if (e.data.indexOf("RESULT|") === 0) { res = e.data === "RESULT|ok"; return; }
+    addLog(e.data);
+  };
+  es.onerror = function() {
+    es.close();
+    if (!res) return;
+    if (window._updApk) {
+      addLog(t("upd_install"));
+      if (window.KaihenBridge && window.KaihenBridge.installUpdate) window.KaihenBridge.installUpdate();
+    } else {
+      updWaitReload();
+    }
+  };
+}
+function updWaitReload() {
+  var tries = 0;
+  var iv = setInterval(async function() {
+    tries++;
+    try {
+      var r = await fetch("/", {cache: "no-store"});
+      var h = await r.text();
+      if (h.indexOf("build " + updLatest) >= 0) { clearInterval(iv); location.reload(); return; }
+    } catch (e) {}
+    if (tries > 40) { clearInterval(iv); addLog(t("upd_reopen")); }
+  }, 1500);
 }
 var IS_ANDROID = /Android/.test(navigator.userAgent || "");
 function themeMode() { try { return localStorage.getItem("ci_theme") || "light"; } catch (e) { return "light"; } }

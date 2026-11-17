@@ -101,6 +101,7 @@ func sseLang(fn func(lang string, log logFn) error) http.HandlerFunc {
 
 func main() {
 	setupExeDir()
+	cleanupUpdateLeftovers()
 	appsInit()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", pageHandler)
@@ -108,6 +109,8 @@ func main() {
 		http.Error(w, "not found", http.StatusNotFound)
 	})
 	mux.HandleFunc("/api/check", checkHandler)
+	mux.HandleFunc("/api/update/check", updateCheckHandler)
+	mux.HandleFunc("/api/update/apply", sseHandlerNoIP(updateApply))
 	mux.HandleFunc("/api/quit", quitHandler)
 	mux.HandleFunc("/api/consentState", consentStateHandler)
 	mux.HandleFunc("/api/consentAgree", consentAgreeHandler)
@@ -133,10 +136,23 @@ func main() {
 	clearWebViewCache()
 	var ln net.Listener
 	var err error
-	for _, p := range []int{47653, 47654, 47655, 47656, 47657} {
-		ln, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p))
-		if err == nil {
-			break
+	// After a self-update the previous process may still hold the
+	// first port for a moment while it exits; wait for that port
+	// instead of drifting to a fallback the open page does not know.
+	if os.Getenv("KAIHEN_UPDATED") != "" {
+		for a := 0; a < 20 && ln == nil; a++ {
+			if a > 0 {
+				time.Sleep(750 * time.Millisecond)
+			}
+			ln, err = net.Listen("tcp", "127.0.0.1:47653")
+		}
+	}
+	if ln == nil {
+		for _, p := range []int{47653, 47654, 47655, 47656, 47657} {
+			ln, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p))
+			if err == nil {
+				break
+			}
 		}
 	}
 	if ln == nil {

@@ -24,8 +24,11 @@ var msgs = map[string]map[string]string{
 		"chkDetailNone": "詳細: ローダーは接続を受けましたが、何も返しませんでした",
 		"chkDetailDiff": "詳細: 応答はありましたが、ローダーの合図ではありませんでした (応答: %s)",
 
-		"fetching": "取得中: %s",
-		"dlErr":    "ダウンロードできません",
+		"fetching":       "取得中: %s",
+		"dlErr":          "ダウンロードできません",
+		"updUnsupported": "この環境では自動更新できません",
+		"updRestart":     "更新しました。再起動します",
+		"updNone":        "すでに最新版です",
 
 		"badContent": "ダウンロードした内容が正しくないため、中止しました",
 
@@ -102,8 +105,11 @@ var msgs = map[string]map[string]string{
 		"chkDetailNone": "Detail: the loader accepted the connection but sent nothing back",
 		"chkDetailDiff": "Detail: something answered, but it was not the loader's echo (reply: %s)",
 
-		"fetching": "Downloading: %s",
-		"dlErr":    "Download failed",
+		"fetching":       "Downloading: %s",
+		"dlErr":          "Download failed",
+		"updUnsupported": "Automatic update is not available on this platform",
+		"updRestart":     "Updated. Restarting now",
+		"updNone":        "You are already on the latest version",
 
 		"badContent": "The downloaded content looks wrong; aborted",
 
@@ -181,8 +187,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "Format d'IP invalide",
 
-		"fetching": "Téléchargement : %s",
-		"dlErr":    "Échec du téléchargement",
+		"fetching":       "Téléchargement : %s",
+		"dlErr":          "Échec du téléchargement",
+		"updUnsupported": "La mise à jour automatique n'est pas disponible sur cette plateforme",
+		"updRestart":     "Mise à jour effectuée. Redémarrage en cours",
+		"updNone":        "Vous avez déjà la dernière version",
 
 		"badContent": "Le contenu téléchargé semble incorrect ; abandon",
 
@@ -260,8 +269,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "Ungültiges IP-Format",
 
-		"fetching": "Download: %s",
-		"dlErr":    "Download fehlgeschlagen",
+		"fetching":       "Download: %s",
+		"dlErr":          "Download fehlgeschlagen",
+		"updUnsupported": "Automatische Updates sind auf dieser Plattform nicht verfügbar",
+		"updRestart":     "Aktualisiert. Neustart läuft",
+		"updNone":        "Sie verwenden bereits die neueste Version",
 
 		"badContent": "Der heruntergeladene Inhalt sieht falsch aus; abgebrochen",
 
@@ -339,8 +351,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "Formato IP non valido",
 
-		"fetching": "Download: %s",
-		"dlErr":    "Download non riuscito",
+		"fetching":       "Download: %s",
+		"dlErr":          "Download non riuscito",
+		"updUnsupported": "L'aggiornamento automatico non è disponibile su questa piattaforma",
+		"updRestart":     "Aggiornato. Riavvio in corso",
+		"updNone":        "Hai già la versione più recente",
 
 		"badContent": "Il contenuto scaricato sembra errato; annullato",
 
@@ -418,8 +433,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "Formato de IP no válido",
 
-		"fetching": "Descargando: %s",
-		"dlErr":    "La descarga falló",
+		"fetching":       "Descargando: %s",
+		"dlErr":          "La descarga falló",
+		"updUnsupported": "La actualización automática no está disponible en esta plataforma",
+		"updRestart":     "Actualizado. Reiniciando ahora",
+		"updNone":        "Ya tienes la versión más reciente",
 
 		"badContent": "El contenido descargado parece incorrecto; cancelado",
 
@@ -497,8 +515,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "Неверный формат IP",
 
-		"fetching": "Загрузка: %s",
-		"dlErr":    "Загрузка не удалась",
+		"fetching":       "Загрузка: %s",
+		"dlErr":          "Загрузка не удалась",
+		"updUnsupported": "Автоматическое обновление недоступно на этой платформе",
+		"updRestart":     "Обновлено. Выполняется перезапуск",
+		"updNone":        "У вас уже последняя версия",
 
 		"badContent": "Загруженное содержимое выглядит неверным; отменено",
 
@@ -576,8 +597,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "Formato de IP inválido",
 
-		"fetching": "A descarregar: %s",
-		"dlErr":    "A transferência falhou",
+		"fetching":       "A descarregar: %s",
+		"dlErr":          "A transferência falhou",
+		"updUnsupported": "A atualização automática não está disponível nesta plataforma",
+		"updRestart":     "Atualizado. Reiniciando agora",
+		"updNone":        "Você já tem a versão mais recente",
 
 		"badContent": "O conteúdo transferido parece errado; abortado",
 
@@ -655,8 +679,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "Nieprawidłowy format IP",
 
-		"fetching": "Pobieranie: %s",
-		"dlErr":    "Pobieranie nie powiodło się",
+		"fetching":       "Pobieranie: %s",
+		"dlErr":          "Pobieranie nie powiodło się",
+		"updUnsupported": "Aktualizacja automatyczna nie jest dostępna na tej platformie",
+		"updRestart":     "Zaktualizowano. Ponowne uruchamianie",
+		"updNone":        "Masz już najnowszą wersję",
 
 		"badContent": "Pobrana zawartość wygląda na błędną; przerwano",
 
@@ -734,8 +761,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "IP 형식이 올바르지 않습니다",
 
-		"fetching": "다운로드 중: %s",
-		"dlErr":    "다운로드에 실패했습니다",
+		"fetching":       "다운로드 중: %s",
+		"dlErr":          "다운로드에 실패했습니다",
+		"updUnsupported": "이 환경에서는 자동 업데이트를 사용할 수 없습니다",
+		"updRestart":     "업데이트했습니다. 다시 시작합니다",
+		"updNone":        "이미 최신 버전입니다",
 
 		"badContent": "다운로드한 내용이 이상합니다. 중단했습니다",
 
@@ -813,8 +843,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "IP 格式无效",
 
-		"fetching": "正在下载: %s",
-		"dlErr":    "下载失败",
+		"fetching":       "正在下载: %s",
+		"dlErr":          "下载失败",
+		"updUnsupported": "此平台不支持自动更新",
+		"updRestart":     "已更新。正在重启",
+		"updNone":        "已是最新版本",
 
 		"badContent": "下载的内容似乎不对,已中止",
 
@@ -892,8 +925,11 @@ var msgs = map[string]map[string]string{
 
 		"ipInvalid": "IP 格式無效",
 
-		"fetching": "正在下載: %s",
-		"dlErr":    "下載失敗",
+		"fetching":       "正在下載: %s",
+		"dlErr":          "下載失敗",
+		"updUnsupported": "此平台不支援自動更新",
+		"updRestart":     "已更新。正在重新啟動",
+		"updNone":        "已是最新版本",
 
 		"badContent": "下載的內容似乎不對,已中止",
 
