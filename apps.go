@@ -84,6 +84,7 @@ func builtinApps() []*appEntry {
 		{ID: "Azkali/moonlight-nx2", Host: "gitlab", Kind: "nro", Builtin: true, Name: "Moonlight", Source: "release"},
 		{ID: "XITRIX/Moonlight-Switch", Kind: "nro", Builtin: true, Name: "Moonlight-Switch", Source: "release"},
 		{ID: "Olmectron/dekopon", Kind: "nro", Builtin: true, Name: "Dekopon for SW2", Source: "release"},
+		{ID: "mizuiroame/kaiplayer", Kind: "nro", Builtin: true, Name: "KaiPlayer", Source: "release"},
 	}
 }
 
@@ -194,20 +195,35 @@ func fetchRelease(a *appEntry) (string, []relAsset, error) {
 		}
 		return rel.TagName, out, nil
 	}
+	tag := ""
 	_, final, err := httpGetFinal("https://github.com/" + a.ID + "/releases/latest")
-	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+	if err == nil {
+		if i := strings.Index(final, "/releases/tag/"); i >= 0 {
+			if t, uerr := url.PathUnescape(strings.TrimSuffix(final[i+len("/releases/tag/"):], "/")); uerr == nil {
+				tag = t
+			}
+		}
+	}
+	if tag == "" {
+		// Prerelease-only repositories have no /releases/latest target
+		// (it 404s); take the newest entry from the releases list page
+		// instead, which includes prereleases.
+		body, lerr := httpGet("https://github.com/" + a.ID + "/releases")
+		if lerr != nil {
+			if strings.Contains(lerr.Error(), "404") {
+				return "", nil, errNoRelease
+			}
+			return "", nil, lerr
+		}
+		m := regexp.MustCompile(`/releases/tag/([^"/]+)`).FindSubmatch(body)
+		if m == nil {
 			return "", nil, errNoRelease
 		}
-		return "", nil, err
-	}
-	i := strings.Index(final, "/releases/tag/")
-	if i < 0 {
-		return "", nil, errNoRelease
-	}
-	tag, err := url.PathUnescape(strings.TrimSuffix(final[i+len("/releases/tag/"):], "/"))
-	if err != nil || tag == "" {
-		return "", nil, errNoRelease
+		t, uerr := url.PathUnescape(string(m[1]))
+		if uerr != nil || t == "" {
+			return "", nil, errNoRelease
+		}
+		tag = t
 	}
 	if tag == a.LatestTag && a.AssetURL != "" {
 		return tag, nil, nil
