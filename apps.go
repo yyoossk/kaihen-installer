@@ -85,6 +85,7 @@ func builtinApps() []*appEntry {
 		{ID: "XITRIX/Moonlight-Switch", Kind: "nro", Builtin: true, Name: "Moonlight-Switch", Source: "release"},
 		{ID: "Olmectron/dekopon", Kind: "nro", Builtin: true, Name: "Dekopon for SW2", Source: "release"},
 		{ID: "mizuiroame/kaiplayer", Kind: "nro", Builtin: true, Name: "KaiPlayer", Source: "release"},
+		{ID: "mizuiroame/kairadio", Kind: "nro", Builtin: true, Name: "KaiRadio", Source: "release"},
 	}
 }
 
