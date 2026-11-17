@@ -42,12 +42,17 @@ const pageHTML = `<!DOCTYPE html>
  body.dark #chkmodal .chkbox, body.dark #quitmodal .chkbox, body.dark #cfmodal .chkbox, body.dark #consent .chkbox { background: #1d2025; color: #eee; }
  body.dark #chkline3 { color: #a8adb5; }
  body.dark .drop { border-color: #666; }
+ body.dark .langbar .cap { color: #a8adb5; }
  body.dark .approw { border-bottom-color: #333; }
  @media (max-width: 640px) {
   body { margin: .8em auto; padding: 0 .6em; }
   button { padding: .55em .7em; }
   .langbar { flex-wrap: wrap; gap: .45em .6em; }
-  .langbar > span:not(:last-child) { display: flex; align-items: center; gap: .4em; flex: 1 1 100%; }
+  .langbar > span:not(:last-child) { display: flex; align-items: center; gap: .4em; min-width: 0; }
+  .langbar > span:nth-child(1) { flex: 4 1 0; flex-direction: column; align-items: stretch; gap: .15em; }
+  .langbar > span:nth-child(2) { flex: 6 1 0; flex-direction: column; align-items: stretch; gap: .15em; }
+  .langbar .cap { font-size: .85em; color: #555; }
+  .langbar > span:nth-child(3) { flex: 1 1 100%; }
   .langbar select { flex: 1 1 auto; min-width: 0; }
   .langbar .note { white-space: nowrap; }
   .langbar > span:last-child { flex: 1 1 100%; }
@@ -64,7 +69,7 @@ const pageHTML = `<!DOCTYPE html>
 </head>
 <body>
 <div id="consent"><div class="chkbox"><div style="font-size:1.25em;text-align:center" data-i18n="consent_h">ご利用にあたって</div><p class="note" style="text-align:left" data-i18n="consent_body">このソフトウェアは、Nintendo Switch 2 本体で非公式のソフトウェア (homebrew) を動かすためのツールです。本体の改造や非公式ソフトウェアの使用は、任天堂の保証の対象外となる場合があります。また、本体の故障 (いわゆる文鎮化)、データの消失、アカウントや本体の利用制限など、予期しない損害が発生する可能性があります。このソフトウェアの使用によって生じたいかなる損害についても、作者は一切の責任を負いません。以上の内容を理解し、すべて自己責任で使用することに同意できる場合のみ、「同意する」を押してください。</p><p style="text-align:center"><select id="langSel2"></select></p><p style="text-align:center"><button onclick="consentAgree()" data-i18n="consent_agree">同意する</button> <button onclick="consentDisagree()" data-i18n="consent_disagree">同意しない</button></p></div></div>
-<p class="langbar"><span><span data-i18n="lang_label">言語</span>:
+<p class="langbar"><span><span class="cap"><span data-i18n="lang_label">言語</span>:</span>
 <select id="langSel">
   <option value="ja">日本語</option>
   <option value="en">English</option>
@@ -79,7 +84,7 @@ const pageHTML = `<!DOCTYPE html>
   <option value="zh-Hans">简体中文</option>
   <option value="zh-Hant">繁體中文</option>
 </select></span>
-<span id="themewrap" style="display:none"><span data-i18n="theme_label">テーマ</span>:
+<span id="themewrap" style="display:none"><span class="cap"><span data-i18n="theme_label">テーマ</span>:</span>
 <select id="themeSel" onchange="themeSet(this.value)">
   <option value="light" data-i18n="theme_light">ライト</option>
   <option value="dark" data-i18n="theme_dark">ダーク</option>
