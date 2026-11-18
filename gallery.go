@@ -261,7 +261,10 @@ func (s *galSession) retr(abs string, offset int64, w io.Writer) error {
 	return err
 }
 
-// del deletes one file (absolute FTP path).
+// del deletes one file (absolute FTP path). Note: this removes
+// only the file; the console's album index keeps its own entry,
+// which the console then shows as unreadable until the user
+// deletes that entry on the console itself.
 func (s *galSession) del(abs string) error {
 	code, _ := s.cmd("DELE " + abs)
 	if code != 250 {
@@ -470,6 +473,7 @@ func galleryDeleteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func galleryListHandler(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
 	q := r.URL.Query()
 	ip, src, lang := q.Get("ip"), q.Get("src"), q.Get("lang")
 	if !validIP(ip) {
@@ -501,6 +505,7 @@ func galleryListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
 		"items": items, "photos": photos, "videos": videos, "src": used,
+		"secs": float64(time.Since(started).Milliseconds()) / 1000,
 	})
 }
 
