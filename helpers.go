@@ -18,6 +18,29 @@ import (
 
 type logFn func(string)
 
+// lanDialTimeout dials a LAN address (console, router, Pi). When the
+// Android shell reports the phone's Wi-Fi address in KAIHEN_LAN_IP, the
+// socket is bound to it: a Wi-Fi network without internet stops being
+// Android's default network, and unbound LAN traffic then leaves via
+// mobile data and never reaches the device (every connect times out --
+// the SWFence failure seen on real hardware on 2026-11-19). If the
+// bound dial fails (stale address after a network change), one unbound
+// retry keeps every previously working setup working.
+func lanDialTimeout(network, addr string, timeout time.Duration) (net.Conn, error) {
+	if ip := net.ParseIP(strings.TrimSpace(os.Getenv("KAIHEN_LAN_IP"))); ip != nil && ip.To4() != nil {
+		var local net.Addr
+		if strings.HasPrefix(network, "udp") {
+			local = &net.UDPAddr{IP: ip}
+		} else {
+			local = &net.TCPAddr{IP: ip}
+		}
+		if conn, err := (&net.Dialer{LocalAddr: local, Timeout: timeout}).Dial(network, addr); err == nil {
+			return conn, nil
+		}
+	}
+	return net.DialTimeout(network, addr, timeout)
+}
+
 func setupExeDir() {
 	if h := os.Getenv("KAIHEN_HOME"); h != "" {
 		exeDir = h
@@ -59,7 +82,7 @@ func validIP(s string) bool {
 // sendCode delivers one JS payload to the loader on ip:9026, half-closes the
 // write side and reads the loader's reply until EOF or the timeout.
 func sendCode(ip, code string, timeout time.Duration) (string, error) {
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, fmt.Sprint(loaderPort)), 8*time.Second)
+	conn, err := lanDialTimeout("tcp", net.JoinHostPort(ip, fmt.Sprint(loaderPort)), 8*time.Second)
 	if err != nil {
 		return "", err
 	}

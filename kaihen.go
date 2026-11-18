@@ -481,7 +481,7 @@ func pushBridge(send logFn, consoleIP, pcIP string, done <-chan struct{}) error 
 	deadline := time.Now().Add(90 * time.Second)
 	var conn net.Conn
 	for {
-		conn, err = net.DialTimeout("tcp", net.JoinHostPort(consoleIP, "9026"), 5*time.Second)
+		conn, err = lanDialTimeout("tcp", net.JoinHostPort(consoleIP, "9026"), 5*time.Second)
 		if err == nil {
 			break
 		}
@@ -544,7 +544,7 @@ func ozConnect(ip, lang string) (*ozSession, error) {
 }
 
 func ozConnectAddr(addr, lang string) (*ozSession, error) {
-	ctrl, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	ctrl, err := lanDialTimeout("tcp", addr, 10*time.Second)
 	if err != nil {
 		return nil, errors.New(tr(lang, "khFtpConn"))
 	}
@@ -651,7 +651,7 @@ func (s *ozSession) stor(rel string, data []byte) error {
 		fmt.Sscanf(strings.TrimSpace(p), "%d", &nums[i])
 	}
 	host, _, _ := net.SplitHostPort(s.ctrl.RemoteAddr().String())
-	dc, err := net.DialTimeout("tcp", net.JoinHostPort(host, fmt.Sprint(nums[4]<<8|nums[5])), 10*time.Second)
+	dc, err := lanDialTimeout("tcp", net.JoinHostPort(host, fmt.Sprint(nums[4]<<8|nums[5])), 10*time.Second)
 	if err != nil {
 		return errors.New(tr(s.lang, "ftpErr"))
 	}

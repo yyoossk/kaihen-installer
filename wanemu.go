@@ -88,7 +88,7 @@ func oweDial(ip, user, pass string) (*ssh.Client, error) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}
-	return ssh.Dial("tcp", host, conf)
+	return sshDialLAN(host, conf)
 }
 
 func oweInstallHandler(w http.ResponseWriter, r *http.Request) { oweServe(w, r, false) }

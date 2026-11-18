@@ -56,7 +56,7 @@ type galSession struct {
 }
 
 func galConnect(ip string, port int) (*galSession, error) {
-	ctrl, err := net.DialTimeout("tcp", net.JoinHostPort(ip, strconv.Itoa(port)), 8*time.Second)
+	ctrl, err := lanDialTimeout("tcp", net.JoinHostPort(ip, strconv.Itoa(port)), 8*time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (s *galSession) pasv() (net.Conn, error) {
 		n[k] = v
 	}
 	host := fmt.Sprintf("%d.%d.%d.%d", n[0], n[1], n[2], n[3])
-	return net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(n[4]*256+n[5])), 10*time.Second)
+	return lanDialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(n[4]*256+n[5])), 10*time.Second)
 }
 
 // transfer runs a data command and returns the data connection; the

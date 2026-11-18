@@ -57,7 +57,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	// OunceShell's FTP server (port 1337) is what homebrew installs
 	// talk to; the homebrew page reports whether it is listening.
 	ftp := false
-	if c, err := net.DialTimeout("tcp", net.JoinHostPort(body.IP, "1337"), 1500*time.Millisecond); err == nil {
+	if c, err := lanDialTimeout("tcp", net.JoinHostPort(body.IP, "1337"), 1500*time.Millisecond); err == nil {
 		c.Close()
 		ftp = true
 	}

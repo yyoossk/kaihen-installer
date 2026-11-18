@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -165,5 +166,25 @@ func TestFenceChkUnreachable(t *testing.T) {
 	}
 	if j["ok"] != false || j["error"] == "" {
 		t.Errorf("unreachable chk = %v, want ok:false with an error", j)
+	}
+}
+
+// With a stale KAIHEN_LAN_IP (an address the machine does not own),
+// the bound dial fails locally and lanDialTimeout must fall back to an
+// unbound dial so the check still reaches the router.
+func TestFenceChkStaleLANIPFallback(t *testing.T) {
+	addr := newFakeOpenWrt(t).addr()
+	os.Setenv("KAIHEN_LAN_IP", "203.0.113.99")
+	defer os.Unsetenv("KAIHEN_LAN_IP")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/fencechk",
+		strings.NewReader(`{"host":"`+addr+`","user":"root","pass":"pw","lang":"ja"}`))
+	fenceChkHandler(rec, req)
+	var got map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["ok"] != true {
+		t.Fatalf("stale KAIHEN_LAN_IP should fall back to an unbound dial: %v", got)
 	}
 }

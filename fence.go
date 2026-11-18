@@ -56,7 +56,21 @@ func fenceDial(router, pass string) (*ssh.Client, error) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}
-	return ssh.Dial("tcp", host, conf)
+	return sshDialLAN(host, conf)
+}
+
+// sshDialLAN dials over lanDialTimeout so SSH to a router on a
+// no-internet Wi-Fi still leaves via Wi-Fi on Android.
+func sshDialLAN(host string, conf *ssh.ClientConfig) (*ssh.Client, error) {
+	conn, err := lanDialTimeout("tcp", host, conf.Timeout)
+	if err != nil {
+		return nil, err
+	}
+	c, chans, reqs, err := ssh.NewClientConn(conn, host, conf)
+	if err != nil {
+		return nil, err
+	}
+	return ssh.NewClient(c, chans, reqs), nil
 }
 
 func fenceExec(cl *ssh.Client, cmd string) (string, error) {
