@@ -261,6 +261,15 @@ func (s *galSession) retr(abs string, offset int64, w io.Writer) error {
 	return err
 }
 
+// del deletes one file (absolute FTP path).
+func (s *galSession) del(abs string) error {
+	code, _ := s.cmd("DELE " + abs)
+	if code != 250 {
+		return fmt.Errorf("DELE: %d", code)
+	}
+	return nil
+}
+
 func (s *galSession) size(abs string) (int64, bool) {
 	code, line := s.cmd("SIZE " + abs)
 	if code != 213 {
@@ -404,6 +413,60 @@ func galWriteErr(w http.ResponseWriter, lang string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": tr(lang, "galErr")})
+}
+
+// galleryCheckHandler probes both gallery FTP servers the way the
+// gallery itself connects (login + album folder), so the page's
+// connection check can say which of them answers.
+func galleryCheckHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	ip, lang := q.Get("ip"), q.Get("lang")
+	w.Header().Set("Content-Type", "application/json")
+	if !validIP(ip) {
+		galWriteErr(w, lang, http.StatusBadRequest)
+		return
+	}
+	probe := func(port int) bool {
+		s, err := galConnect(ip, port)
+		if err != nil {
+			return false
+		}
+		s.close()
+		return true
+	}
+	json.NewEncoder(w).Encode(map[string]bool{
+		"oz":     probe(galOzPort),
+		"plugin": probe(galPluginPort),
+	})
+}
+
+// galleryDeleteHandler deletes one album file over FTP.
+// Body: {"ip", "src", "path", "lang"} as JSON.
+func galleryDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		IP   string `json:"ip"`
+		Src  string `json:"src"`
+		Path string `json:"path"`
+		Lang string `json:"lang"`
+	}
+	json.NewDecoder(r.Body).Decode(&body)
+	w.Header().Set("Content-Type", "application/json")
+	rel, okRel := galCleanRel(body.Path)
+	if !validIP(body.IP) || !okRel || galMediaType(rel) == "" {
+		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": tr(body.Lang, "galErr")})
+		return
+	}
+	s, _, err := galResolve(body.IP, body.Src)
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": tr(body.Lang, "galErr")})
+		return
+	}
+	defer s.close()
+	if err := s.del(s.prefix + galAlbumRoot + "/" + rel); err != nil {
+		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": tr(body.Lang, "galErr")})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"ok": true})
 }
 
 func galleryListHandler(w http.ResponseWriter, r *http.Request) {

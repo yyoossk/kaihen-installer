@@ -122,6 +122,8 @@ func main() {
 	mux.HandleFunc("/api/kaihenStart", kaihenStartHandler)
 	mux.HandleFunc("/api/nroFtp", nroFtpHandler)
 	mux.HandleFunc("/api/gallery/list", galleryListHandler)
+	mux.HandleFunc("/api/gallery/check", galleryCheckHandler)
+	mux.HandleFunc("/api/gallery/delete", galleryDeleteHandler)
 	mux.HandleFunc("/api/gallery/file", galleryFileHandler)
 	mux.HandleFunc("/api/gallery/thumb", galleryThumbHandler)
 	mux.HandleFunc("/api/apps", appsListHandler)

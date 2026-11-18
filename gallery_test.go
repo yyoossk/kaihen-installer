@@ -177,6 +177,13 @@ func (f *fakeGalFTP) handle(c net.Conn) {
 				restAt = 0
 			}
 			data(b)
+		case "DELE":
+			if _, ok := f.files[arg]; ok {
+				delete(f.files, arg)
+				send("250 deleted")
+			} else {
+				send("550 no file")
+			}
 		case "QUIT":
 			send("221 bye")
 			return
@@ -291,6 +298,33 @@ func TestGalRetrRangeAndThumb(t *testing.T) {
 	}
 	if img.Bounds().Dx() != 64 || img.Bounds().Dy() != 48 {
 		t.Errorf("thumb size = %v, want 64x48 (already small)", img.Bounds())
+	}
+}
+
+func TestGalDelete(t *testing.T) {
+	files := galTestFiles()
+	f := newFakeGalFTP(t, files, false)
+	s, err := galConnect("127.0.0.1", f.port())
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer s.close()
+	victim := "/Nintendo/Album/2026/11/17/2026111710300000-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.jpg"
+	if err := s.del(victim); err != nil {
+		t.Fatalf("del: %v", err)
+	}
+	if _, ok := files[victim]; ok {
+		t.Error("file still present after DELE")
+	}
+	if err := s.del(victim); err == nil {
+		t.Error("del of a missing file succeeded, want error")
+	}
+	items, err := s.walk()
+	if err != nil {
+		t.Fatalf("walk: %v", err)
+	}
+	if len(items) != 2 {
+		t.Errorf("items after delete = %d, want 2", len(items))
 	}
 }
 
