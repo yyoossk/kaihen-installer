@@ -88,6 +88,7 @@ func builtinApps() []*appEntry {
 		{ID: "mizuiroame/kairadio", Kind: "nro", Builtin: true, Name: "KaiRadio", Source: "release"},
 		{ID: "mizuiroame/kaivideo", Kind: "nro", Builtin: true, Name: "KaiVideo", Source: "release"},
 		{ID: "HerXayah/brewstore", Kind: "nro", Builtin: true, Name: "BrewStore", Source: "release"},
+		{ID: "s8n/blacklist-tool", Kind: "nro", Builtin: true, Name: "Blacklist Tool", Source: "release"},
 	}
 }
 
@@ -231,9 +232,46 @@ func fetchRelease(a *appEntry) (string, []relAsset, error) {
 	if tag == a.LatestTag && a.AssetURL != "" {
 		return tag, nil, nil
 	}
-	body, err := httpGet("https://github.com/" + a.ID + "/releases/expanded_assets/" + url.PathEscape(tag))
+	out, err := fetchReleaseAssets(a.ID, tag)
 	if err != nil {
 		return "", nil, err
+	}
+	if len(out) > 0 {
+		return tag, out, nil
+	}
+	// The newest release carries no downloadable files at all (the
+	// author published the tag without attaching binaries). Walk the
+	// releases list, newest first, and use the first older release
+	// that actually has files; when the author attaches the binaries
+	// to the newest release later, it wins again automatically.
+	listBody, lerr := httpGet("https://github.com/" + a.ID + "/releases")
+	if lerr != nil {
+		return tag, out, nil
+	}
+	seenTags := map[string]bool{tag: true}
+	for _, m := range regexp.MustCompile(`/releases/tag/([^"/]+)`).FindAllSubmatch(listBody, -1) {
+		t, uerr := url.PathUnescape(string(m[1]))
+		if uerr != nil || t == "" || seenTags[t] {
+			continue
+		}
+		seenTags[t] = true
+		assets, ferr := fetchReleaseAssets(a.ID, t)
+		if ferr != nil {
+			continue
+		}
+		if len(assets) > 0 {
+			return t, assets, nil
+		}
+	}
+	return tag, out, nil
+}
+
+// fetchReleaseAssets returns the downloadable files attached to one
+// GitHub release, parsed from its expanded_assets fragment.
+func fetchReleaseAssets(id, tag string) ([]relAsset, error) {
+	body, err := httpGet("https://github.com/" + id + "/releases/expanded_assets/" + url.PathEscape(tag))
+	if err != nil {
+		return nil, err
 	}
 	re := regexp.MustCompile(`href="(/[^"]+/releases/download/[^"]+)"`)
 	out := []relAsset{}
@@ -247,7 +285,7 @@ func fetchRelease(a *appEntry) (string, []relAsset, error) {
 		name, _ := url.PathUnescape(href[strings.LastIndex(href, "/")+1:])
 		out = append(out, relAsset{Name: name, URL: "https://github.com" + href})
 	}
-	return tag, out, nil
+	return out, nil
 }
 
 // pickNroAsset selects the downloadable asset of a kaiHEN homebrew
