@@ -89,6 +89,9 @@ func builtinApps() []*appEntry {
 		{ID: "mizuiroame/kaivideo", Kind: "nro", Builtin: true, Name: "KaiVideo", Source: "release"},
 		{ID: "HerXayah/brewstore", Kind: "nro", Builtin: true, Name: "BrewStore", Source: "release"},
 		{ID: "s8n/blacklist-tool", Kind: "nro", Builtin: true, Name: "Blacklist Tool", Source: "release"},
+		{ID: "Rodpad/SW2NES", Kind: "nro", Builtin: true, Name: "SW2NES", Source: "release"},
+		{ID: "Rodpad/SW2SNES", Kind: "nro", Builtin: true, Name: "SW2SNES", Source: "release"},
+		{ID: "Rodpad/SW2Transfer", Kind: "nro", Builtin: true, Name: "SW2Transfer", Source: "release"},
 	}
 }
 
