@@ -537,24 +537,67 @@ const (
 // package pair for the router's release family, verifying SHA256SUMS
 // on the router exactly like upstream's offline procedure. No network
 // is used on either side.
-// fenceNetDiag streams a short router network self-check into the
-// install log: routing table, addresses, gateway and public-IP
-// reachability, DNS, and one IPv4 fetch of the first feed. It runs
-// when the package lists could not be fetched at all, so a single
-// failed install shows WHY the router cannot reach the internet.
-func fenceNetDiag(cl *ssh.Client, send logFn) {
+// fenceNetDiag runs a short router network self-check (routing
+// table, addresses, gateway and public-IP reachability, DNS, one
+// IPv4 fetch of the first feed), streams it into the install log,
+// and returns a one-line summary that callers embed in the failure
+// message itself, so the reason survives even a truncated log copy.
+func fenceNetDiag(cl *ssh.Client, send logFn) string {
 	send("--- router network diagnostics ---")
-	for _, c := range []string{
-		"ip -4 route",
-		"ip -4 -o addr show scope global",
-		"gw=$(ip -4 route | awk '/^default/{print $3; exit}'); echo gateway=$gw; [ -n \"$gw\" ] && ping -c 1 -W 2 $gw",
-		"ping -c 1 -W 2 1.1.1.1",
-		"nslookup downloads.openwrt.org 127.0.0.1 | head -8",
-		"u=$(awk '$1==\"src/gz\"{print $3; exit}' /etc/opkg/distfeeds.conf); echo feed=$u; uclient-fetch -4 -O /dev/null \"$u/Packages.gz\"; echo fetch_exit=$?",
-	} {
+	run := func(c string) string {
 		send("$ " + c)
-		fenceRunStdin(cl, c, "", send)
+		out, _ := fenceExec(cl, c)
+		for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+			if line != "" {
+				send(line)
+			}
+		}
+		return out
 	}
+	routes := run("ip -4 route")
+	gw := ""
+	for _, line := range strings.Split(routes, "\n") {
+		f := strings.Fields(line)
+		if len(f) >= 3 && f[0] == "default" && net.ParseIP(f[2]) != nil {
+			gw = f[2]
+			break
+		}
+	}
+	addrsOut := run("ip -4 -o addr show scope global")
+	var addrs []string
+	for _, line := range strings.Split(addrsOut, "\n") {
+		f := strings.Fields(line)
+		for i, tok := range f {
+			if tok == "inet" && i+1 < len(f) && len(f) >= 2 {
+				addrs = append(addrs, f[1]+":"+f[i+1])
+			}
+		}
+	}
+	pingOK := func(out string) string {
+		if strings.Contains(out, "1 received") || strings.Contains(out, "0% packet loss") {
+			return "ok"
+		}
+		return "ng"
+	}
+	gwPing := "ng"
+	if gw != "" {
+		gwPing = pingOK(run("ping -c 1 -W 2 " + gw))
+	} else {
+		send("no default gateway")
+	}
+	netPing := pingOK(run("ping -c 1 -W 2 1.1.1.1"))
+	dnsOut := run("nslookup downloads.openwrt.org 127.0.0.1 | head -8")
+	dns := "ng"
+	if strings.Count(dnsOut, "Address") >= 2 && !strings.Contains(dnsOut, "can't") {
+		dns = "ok"
+	}
+	fetchOut := run("u=$(awk '$1==\"src/gz\"{print $3; exit}' /etc/opkg/distfeeds.conf); uclient-fetch -4 -O /dev/null \"$u/Packages.gz\"; echo EXIT=$?")
+	v4 := "ng"
+	if strings.Contains(fetchOut, "EXIT=0") {
+		v4 = "ok"
+	}
+	return fmt.Sprintf("diag[gw=%s gwping=%s netping=%s dns=%s v4fetch=%s addrs=%s]",
+		gw, gwPing, netPing, dns, v4, strings.Join(addrs, ","))
 }
 
 func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
@@ -621,15 +664,13 @@ func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
 		}
 	}
 	if updErr != nil {
-		// The router cannot fetch its package lists either way.
-		// Leave a network self-check in the log so the cause
-		// (no default route, unreachable gateway, broken DNS,
-		// IPv6-only failure) can be read off one run.
-		fenceNetDiag(cl, send)
-		return fmt.Errorf("%s: %w", upd, updErr)
+		// The router cannot fetch its package lists either way:
+		// diagnose its network and put the summary in the failure
+		// message itself.
+		return fmt.Errorf("%s: %w | %s", upd, updErr, fenceNetDiag(cl, send))
 	}
 	if _, err := fenceRunStdin(cl, "cd "+dir+" && "+fencePathPrefix+inst, "", send); err != nil {
-		return err
+		return fmt.Errorf("%w | %s", err, fenceNetDiag(cl, send))
 	}
 	if _, err := fenceRunStdin(cl, fenceRepoCmd, "", send); err != nil {
 		return err

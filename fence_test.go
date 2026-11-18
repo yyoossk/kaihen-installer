@@ -356,6 +356,25 @@ func TestFenceInstallDiagOnFetchFailure(t *testing.T) {
 	}
 }
 
+// A partial opkg update can exit 0 with the decisive feed missing;
+// the install step then fails. That path must also diagnose, and
+// the one-line summary must ride in the failure message itself.
+func TestFenceInstallDiagOnInstallFailure(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	f := newFakeOpenWrt(t)
+	f.failCmds["cd /tmp/swfence-bundle/SWFence && "+fencePathPrefix+"opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk"] = true
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "router network diagnostics") || !strings.Contains(body, "diag[") {
+		t.Fatalf("an install-step failure should carry diagnostics and the summary line: %s", body)
+	}
+}
+
 func TestFenceValidTag(t *testing.T) {
 	for _, ok := range []string{"v1.0.0", "1.2.3", "v0.1.0-beta"} {
 		if !fenceValidTag(ok) {
