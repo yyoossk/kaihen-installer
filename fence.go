@@ -17,11 +17,32 @@ import (
 
 type fenceBody struct {
 	Router  string `json:"router"`
+	Host    string `json:"host"`
 	Pass    string `json:"pass"`
 	Lang    string `json:"lang"`
 	MacWiFi string `json:"macwifi"`
 	MacEth  string `json:"maceth"`
 	Subnet  string `json:"subnet"`
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// addr returns the router address. The page sends it as "host"
+// (and as "ip" for the install query); "router" is also accepted.
+// The two sides once disagreed on the key name, which left the
+// address empty and made every SWFence operation fail at dial.
+func (b fenceBody) addr() string {
+	if b.Router != "" {
+		return b.Router
+	}
+	return b.Host
 }
 
 func fenceDial(router, pass string) (*ssh.Client, error) {
@@ -126,7 +147,7 @@ func fenceLeases(cl *ssh.Client) []map[string]string {
 func fenceChkHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	json.NewDecoder(r.Body).Decode(&b)
-	cl, err := fenceDial(b.Router, b.Pass)
+	cl, err := fenceDial(b.addr(), b.Pass)
 	if err != nil {
 		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH")})
 		return
@@ -184,8 +205,8 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	if r.URL.RawQuery != "" {
 		q := r.URL.Query()
-		b = fenceBody{Router: q.Get("router"), Pass: q.Get("pass"), Lang: q.Get("lang"),
-			MacWiFi: q.Get("macwifi"), MacEth: q.Get("maceth"), Subnet: q.Get("subnet")}
+		b = fenceBody{Router: firstNonEmpty(q.Get("router"), q.Get("ip")), Pass: q.Get("pass"), Lang: q.Get("lang"),
+			MacWiFi: firstNonEmpty(q.Get("macwifi"), q.Get("macw")), MacEth: firstNonEmpty(q.Get("maceth"), q.Get("mace")), Subnet: q.Get("subnet")}
 	} else {
 		json.NewDecoder(r.Body).Decode(&b)
 	}
@@ -219,7 +240,7 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 		runningMu.Unlock()
 	}()
 
-	cl, err := fenceDial(b.Router, b.Pass)
+	cl, err := fenceDial(b.addr(), b.Pass)
 	if err != nil {
 		fail(errors.New(tr(lang, "fSSH")))
 		return
@@ -316,7 +337,7 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 func fenceStatusHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	json.NewDecoder(r.Body).Decode(&b)
-	cl, err := fenceDial(b.Router, b.Pass)
+	cl, err := fenceDial(b.addr(), b.Pass)
 	if err != nil {
 		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH")})
 		return
@@ -329,7 +350,7 @@ func fenceStatusHandler(w http.ResponseWriter, r *http.Request) {
 func fenceOffHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	json.NewDecoder(r.Body).Decode(&b)
-	cl, err := fenceDial(b.Router, b.Pass)
+	cl, err := fenceDial(b.addr(), b.Pass)
 	if err != nil {
 		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH")})
 		return
