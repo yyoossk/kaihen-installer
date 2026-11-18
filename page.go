@@ -22,18 +22,10 @@ const pageHTML = `<!DOCTYPE html>
 .tabs button.active { font-weight: bold; border-bottom: 3px solid #2a7; }
 .drop { border: 2px dashed #888; padding: 18px; text-align: center; margin: 8px 0; } .drop.over { border-color: #2a7; background: rgba(42,170,119,.08); }
  .widebtn { display: block; width: 100%; margin: .3em 0; }
- #chkmodal, #quitmodal, #cfmodal, #updmodal, #galmodal, #inpmodal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
+ #chkmodal, #quitmodal, #cfmodal, #updmodal, #galmodal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
  #consent { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 10000; }
  #consent .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; min-width: 340px; max-width: 600px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
- #chkmodal .chkbox, #quitmodal .chkbox, #cfmodal .chkbox, #updmodal .chkbox, #galmodal .chkbox, #inpmodal .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; text-align: center; min-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
- .fmrow { padding: .55em .7em; border-bottom: 1px solid #ccc; cursor: pointer; display: flex; justify-content: space-between; gap: 1em; }
- .fmrow.sel { background: #dbeafe; }
- body.dark .fmrow.sel { background: #2c4a77; }
- .fmrow .fmsize { color: #888; white-space: nowrap; }
- .fmrow .fmname { word-break: break-all; }
- .fmpath { font-weight: bold; word-break: break-all; }
- .fmbar button { margin: 0 .3em .5em 0; }
- #page-files.fmdrag { outline: 3px dashed #38f; outline-offset: -6px; }
+ #chkmodal .chkbox, #quitmodal .chkbox, #cfmodal .chkbox, #updmodal .chkbox, #galmodal .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; text-align: center; min-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
  #page-galview { background: #ebebeb; padding: 1em 1em 1.2em; border-radius: 6px; }
  body.dark #page-galview { background: #2d2d2d; }
  .galhead { text-align: center; margin: .2em 0 1em; }
@@ -68,7 +60,7 @@ const pageHTML = `<!DOCTYPE html>
  body.dark .langbar { background: #121417; border-bottom-color: #333; }
  body.dark button { background: #2b2f36; color: #eee; border: 1px solid #565d66; border-radius: 4px; }
  body.dark input, body.dark select { background: #1d2025; color: #eee; border: 1px solid #565d66; border-radius: 4px; }
- body.dark #chkmodal .chkbox, body.dark #quitmodal .chkbox, body.dark #cfmodal .chkbox, body.dark #updmodal .chkbox, body.dark #galmodal .chkbox, body.dark #inpmodal .chkbox, body.dark #consent .chkbox { background: #1d2025; color: #eee; }
+ body.dark #chkmodal .chkbox, body.dark #quitmodal .chkbox, body.dark #cfmodal .chkbox, body.dark #updmodal .chkbox, body.dark #galmodal .chkbox, body.dark #consent .chkbox { background: #1d2025; color: #eee; }
  body.dark #chkline3 { color: #a8adb5; }
  body.dark .drop { border-color: #666; }
  body.dark .langbar .cap { color: #a8adb5; }
@@ -174,9 +166,6 @@ const pageHTML = `<!DOCTYPE html>
 <h2 data-i18n="gal_title">ギャラリー</h2>
 <p><button class="widebtn" onclick="showPage('gallery')" data-i18n="gal_title">ギャラリー</button></p>
 
-<h2 data-i18n="fm_title">ファイルマネージャー</h2>
-<p><button class="widebtn" onclick="showPage('files')" data-i18n="fm_title">ファイルマネージャー</button></p>
-
 <p style="text-align:center"><button onclick="showPage('credits')" data-i18n="credits_btn">クレジット</button></p>
 </div>
 <div id="page-gallery" style="display:none">
@@ -196,39 +185,6 @@ const pageHTML = `<!DOCTYPE html>
 <div class="galhead"><div class="galtitle" data-i18n="gal_title">ギャラリー</div></div>
 <div id="galgrid" class="galgrid"></div>
 <div id="galpages" class="galpages"></div>
-</div>
-<div id="page-files" style="display:none">
-<h2 data-i18n="fm_title">ファイルマネージャー</h2>
-<p class="note" data-i18n="fm_note">OunceShell か FTPD プラグインで接続して、SD カードの中身を操作します。</p>
-<div id="prepslot-files"></div>
-<p><span data-i18n="gal_src">接続先</span>:
-<select id="fmsrc">
-<option value="auto" data-i18n="gal_auto">自動</option>
-<option value="oz">OunceShell (1337)</option>
-<option value="plugin" data-i18n="gal_plugin">FTPD プラグイン (5000)</option>
-</select>
-<button class="btn" onclick="fmOpen()" data-i18n="fm_open">開く</button></p>
-<div id="fmwrap" style="display:none">
-<p class="fmpath" id="fmpath">/</p>
-<p class="fmbar">
-<button onclick="fmUp()" data-i18n="fm_up">上へ</button>
-<button onclick="fmLoad(fmSt.path)" data-i18n="fm_reload">更新</button>
-<button onclick="fmMkdir()" data-i18n="fm_newfolder">新規フォルダ</button>
-<button onclick="fmRename()" data-i18n="fm_rename">名前変更</button>
-<button onclick="fmCopy('copy')" data-i18n="fm_copy">コピー</button>
-<button onclick="fmCopy('cut')" data-i18n="fm_cut">切り取り</button>
-<button onclick="fmPaste()" data-i18n="fm_paste">貼り付け</button>
-<button onclick="fmDelete()" data-i18n="fm_delete">削除</button>
-<button onclick="document.getElementById('fmfile').click()" data-i18n="fm_upload">アップロード</button>
-<button onclick="document.getElementById('fmfolder').click()" data-i18n="fm_upfolder">フォルダをアップロード</button>
-<button onclick="fmDownload()" data-i18n="fm_download">ダウンロード</button>
-</p>
-<div id="fmlist"></div>
-<p id="fmmsg" class="note"></p>
-<p class="note" data-i18n="fm_drophint">パソコンでは、この画面にファイルやフォルダをドロップするとアップロードでき、ファイルを選んで外へドラッグするとコピーできます。</p>
-</div>
-<input type="file" id="fmfile" multiple style="display:none">
-<input type="file" id="fmfolder" webkitdirectory style="display:none">
 </div>
 <div id="page-credits" style="display:none">
 <h2 data-i18n="credits_h">クレジット</h2>
@@ -377,7 +333,6 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 <div id="galmodal"><div class="chkbox"><div class="galview" id="galview"></div><table class="galtable"><tr><td data-i18n="gal_type">種類</td><td id="galv-type"></td></tr><tr><td data-i18n="gal_taken">撮影日時</td><td id="galv-taken"></td></tr><tr><td data-i18n="gal_stored">保存先</td><td id="galv-stored"></td></tr><tr><td data-i18n="gal_size">サイズ</td><td id="galv-size"></td></tr></table><p id="galv-status" class="note" style="min-height:1.2em; margin:.2em 0"></p>
 <p><button class="btn" onclick="galDownload()" data-i18n="gal_dl">ダウンロード</button> <button onclick="galClose()" data-i18n="dlg_ok">OK</button></p></div></div>
 <div id="cfmodal"><div class="chkbox"><div style="font-size:1.25em" data-i18n="app_del_list_q">本当にリストから削除しますか？</div><div id="cfname" class="note"></div><p><button onclick="cfAnswer(true)" data-i18n="cf_yes">はい</button> <button onclick="cfAnswer(false)" data-i18n="cf_no">いいえ</button></p></div></div>
-<div id="inpmodal"><div class="chkbox"><div id="inptitle" style="font-size:1.25em"></div><p><input type="text" id="inptext" style="font-size:1.1em;width:92%"></p><p><button onclick="inpAnswer(true)" data-i18n="dlg_ok">OK</button> <button onclick="inpAnswer(false)" data-i18n="fm_cancel">キャンセル</button></p></div></div>
 <script>
 var I18N = {"ja":{"title":"kaiHEN Installer","prep_h":"インストール方法","ip_label":"本体の IP アドレス","check_btn":"接続を確認する","log_h":"実行ログ","lang_label":"言語","checking":"--- 接続の確認: ","connected":"ローダーに接続できました","conn_fail":"接続できません: ","enter_ip":"IP アドレスを入力してください","started":" 開始: ","nameA":"手順1","st_bytes":" バイト"},"en":{"title":"kaiHEN Installer","prep_h":"How to install","ip_label":"Console IP address","check_btn":"Check connection","log_h":"Log","lang_label":"Language","checking":"--- Checking connection: ","connected":"Connected to the loader","conn_fail":"Could not connect: ","enter_ip":"Please enter an IP address","started":" started: ","nameA":"Step 1","st_bytes":" bytes"},"fr":{"title":"kaiHEN Installer","prep_h":"Méthode d'installation","ip_label":"Adresse IP de la console","check_btn":"Vérifier la connexion","log_h":"Journal","lang_label":"Langue","checking":"--- Vérification de la connexion : ","connected":"Connecté au chargeur","conn_fail":"Connexion impossible : ","enter_ip":"Veuillez saisir une adresse IP","started":" démarré : ","nameA":"Étape 1","st_bytes":" octets"},"de":{"title":"kaiHEN Installer","prep_h":"Installationsmethode","ip_label":"IP-Adresse der Konsole","check_btn":"Verbindung prüfen","log_h":"Protokoll","lang_label":"Sprache","checking":"--- Verbindung wird geprüft: ","connected":"Mit dem Loader verbunden","conn_fail":"Keine Verbindung: ","enter_ip":"Bitte eine IP-Adresse eingeben","started":" gestartet: ","nameA":"Schritt 1","st_bytes":" Bytes"},"it":{"title":"kaiHEN Installer","prep_h":"Metodo di installazione","ip_label":"Indirizzo IP della console","check_btn":"Verifica connessione","log_h":"Registro","lang_label":"Lingua","checking":"--- Verifica connessione: ","connected":"Connesso al loader","conn_fail":"Connessione impossibile: ","enter_ip":"Inserisci un indirizzo IP","started":" avviato: ","nameA":"Passo 1","st_bytes":" byte"},"es":{"title":"kaiHEN Installer","prep_h":"Método de instalación","ip_label":"Dirección IP de la consola","check_btn":"Comprobar conexión","log_h":"Registro","lang_label":"Idioma","checking":"--- Comprobando conexión: ","connected":"Conectado al cargador","conn_fail":"No se pudo conectar: ","enter_ip":"Introduce una dirección IP","started":" iniciado: ","nameA":"Paso 1","st_bytes":" bytes"},"ru":{"title":"kaiHEN Installer","prep_h":"Способ установки","ip_label":"IP-адрес консоли","check_btn":"Проверить соединение","log_h":"Журнал","lang_label":"Язык","checking":"--- Проверка соединения: ","connected":"Подключено к загрузчику","conn_fail":"Не удалось подключиться: ","enter_ip":"Введите IP-адрес","started":" запущено: ","nameA":"Шаг 1","st_bytes":" байт"},"pt":{"title":"kaiHEN Installer","prep_h":"Método de instalação","ip_label":"Endereço IP do console","check_btn":"Verificar conexão","log_h":"Log","lang_label":"Idioma","checking":"--- Verificando conexão: ","connected":"Conectado ao loader","conn_fail":"Não foi possível conectar: ","enter_ip":"Digite um endereço IP","started":" iniciado: ","nameA":"Passo 1","st_bytes":" bytes"},"pl":{"title":"kaiHEN Installer","prep_h":"Sposób instalacji","ip_label":"Adres IP konsoli","check_btn":"Sprawdź połączenie","log_h":"Dziennik","lang_label":"Język","checking":"--- Sprawdzanie połączenia: ","connected":"Połączono z loaderem","conn_fail":"Nie udało się połączyć: ","enter_ip":"Wpisz adres IP","started":" rozpoczęto: ","nameA":"Krok 1","st_bytes":" bajtów"},"ko":{"title":"kaiHEN Installer","prep_h":"설치 방법","ip_label":"본체 IP 주소","check_btn":"연결 확인","log_h":"실행 로그","lang_label":"언어","checking":"--- 연결 확인: ","connected":"로더에 연결되었습니다","conn_fail":"연결할 수 없습니다: ","enter_ip":"IP 주소를 입력하세요","started":" 시작: ","nameA":"1단계","st_bytes":" 바이트"},"zh-Hans":{"title":"kaiHEN Installer","prep_h":"安装方法","ip_label":"主机 IP 地址","check_btn":"检查连接","log_h":"执行日志","lang_label":"语言","checking":"--- 检查连接: ","connected":"已连接到加载器","conn_fail":"无法连接: ","enter_ip":"请输入 IP 地址","started":" 开始: ","nameA":"步骤1","st_bytes":" 字节"},"zh-Hant":{"title":"kaiHEN Installer","prep_h":"安裝方法","ip_label":"主機 IP 位址","check_btn":"檢查連線","log_h":"執行日誌","lang_label":"語言","checking":"--- 檢查連線: ","connected":"已連線到載入器","conn_fail":"無法連線: ","enter_ip":"請輸入 IP 位址","started":" 開始: ","nameA":"步驟1","st_bytes":" 位元組"}};
 var HB = {"ja":{"hb_note":"① 本体でローダーを起動 (「ゲームをロード」でローダー画面を出すか、Pico で起動)\n② 下のボタンで kaiHEN を起動 → ③ 成功の表示が出たら シヴィライゼーション7 を終了し、別のゲームを R を押しながら起動すると hbmenu が開きます (1回目は記録だけで通常起動)。"},"en":{"hb_note":"1) Start the loader on the console (open the loader screen with \"Load Game\", or start it with the Pico)\n2) Start kaiHEN with the button below → 3) When the success message appears, close Civilization VII and launch another game while holding R to open hbmenu (the first launch only records the signature and starts normally)."},"fr":{"hb_note":"1) Démarrez le chargeur sur la console (ouvrez l'écran du chargeur avec « Charger le jeu » ou démarrez-le avec le Pico)\n2) Démarrez kaiHEN avec le bouton ci-dessous → 3) Quand le message de réussite apparaît, fermez Civilization VII et lancez un autre jeu en maintenant R pour ouvrir hbmenu (le premier lancement enregistre seulement la signature et démarre normalement)."},"de":{"hb_note":"1) Starten Sie den Loader auf der Konsole (Loader-Bildschirm mit „Spiel laden“ öffnen oder mit dem Pico starten)\n2) Starten Sie kaiHEN mit der Schaltfläche unten → 3) Wenn die Erfolgsmeldung erscheint, beenden Sie Civilization VII und starten Sie ein anderes Spiel mit gedrückter R-Taste, um hbmenu zu öffnen (der erste Start zeichnet nur die Signatur auf und startet normal)."},"it":{"hb_note":"1) Avvia il loader sulla console (apri la schermata del loader con «Carica gioco» o avvialo con il Pico)\n2) Avvia kaiHEN con il pulsante qui sotto → 3) Quando appare il messaggio di successo, chiudi Civilization VII e avvia un altro gioco tenendo premuto R per aprire hbmenu (il primo avvio registra solo la firma e parte normalmente)."},"es":{"hb_note":"1) Inicia el cargador en la consola (abre la pantalla del cargador con «Cargar juego» o inícialo con el Pico)\n2) Inicia kaiHEN con el botón de abajo → 3) Cuando aparezca el mensaje de éxito, cierra Civilization VII e inicia otro juego manteniendo pulsado R para abrir hbmenu (el primer inicio solo registra la firma y arranca normalmente)."},"ru":{"hb_note":"1) Запустите загрузчик на консоли (откройте экран загрузчика через «Загрузить игру» или запустите с помощью Pico)\n2) Запустите kaiHEN кнопкой ниже → 3) Когда появится сообщение об успехе, закройте Civilization VII и запустите другую игру, удерживая R, чтобы открыть hbmenu (первый запуск только записывает подпись и стартует как обычно)."},"pt":{"hb_note":"1) Inicie o loader no console (abra a tela do loader com «Carregar jogo» ou inicie com o Pico)\n2) Inicie o kaiHEN com o botão abaixo → 3) Quando a mensagem de sucesso aparecer, feche o Civilization VII e inicie outro jogo segurando R para abrir o hbmenu (a primeira vez só registra a assinatura e inicia normalmente)."},"pl":{"hb_note":"1) Uruchom loader na konsoli (otwórz ekran loadera przez „Wczytaj grę” albo uruchom go za pomocą Pico)\n2) Uruchom kaiHEN przyciskiem poniżej → 3) Gdy pojawi się komunikat o sukcesie, zamknij Civilization VII i uruchom inną grę, trzymając R, aby otworzyć hbmenu (pierwsze uruchomienie tylko zapisuje sygnaturę i startuje normalnie)."},"ko":{"hb_note":"① 본체에서 로더를 실행 ('게임 불러오기'로 로더 화면을 열거나 Pico로 실행)\n② 아래 버튼으로 kaiHEN 시작 → ③ 성공 표시가 나오면 시빌라이제이션 7을 종료하고, R을 누른 채 다른 게임을 실행하면 hbmenu가 열립니다 (첫 번째는 기록만 되고 일반 실행)."},"zh-Hans":{"hb_note":"① 在主机上启动加载器（用\"加载游戏\"打开加载器画面，或用 Pico 启动）\n② 用下面的按钮启动 kaiHEN → ③ 出现成功提示后关闭 文明7，按住 R 启动另一个游戏即可打开 hbmenu（第一次只记录签名，会正常启动）。"},"zh-Hant":{"hb_note":"① 在主機上啟動載入器（用「載入遊戲」開啟載入器畫面，或用 Pico 啟動）\n② 用下面的按鈕啟動 kaiHEN → ③ 出現成功提示後關閉 文明7，按住 R 啟動另一個遊戲即可開啟 hbmenu（第一次只記錄簽名，會正常啟動）。"}};
@@ -405,9 +360,6 @@ var GAL2 = {"ja": {gal_chk_ok: "接続できました", gal_chk_ng: "接続で�
 for (var kGB in GAL2) { if (I18N[kGB]) { for (var kkGB in GAL2[kGB]) I18N[kGB][kkGB] = GAL2[kGB][kkGB]; } }
 var GAL3 = {"ja": {gal_dl_ing: "ダウンロードしています…", gal_dl_done: "ダウンロードしました", gal_dl_fail: "ダウンロードできませんでした"}, "en": {gal_dl_ing: "Downloading…", gal_dl_done: "Downloaded", gal_dl_fail: "Download failed"}, "fr": {gal_dl_ing: "Téléchargement…", gal_dl_done: "Téléchargé", gal_dl_fail: "Échec du téléchargement"}, "de": {gal_dl_ing: "Wird heruntergeladen…", gal_dl_done: "Heruntergeladen", gal_dl_fail: "Download fehlgeschlagen"}, "it": {gal_dl_ing: "Download in corso…", gal_dl_done: "Scaricato", gal_dl_fail: "Download non riuscito"}, "es": {gal_dl_ing: "Descargando…", gal_dl_done: "Descargado", gal_dl_fail: "La descarga falló"}, "ru": {gal_dl_ing: "Загрузка…", gal_dl_done: "Загружено", gal_dl_fail: "Не удалось загрузить"}, "pt": {gal_dl_ing: "Baixando…", gal_dl_done: "Baixado", gal_dl_fail: "Falha no download"}, "pl": {gal_dl_ing: "Pobieranie…", gal_dl_done: "Pobrano", gal_dl_fail: "Pobieranie nie powiodło się"}, "ko": {gal_dl_ing: "다운로드 중…", gal_dl_done: "다운로드했습니다", gal_dl_fail: "다운로드할 수 없습니다"}, "zh-Hans": {gal_dl_ing: "正在下载…", gal_dl_done: "下载完成", gal_dl_fail: "下载失败"}, "zh-Hant": {gal_dl_ing: "正在下載…", gal_dl_done: "下載完成", gal_dl_fail: "下載失敗"}};
 for (var kGC in GAL3) { if (I18N[kGC]) { for (var kkGC in GAL3[kGC]) I18N[kGC][kkGC] = GAL3[kGC][kkGC]; } }
-var FM = {"ja": {fm_title: "ファイルマネージャー", fm_note: "OunceShell か FTPD プラグインで接続して、SD カードの中身を操作します。", fm_open: "開く", fm_up: "上へ", fm_reload: "更新", fm_newfolder: "新規フォルダ", fm_rename: "名前変更", fm_delete: "削除", fm_copy: "コピー", fm_cut: "切り取り", fm_paste: "貼り付け", fm_upload: "アップロード", fm_upfolder: "フォルダをアップロード", fm_download: "ダウンロード", fm_cancel: "キャンセル", fm_folder_name: "フォルダ名を入力してください", fm_new_name: "新しい名前を入力してください", fm_del_q_file: "このファイルを削除しますか？", fm_del_q_dir: "このフォルダを中身ごと削除しますか？", fm_done_del: "削除しました", fm_done_copy: "コピーしました", fm_done_move: "移動しました", fm_done_rename: "名前を変更しました", fm_done_mkdir: "フォルダを作成しました", fm_done_upload: "アップロードしました", fm_done_download: "ダウンロードしました", fm_fail: "失敗しました", fm_empty: "空です", fm_drophint: "パソコンでは、この画面にファイルやフォルダをドロップするとアップロードでき、ファイルを選んで外へドラッグするとコピーできます。", fm_uploading: "アップロード中…", fm_root: "ルート (SD カード)"}, "en": {fm_title: "File Manager", fm_note: "Connect via OunceShell or the FTPD plugin and manage the contents of the SD card.", fm_open: "Open", fm_up: "Up", fm_reload: "Reload", fm_newfolder: "New folder", fm_rename: "Rename", fm_delete: "Delete", fm_copy: "Copy", fm_cut: "Cut", fm_paste: "Paste", fm_upload: "Upload", fm_upfolder: "Upload folder", fm_download: "Download", fm_cancel: "Cancel", fm_folder_name: "Enter the folder name", fm_new_name: "Enter the new name", fm_del_q_file: "Delete this file?", fm_del_q_dir: "Delete this folder and everything in it?", fm_done_del: "Deleted", fm_done_copy: "Copied", fm_done_move: "Moved", fm_done_rename: "Renamed", fm_done_mkdir: "Folder created", fm_done_upload: "Uploaded", fm_done_download: "Downloaded", fm_fail: "Failed", fm_empty: "(empty)", fm_drophint: "On a computer, drop files or folders onto this screen to upload them, and drag a file out of the screen to copy it.", fm_uploading: "Uploading…", fm_root: "Root (SD card)"}, "fr": {fm_title: "Gestionnaire de fichiers", fm_note: "Connectez-vous via OunceShell ou le plugin FTPD et gérez le contenu de la carte SD.", fm_open: "Ouvrir", fm_up: "Monter", fm_reload: "Recharger", fm_newfolder: "Nouveau dossier", fm_rename: "Renommer", fm_delete: "Supprimer", fm_copy: "Copier", fm_cut: "Couper", fm_paste: "Coller", fm_upload: "Envoyer", fm_upfolder: "Envoyer un dossier", fm_download: "Télécharger", fm_cancel: "Annuler", fm_folder_name: "Entrez le nom du dossier", fm_new_name: "Entrez le nouveau nom", fm_del_q_file: "Supprimer ce fichier ?", fm_del_q_dir: "Supprimer ce dossier et tout son contenu ?", fm_done_del: "Supprimé", fm_done_copy: "Copié", fm_done_move: "Déplacé", fm_done_rename: "Renommé", fm_done_mkdir: "Dossier créé", fm_done_upload: "Envoyé", fm_done_download: "Téléchargé", fm_fail: "Échec", fm_empty: "(vide)", fm_drophint: "Sur un ordinateur, déposez des fichiers ou dossiers sur cet écran pour les envoyer, et faites glisser un fichier hors de l'écran pour le copier.", fm_uploading: "Envoi…", fm_root: "Racine (carte SD)"}, "de": {fm_title: "Dateimanager", fm_note: "Verbinden Sie sich über OunceShell oder das FTPD-Plugin und verwalten Sie den Inhalt der SD-Karte.", fm_open: "Öffnen", fm_up: "Nach oben", fm_reload: "Neu laden", fm_newfolder: "Neuer Ordner", fm_rename: "Umbenennen", fm_delete: "Löschen", fm_copy: "Kopieren", fm_cut: "Ausschneiden", fm_paste: "Einfügen", fm_upload: "Hochladen", fm_upfolder: "Ordner hochladen", fm_download: "Herunterladen", fm_cancel: "Abbrechen", fm_folder_name: "Geben Sie den Ordnernamen ein", fm_new_name: "Geben Sie den neuen Namen ein", fm_del_q_file: "Diese Datei löschen?", fm_del_q_dir: "Diesen Ordner mit allem Inhalt löschen?", fm_done_del: "Gelöscht", fm_done_copy: "Kopiert", fm_done_move: "Verschoben", fm_done_rename: "Umbenannt", fm_done_mkdir: "Ordner erstellt", fm_done_upload: "Hochgeladen", fm_done_download: "Heruntergeladen", fm_fail: "Fehlgeschlagen", fm_empty: "(leer)", fm_drophint: "Am Computer: Dateien oder Ordner auf diesen Bildschirm ziehen, um sie hochzuladen, und eine Datei aus dem Bildschirm herausziehen, um sie zu kopieren.", fm_uploading: "Hochladen…", fm_root: "Wurzel (SD-Karte)"}, "it": {fm_title: "Gestione file", fm_note: "Connettiti tramite OunceShell o il plugin FTPD e gestisci il contenuto della scheda SD.", fm_open: "Apri", fm_up: "Su", fm_reload: "Ricarica", fm_newfolder: "Nuova cartella", fm_rename: "Rinomina", fm_delete: "Elimina", fm_copy: "Copia", fm_cut: "Taglia", fm_paste: "Incolla", fm_upload: "Carica", fm_upfolder: "Carica cartella", fm_download: "Scarica", fm_cancel: "Annulla", fm_folder_name: "Inserisci il nome della cartella", fm_new_name: "Inserisci il nuovo nome", fm_del_q_file: "Eliminare questo file?", fm_del_q_dir: "Eliminare questa cartella e tutto il contenuto?", fm_done_del: "Eliminato", fm_done_copy: "Copiato", fm_done_move: "Spostato", fm_done_rename: "Rinominato", fm_done_mkdir: "Cartella creata", fm_done_upload: "Caricato", fm_done_download: "Scaricato", fm_fail: "Non riuscito", fm_empty: "(vuoto)", fm_drophint: "Su un computer, trascina file o cartelle su questa schermata per caricarli e trascina un file fuori dalla schermata per copiarlo.", fm_uploading: "Caricamento…", fm_root: "Radice (scheda SD)"}, "es": {fm_title: "Gestor de archivos", fm_note: "Conéctate mediante OunceShell o el plugin FTPD y gestiona el contenido de la tarjeta SD.", fm_open: "Abrir", fm_up: "Subir", fm_reload: "Recargar", fm_newfolder: "Carpeta nueva", fm_rename: "Renombrar", fm_delete: "Eliminar", fm_copy: "Copiar", fm_cut: "Cortar", fm_paste: "Pegar", fm_upload: "Subir", fm_upfolder: "Subir carpeta", fm_download: "Descargar", fm_cancel: "Cancelar", fm_folder_name: "Escribe el nombre de la carpeta", fm_new_name: "Escribe el nombre nuevo", fm_del_q_file: "¿Eliminar este archivo?", fm_del_q_dir: "¿Eliminar esta carpeta y todo su contenido?", fm_done_del: "Eliminado", fm_done_copy: "Copiado", fm_done_move: "Movido", fm_done_rename: "Renombrado", fm_done_mkdir: "Carpeta creada", fm_done_upload: "Subido", fm_done_download: "Descargado", fm_fail: "Falló", fm_empty: "(vacío)", fm_drophint: "En un ordenador, arrastra archivos o carpetas a esta pantalla para subirlos y arrastra un archivo fuera de la pantalla para copiarlo.", fm_uploading: "Subiendo…", fm_root: "Raíz (tarjeta SD)"}, "ru": {fm_title: "Файловый менеджер", fm_note: "Подключитесь через OunceShell или плагин FTPD и управляйте содержимым SD-карты.", fm_open: "Открыть", fm_up: "Вверх", fm_reload: "Обновить", fm_newfolder: "Новая папка", fm_rename: "Переименовать", fm_delete: "Удалить", fm_copy: "Копировать", fm_cut: "Вырезать", fm_paste: "Вставить", fm_upload: "Загрузить", fm_upfolder: "Загрузить папку", fm_download: "Скачать", fm_cancel: "Отмена", fm_folder_name: "Введите имя папки", fm_new_name: "Введите новое имя", fm_del_q_file: "Удалить этот файл?", fm_del_q_dir: "Удалить эту папку со всем содержимым?", fm_done_del: "Удалено", fm_done_copy: "Скопировано", fm_done_move: "Перемещено", fm_done_rename: "Переименовано", fm_done_mkdir: "Папка создана", fm_done_upload: "Загружено", fm_done_download: "Скачано", fm_fail: "Не удалось", fm_empty: "(пусто)", fm_drophint: "На компьютере: перетащите файлы или папки на этот экран, чтобы загрузить их, и перетащите файл за пределы экрана, чтобы скопировать его.", fm_uploading: "Загрузка…", fm_root: "Корень (SD-карта)"}, "pt": {fm_title: "Gestor de ficheiros", fm_note: "Liga através do OunceShell ou do plugin FTPD e gere o conteúdo do cartão SD.", fm_open: "Abrir", fm_up: "Para cima", fm_reload: "Recarregar", fm_newfolder: "Nova pasta", fm_rename: "Mudar o nome", fm_delete: "Excluir", fm_copy: "Copiar", fm_cut: "Cortar", fm_paste: "Colar", fm_upload: "Enviar", fm_upfolder: "Enviar pasta", fm_download: "Transferir", fm_cancel: "Cancelar", fm_folder_name: "Escreve o nome da pasta", fm_new_name: "Escreve o nome novo", fm_del_q_file: "Excluir este ficheiro?", fm_del_q_dir: "Excluir esta pasta e todo o seu conteúdo?", fm_done_del: "Excluído", fm_done_copy: "Copiado", fm_done_move: "Movido", fm_done_rename: "Nome alterado", fm_done_mkdir: "Pasta criada", fm_done_upload: "Enviado", fm_done_download: "Transferido", fm_fail: "Falhou", fm_empty: "(vazio)", fm_drophint: "Num computador, arrasta ficheiros ou pastas para este ecrã para os enviar e arrasta um ficheiro para fora do ecrã para o copiar.", fm_uploading: "A enviar…", fm_root: "Raiz (cartão SD)"}, "pl": {fm_title: "Menedżer plików", fm_note: "Połącz się przez OunceShell lub wtyczkę FTPD i zarządzaj zawartością karty SD.", fm_open: "Otwórz", fm_up: "W górę", fm_reload: "Odśwież", fm_newfolder: "Nowy folder", fm_rename: "Zmień nazwę", fm_delete: "Usuń", fm_copy: "Kopiuj", fm_cut: "Wytnij", fm_paste: "Wklej", fm_upload: "Prześlij", fm_upfolder: "Prześlij folder", fm_download: "Pobierz", fm_cancel: "Anuluj", fm_folder_name: "Wpisz nazwę folderu", fm_new_name: "Wpisz nową nazwę", fm_del_q_file: "Usunąć ten plik?", fm_del_q_dir: "Usunąć ten folder wraz z całą zawartością?", fm_done_del: "Usunięto", fm_done_copy: "Skopiowano", fm_done_move: "Przeniesiono", fm_done_rename: "Zmieniono nazwę", fm_done_mkdir: "Utworzono folder", fm_done_upload: "Przesłano", fm_done_download: "Pobrano", fm_fail: "Nie udało się", fm_empty: "(pusto)", fm_drophint: "Na komputerze: przeciągnij pliki lub foldery na ten ekran, aby je przesłać, i przeciągnij plik poza ekran, aby go skopiować.", fm_uploading: "Przesyłanie…", fm_root: "Katalog główny (karta SD)"}, "ko": {fm_title: "파일 관리자", fm_note: "OunceShell 또는 FTPD 플러그인으로 연결해 SD 카드의 내용을 조작합니다.", fm_open: "열기", fm_up: "위로", fm_reload: "새로고침", fm_newfolder: "새 폴더", fm_rename: "이름 변경", fm_delete: "삭제", fm_copy: "복사", fm_cut: "잘라내기", fm_paste: "붙여넣기", fm_upload: "업로드", fm_upfolder: "폴더 업로드", fm_download: "다운로드", fm_cancel: "취소", fm_folder_name: "폴더 이름을 입력하세요", fm_new_name: "새 이름을 입력하세요", fm_del_q_file: "이 파일을 삭제할까요?", fm_del_q_dir: "이 폴더를 내용물과 함께 삭제할까요?", fm_done_del: "삭제했습니다", fm_done_copy: "복사했습니다", fm_done_move: "이동했습니다", fm_done_rename: "이름을 변경했습니다", fm_done_mkdir: "폴더를 만들었습니다", fm_done_upload: "업로드했습니다", fm_done_download: "다운로드했습니다", fm_fail: "실패했습니다", fm_empty: "비어 있습니다", fm_drophint: "PC에서는 파일이나 폴더를 이 화면에 끌어다 놓으면 업로드되고, 파일을 선택해 밖으로 끌어내면 복사됩니다.", fm_uploading: "업로드 중…", fm_root: "루트(SD 카드)"}, "zh-Hans": {fm_title: "文件管理器", fm_note: "通过 OunceShell 或 FTPD 插件连接,管理 SD 卡中的内容。", fm_open: "打开", fm_up: "向上", fm_reload: "刷新", fm_newfolder: "新建文件夹", fm_rename: "重命名", fm_delete: "删除", fm_copy: "复制", fm_cut: "剪切", fm_paste: "粘贴", fm_upload: "上传", fm_upfolder: "上传文件夹", fm_download: "下载", fm_cancel: "取消", fm_folder_name: "请输入文件夹名称", fm_new_name: "请输入新名称", fm_del_q_file: "要删除这个文件吗?", fm_del_q_dir: "要删除这个文件夹及其全部内容吗?", fm_done_del: "已删除", fm_done_copy: "已复制", fm_done_move: "已移动", fm_done_rename: "已重命名", fm_done_mkdir: "已创建文件夹", fm_done_upload: "已上传", fm_done_download: "已下载", fm_fail: "失败", fm_empty: "(空)", fm_drophint: "在电脑上,把文件或文件夹拖到此画面即可上传;选中文件拖到画面外即可复制。", fm_uploading: "上传中…", fm_root: "根目录(SD 卡)"}, "zh-Hant": {fm_title: "檔案管理器", fm_note: "透過 OunceShell 或 FTPD 外掛連接,管理 SD 卡中的內容。", fm_open: "開啟", fm_up: "向上", fm_reload: "重新整理", fm_newfolder: "新增資料夾", fm_rename: "重新命名", fm_delete: "刪除", fm_copy: "複製", fm_cut: "剪下", fm_paste: "貼上", fm_upload: "上傳", fm_upfolder: "上傳資料夾", fm_download: "下載", fm_cancel: "取消", fm_folder_name: "請輸入資料夾名稱", fm_new_name: "請輸入新名稱", fm_del_q_file: "要刪除這個檔案嗎?", fm_del_q_dir: "要刪除這個資料夾及其全部內容嗎?", fm_done_del: "已刪除", fm_done_copy: "已複製", fm_done_move: "已移動", fm_done_rename: "已重新命名", fm_done_mkdir: "已建立資料夾", fm_done_upload: "已上傳", fm_done_download: "已下載", fm_fail: "失敗", fm_empty: "(空)", fm_drophint: "在電腦上,把檔案或資料夾拖到此畫面即可上傳;選取檔案拖到畫面外即可複製。", fm_uploading: "上傳中…", fm_root: "根目錄(SD 卡)"}};
-for (var kFM in FM) { if (I18N[kFM]) { for (var kkFM in FM[kFM]) I18N[kFM][kkFM] = FM[kFM][kkFM]; } }
-
 var AE = {
 ja: { app_add: "追加", app_check: "更新を確認", app_install: "インストール", app_delete: "削除", app_update_badge: "更新あり", app_update_found: "更新があります (ダウンロード済み)", app_got: "本体の版", app_none2: "まだ登録がありません" },
 en: { app_add: "Add", app_check: "Check for updates", app_install: "Install", app_delete: "Remove", app_update_badge: "Update", app_update_found: "Update available (downloaded)", app_got: "On console", app_none2: "Nothing registered yet" },
@@ -557,7 +509,7 @@ function backTop() {
 var pageHist = [];
 function showPage(p, isBack) {
   if (!isBack && curView && curView !== p) pageHist.push(curView);
-  var pages = ["home", "hb", "mig", "backup", "fence", "credits", "auto", "gallery", "galview", "files"];
+  var pages = ["home", "hb", "mig", "backup", "fence", "credits", "auto", "gallery", "galview"];
   for (var i = 0; i < pages.length; i++) {
     var el = document.getElementById("page-" + pages[i]);
     if (el) el.style.display = pages[i] === p ? "" : "none";
@@ -792,20 +744,6 @@ function cfAnswer(v) {
   document.getElementById("cfmodal").style.display = "none";
   if (cfResolve) { var r = cfResolve; cfResolve = null; r(v); }
 }
-var inpResolve = null;
-function inpShow(title, val) {
-  document.getElementById("inptitle").textContent = title;
-  var inp = document.getElementById("inptext");
-  inp.value = val || "";
-  document.getElementById("inpmodal").style.display = "flex";
-  setTimeout(function() { try { inp.focus(); inp.select(); } catch (e) {} }, 50);
-  return new Promise(function(res) { inpResolve = res; });
-}
-function inpAnswer(ok) {
-  document.getElementById("inpmodal").style.display = "none";
-  var v = document.getElementById("inptext").value.trim();
-  if (inpResolve) { var r = inpResolve; inpResolve = null; r(ok ? v : ""); }
-}
 async function deleteApp(kind, id) {
   var name = (window._appNames && window._appNames[id]) || id;
   if (!await showConfirm(name)) return;
@@ -896,7 +834,6 @@ function addLog(s) {
 }
 async function doCheck() {
   if (curView === "gallery" || curView === "galview") { await galCheck(); return; }
-  if (curView === "files") { await fmCheck(); return; }
   addLog(t("checking") + ip());
   var connText = t("chk_ng"), pingText = t("ping_ng"), ok = false, hintText = "";
   try {
@@ -1375,240 +1312,6 @@ function updWaitReload() {
     } catch (e) {}
     if (tries > 40) { clearInterval(iv); document.getElementById("updline2").textContent = t("upd_reopen"); updOkMode(); }
   }, 1500);
-}
-// ---------- file manager ----------
-var fmSt = { path: "/", items: [], sel: -1, clip: null, src: "auto", opened: false };
-function fmBase() { return "ip=" + encodeURIComponent(ip()) + "&src=" + encodeURIComponent(fmSt.src) + "&lang=" + encodeURIComponent(LANG); }
-function fmJoinP(dir, name) { return dir === "/" ? "/" + name : dir + "/" + name; }
-function fmParentP(p) { var i = p.lastIndexOf("/"); return i <= 0 ? "/" : p.substring(0, i); }
-function fmSelItem() { return fmSt.sel >= 0 ? fmSt.items[fmSt.sel] : null; }
-async function fmCheck() {
-  var ok = false, who = "";
-  try {
-    var r = await fetch("/api/files/check?ip=" + encodeURIComponent(ip()));
-    var j = await r.json();
-    var names = [];
-    if (j.oz) names.push("OunceShell (1337)");
-    if (j.plugin) names.push("FTPD (5000)");
-    ok = names.length > 0;
-    who = names.join(" / ");
-    addLog(ok ? t("connected") : t("conn_fail"));
-  } catch (e) {}
-  showChk(ok ? t("gal_chk_ok") : t("gal_chk_ng"), who, ok, ok ? "" : t("gal_chk_hint"));
-}
-async function fmOpen() {
-  fmInitDrop();
-  fmSt.src = document.getElementById("fmsrc").value;
-  await fmLoad("/");
-  document.getElementById("fmwrap").style.display = "";
-  fmSt.opened = true;
-}
-async function fmLoad(p) {
-  var msg = document.getElementById("fmmsg");
-  msg.textContent = "...";
-  try {
-    var r = await fetch("/api/files/list?" + fmBase() + "&path=" + encodeURIComponent(p));
-    var j = await r.json();
-    if (!j.ok) throw new Error("ng");
-    fmSt.path = j.path;
-    fmSt.items = j.items || [];
-    fmSt.sel = -1;
-    msg.textContent = "";
-    fmRender();
-  } catch (e) { msg.textContent = t("gal_err"); }
-}
-function fmRender() {
-  document.getElementById("fmpath").textContent = fmSt.path === "/" ? t("fm_root") : fmSt.path;
-  var box = document.getElementById("fmlist");
-  box.innerHTML = "";
-  if (!fmSt.items.length) {
-    var pe = document.createElement("p");
-    pe.className = "note";
-    pe.textContent = t("fm_empty");
-    box.appendChild(pe);
-    return;
-  }
-  fmSt.items.forEach(function(it, i) {
-    var row = document.createElement("div");
-    row.className = "fmrow" + (i === fmSt.sel ? " sel" : "");
-    var nm = document.createElement("span");
-    nm.className = "fmname";
-    nm.textContent = it.name + (it.dir ? "/" : "");
-    if (it.dir) nm.style.fontWeight = "bold";
-    nm.addEventListener("click", function(ev) {
-      ev.stopPropagation();
-      if (it.dir) { fmLoad(fmJoinP(fmSt.path, it.name)); }
-      else { fmSt.sel = i; fmRender(); }
-    });
-    row.appendChild(nm);
-    if (!it.dir) {
-      var sz = document.createElement("span");
-      sz.className = "fmsize";
-      sz.textContent = galSizeStr(it.size);
-      row.appendChild(sz);
-      row.draggable = true;
-      row.addEventListener("dragstart", function(e) {
-        var url = location.origin + "/api/files/download?" + fmBase() + "&path=" + encodeURIComponent(fmJoinP(fmSt.path, it.name)) + "&dl=1";
-        try { e.dataTransfer.setData("DownloadURL", "application/octet-stream:" + it.name + ":" + url); } catch (x) {}
-      });
-    }
-    row.addEventListener("click", function() { fmSt.sel = i; fmRender(); });
-    box.appendChild(row);
-  });
-}
-function fmUp() { if (fmSt.path !== "/") fmLoad(fmParentP(fmSt.path)); }
-async function fmPost(url, body) {
-  var r = await fetch(url, { method: "POST", body: JSON.stringify(body) });
-  return r.json();
-}
-function fmDone(ok, doneKey, name) { showChk(ok ? t(doneKey) : t("fm_fail"), name || "", ok, ""); }
-async function fmMkdir() {
-  var name = await inpShow(t("fm_folder_name"), "");
-  if (!name) return;
-  var j = await fmPost("/api/files/mkdir", { ip: ip(), src: fmSt.src, lang: LANG, dir: fmSt.path, name: name });
-  fmDone(j.ok, "fm_done_mkdir", name);
-  if (j.ok) fmLoad(fmSt.path);
-}
-async function fmRename() {
-  var it = fmSelItem();
-  if (!it) return;
-  var name = await inpShow(t("fm_new_name"), it.name);
-  if (!name || name === it.name) return;
-  var j = await fmPost("/api/files/rename", { ip: ip(), src: fmSt.src, lang: LANG, from: fmJoinP(fmSt.path, it.name), name: name });
-  fmDone(j.ok, "fm_done_rename", name);
-  if (j.ok) fmLoad(fmSt.path);
-}
-async function fmDelete() {
-  var it = fmSelItem();
-  if (!it) return;
-  var yes = await showConfirm((it.dir ? t("fm_del_q_dir") : t("fm_del_q_file")) + "\n" + it.name);
-  if (!yes) return;
-  var j = await fmPost("/api/files/delete", { ip: ip(), src: fmSt.src, lang: LANG, path: fmJoinP(fmSt.path, it.name), isDir: it.dir });
-  fmDone(j.ok, "fm_done_del", it.name);
-  if (j.ok) fmLoad(fmSt.path);
-}
-function fmCopy(mode) {
-  var it = fmSelItem();
-  if (!it) return;
-  fmSt.clip = { mode: mode, path: fmJoinP(fmSt.path, it.name), name: it.name, dir: it.dir };
-  document.getElementById("fmmsg").textContent = it.name;
-}
-async function fmPaste() {
-  var c = fmSt.clip;
-  if (!c) return;
-  var j;
-  if (c.mode === "copy") {
-    j = await fmPost("/api/files/copy", { ip: ip(), src: fmSt.src, lang: LANG, from: c.path, toDir: fmSt.path, isDir: c.dir });
-    fmDone(j.ok, "fm_done_copy", c.name);
-  } else {
-    j = await fmPost("/api/files/rename", { ip: ip(), src: fmSt.src, lang: LANG, from: c.path, toDir: fmSt.path });
-    fmDone(j.ok, "fm_done_move", c.name);
-    if (j.ok) fmSt.clip = null;
-  }
-  if (j.ok) fmLoad(fmSt.path);
-}
-function fmDownload() {
-  var it = fmSelItem();
-  if (!it || it.dir) return;
-  var url = "/api/files/download?" + fmBase() + "&path=" + encodeURIComponent(fmJoinP(fmSt.path, it.name)) + "&dl=1";
-  if (IS_ANDROID) {
-    var a = document.createElement("a");
-    a.href = url;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return;
-  }
-  fetch(url).then(function(r) { return r.blob(); }).then(function(b) {
-    var u = URL.createObjectURL(b);
-    var a = document.createElement("a");
-    a.href = u;
-    a.download = it.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function() { URL.revokeObjectURL(u); }, 5000);
-    fmDone(true, "fm_done_download", it.name);
-  }).catch(function() { fmDone(false, "fm_done_download", it.name); });
-}
-// Called by the Android shell when a DownloadManager download of
-// a file-manager file finishes.
-function fmDlDone(ok) {
-  var it = fmSelItem();
-  fmDone(!!ok, "fm_done_download", it ? it.name : "");
-}
-async function fmUploadPairs(pairs) {
-  if (!pairs.length) return;
-  var msg = document.getElementById("fmmsg");
-  var done = 0, failed = 0;
-  for (var k = 0; k < pairs.length; k++) {
-    msg.textContent = t("fm_uploading") + " " + (done + failed + 1) + "/" + pairs.length;
-    try {
-      var url = "/api/files/upload?" + fmBase() + "&path=" + encodeURIComponent(fmJoinP(fmSt.path, pairs[k].rel));
-      var r = await fetch(url, { method: "POST", body: pairs[k].file });
-      var j = await r.json();
-      if (j.ok) done++; else failed++;
-    } catch (e) { failed++; }
-  }
-  msg.textContent = "";
-  fmDone(failed === 0, "fm_done_upload", pairs.length === 1 ? pairs[0].rel : (done + "/" + pairs.length));
-  if (done) fmLoad(fmSt.path);
-}
-function fmInitDrop() {
-  var page = document.getElementById("page-files");
-  if (!page || page.dataset.fmdrop) return;
-  page.dataset.fmdrop = "1";
-  page.addEventListener("dragover", function(e) { e.preventDefault(); page.classList.add("fmdrag"); });
-  page.addEventListener("dragleave", function(e) { if (e.target === page) page.classList.remove("fmdrag"); });
-  page.addEventListener("drop", function(e) {
-    e.preventDefault();
-    page.classList.remove("fmdrag");
-    if (!fmSt.opened) return;
-    var pairs = [];
-    var proms = [];
-    var items = e.dataTransfer ? e.dataTransfer.items : null;
-    if (items && items.length && items[0].webkitGetAsEntry) {
-      for (var i = 0; i < items.length; i++) {
-        var en = items[i].webkitGetAsEntry();
-        if (en) proms.push(fmWalkEntry(en, "", pairs));
-      }
-      Promise.all(proms).then(function() { fmUploadPairs(pairs); });
-    } else if (e.dataTransfer && e.dataTransfer.files) {
-      for (var j = 0; j < e.dataTransfer.files.length; j++) pairs.push({ file: e.dataTransfer.files[j], rel: e.dataTransfer.files[j].name });
-      fmUploadPairs(pairs);
-    }
-  });
-  document.getElementById("fmfile").addEventListener("change", function(e) {
-    var pairs = [];
-    for (var i = 0; i < e.target.files.length; i++) pairs.push({ file: e.target.files[i], rel: e.target.files[i].name });
-    e.target.value = "";
-    fmUploadPairs(pairs);
-  });
-  document.getElementById("fmfolder").addEventListener("change", function(e) {
-    var pairs = [];
-    for (var i = 0; i < e.target.files.length; i++) pairs.push({ file: e.target.files[i], rel: e.target.files[i].webkitRelativePath || e.target.files[i].name });
-    e.target.value = "";
-    fmUploadPairs(pairs);
-  });
-}
-function fmWalkEntry(en, base, pairs) {
-  return new Promise(function(res) {
-    if (en.isFile) {
-      en.file(function(f) { pairs.push({ file: f, rel: base + en.name }); res(); }, function() { res(); });
-    } else if (en.isDirectory) {
-      var rd = en.createReader();
-      var readAll = function() {
-        rd.readEntries(function(ents) {
-          if (!ents.length) { res(); return; }
-          var ps = [];
-          for (var i = 0; i < ents.length; i++) ps.push(fmWalkEntry(ents[i], base + en.name + "/", pairs));
-          Promise.all(ps).then(readAll);
-        }, function() { res(); });
-      };
-      readAll();
-    } else res();
-  });
 }
 
 var galSt = { items: [], page: 1, per: 30, src: "auto", cur: -1 };

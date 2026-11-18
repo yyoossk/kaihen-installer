@@ -44,7 +44,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "FTP 送信に失敗しました",
 		"galErr": "無法連接到圖庫",
-		"fmErr": "操作失敗",
 
 		"appNotFound": "登録が見つかりません",
 		"appNoAsset":  "最新のリリースに合うファイルがありません",
@@ -127,7 +126,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "FTP upload failed",
 		"galErr": "无法连接到图库",
-		"fmErr": "操作失败",
 
 		"appNotFound": "App not registered",
 		"appNoAsset":  "No matching file in the latest release",
@@ -211,7 +209,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "Échec de l'envoi FTP",
 		"galErr": "갤러리에 연결할 수 없습니다",
-		"fmErr": "작업을 수행할 수 없습니다",
 
 		"appNotFound": "Application non enregistrée",
 		"appNoAsset":  "Aucun fichier correspondant dans la dernière version",
@@ -295,7 +292,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "FTP-Upload fehlgeschlagen",
 		"galErr": "Nie udało się połączyć z galerią",
-		"fmErr": "Operacja się nie powiodła",
 
 		"appNotFound": "App nicht registriert",
 		"appNoAsset":  "Keine passende Datei im neuesten Release",
@@ -379,7 +375,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "Caricamento FTP non riuscito",
 		"galErr": "Não foi possível ligar à galeria",
-		"fmErr": "A operação falhou",
 
 		"appNotFound": "App non registrata",
 		"appNoAsset":  "Nessun file corrispondente nella versione più recente",
@@ -463,7 +458,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "La subida FTP falló",
 		"galErr": "Не удалось подключиться к галерее",
-		"fmErr": "Не удалось выполнить операцию",
 
 		"appNotFound": "App no registrada",
 		"appNoAsset":  "No hay un archivo coincidente en la versión más reciente",
@@ -547,7 +541,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "Загрузка по FTP не удалась",
 		"galErr": "No se pudo conectar con la galería",
-		"fmErr": "La operación falló",
 
 		"appNotFound": "Приложение не зарегистрировано",
 		"appNoAsset":  "В новейшем релизе нет подходящего файла",
@@ -631,7 +624,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "O envio FTP falhou",
 		"galErr": "Impossibile connettersi alla galleria",
-		"fmErr": "Operazione non riuscita",
 
 		"appNotFound": "App não registada",
 		"appNoAsset":  "Nenhum ficheiro correspondente na versão mais recente",
@@ -715,7 +707,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "Wysyłanie FTP nie powiodło się",
 		"galErr": "Keine Verbindung zur Galerie",
-		"fmErr": "Der Vorgang ist fehlgeschlagen",
 
 		"appNotFound": "Aplikacja niezarejestrowana",
 		"appNoAsset":  "Brak pasującego pliku w najnowszym wydaniu",
@@ -799,7 +790,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "FTP 업로드에 실패했습니다",
 		"galErr": "Impossible de se connecter à la galerie",
-		"fmErr": "L'opération a échoué",
 
 		"appNotFound": "등록되지 않은 앱입니다",
 		"appNoAsset":  "최신 릴리스에 맞는 파일이 없습니다",
@@ -883,7 +873,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "FTP 上传失败",
 		"galErr": "Could not connect to the gallery",
-		"fmErr": "The operation failed",
 
 		"appNotFound": "应用未注册",
 		"appNoAsset":  "最新版本中没有匹配的文件",
@@ -967,7 +956,6 @@ var msgs = map[string]map[string]string{
 
 		"ftpErr": "FTP 上傳失敗",
 		"galErr": "ギャラリーの接続に失敗しました",
-		"fmErr": "操作に失敗しました",
 
 		"appNotFound": "應用未註冊",
 		"appNoAsset":  "最新版本中沒有相符的檔案",
