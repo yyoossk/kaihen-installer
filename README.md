@@ -68,12 +68,19 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
   the FTPD plugin): the SD card album as a thumbnail grid; tap an item
   to view it full-size or play the video, see its details, and
   download it. Captures in internal storage are not reachable over
-  FTP, so only the SD card album is shown.
+  FTP, so only the SD card album is shown. There is intentionally
+  no delete: removing an album file over FTP leaves an entry in
+  the console's album that cannot be deleted even on the console
+  itself (its screenshot service fails with error 2206-0023 when
+  the file is missing).
   **ギャラリー** — FTP (OunceShell または FTPD プラグイン) 経由で
   NXGallery 風にアルバムを表示します。SD カードのアルバムをサムネイル
   一覧で表示し、タップで拡大表示・動画再生・詳細表示・ダウンロードが
   できます。内部ストレージのキャプチャは FTP では見られないため、
-  SD カードのアルバムだけが対象です。
+  SD カードのアルバムだけが対象です。削除機能はあえて付けていません。
+  FTP でファイルを消すと本体のアルバムに項目だけが残り、その項目は
+  本体側でも消せなくなるためです (ファイルが無いと本体の画面写真
+  サービスがエラー 2206-0023 を出します)。
 - **Self-update** — the app checks this repository's releases at startup.
   On Windows it replaces itself and restarts (your settings and
   downloaded files are kept). On Android it downloads the new APK and
