@@ -39,10 +39,14 @@ var fakeWrtOutputs = map[string]string{
 	fenceExtractCmd:                                             "",
 	fenceFindCmd:                                                "/tmp/swfence-bundle/SWFence/SHA256SUMS\n",
 	"cd /tmp/swfence-bundle/SWFence && sha256sum -c SHA256SUMS": "swfence-24.10.ipk: OK\nluc" + "i-app-swfence-24.10.ipk: OK\n",
-	"cd /tmp/swfence-bundle/SWFence && opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk": "",
-	fenceRepoCmd:       "",
-	fenceOpkgUpdateCmd: "",
-	fenceApkUpdateCmd:  "",
+	"cd /tmp/swfence-bundle/SWFence && " + fencePathPrefix + "opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk": "",
+	fenceRepoCmd:                         "",
+	fenceOpkgUpdateCmd:                   "",
+	fenceApkUpdateCmd:                    "",
+	fenceWgetWrapCmd:                     "",
+	fenceListFetchCmd:                    "",
+	fencePathPrefix + fenceOpkgUpdateCmd: "",
+	fencePathPrefix + fenceApkUpdateCmd:  "",
 }
 
 func init() {
@@ -310,6 +314,26 @@ func TestFenceInstallBackupFailureDetail(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "status 1") {
 		t.Fatalf("a failed backup must surface the underlying error, not just the generic message: %s", body)
+	}
+}
+
+// When opkg update fails on the router (its downloader is the
+// usual casualty of the IPv6 fallback problem), the install must
+// fall back to fetching the package lists directly and still
+// complete.
+func TestFenceInstallUpdateFallback(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	f := newFakeOpenWrt(t)
+	f.failCmds[fencePathPrefix+fenceOpkgUpdateCmd] = true
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "fetching the package lists directly") || !strings.Contains(body, "RESULT|ok") {
+		t.Fatalf("install should fall back to a direct list fetch and succeed: %s", body)
 	}
 }
 

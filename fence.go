@@ -518,6 +518,19 @@ const (
 	fenceRepoCmd       = "mkdir -p /etc/swfence && printf '%s\n' 'byizmysh/SWFence' > /etc/swfence/repository && swfence setup"
 	fenceOpkgUpdateCmd = "opkg update"
 	fenceApkUpdateCmd  = "apk update"
+
+	// fenceWgetWrapCmd installs a wget shim that forces IPv4.
+	// opkg/apk fetch through "wget" (uclient-fetch), which fails
+	// with "Failed to send request: Operation not permitted" when
+	// DNS offers IPv6 addresses but the router has no working IPv6
+	// route: uclient-fetch does not fall back to IPv4. Prefixing
+	// PATH with the shim directory makes their downloads use -4.
+	fenceWgetWrapCmd = "mkdir -p /tmp/swfence-bin && printf '%s\n' '#!/bin/sh' 'exec uclient-fetch -4 \"$@\"' > /tmp/swfence-bin/wget && chmod +x /tmp/swfence-bin/wget"
+	fencePathPrefix  = "PATH=/tmp/swfence-bin:/usr/sbin:/usr/bin:/sbin:/bin "
+	// fenceListFetchCmd is the fallback when opkg update still
+	// fails: fetch each feed's Packages.gz straight into
+	// /var/opkg-lists under its feed name, again forcing IPv4.
+	fenceListFetchCmd = "mkdir -p /var/opkg-lists && while read -r t n u x; do case \"$t\" in src/gz) uclient-fetch -4 -q -O /var/opkg-lists/$n \"$u/Packages.gz\" || exit 1;; esac; done < /etc/opkg/distfeeds.conf"
 )
 
 // fenceInstallBundle uploads the cached bundle and installs the
@@ -564,14 +577,29 @@ func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
 	// and fails with "Unknown package 'swfence'". This runs on the
 	// router, so the router needs its own internet connection here;
 	// the phone/PC still downloads nothing at install time.
+	// The downloads go through the IPv4-forcing wget shim above:
+	// uclient-fetch fails on routers whose DNS answers with IPv6
+	// addresses they cannot route to.
+	if _, err := fenceRunStdin(cl, fenceWgetWrapCmd, "", send); err != nil {
+		return err
+	}
 	upd := fenceOpkgUpdateCmd
-	if strings.HasPrefix(release, "25.12.") {
+	isApk := strings.HasPrefix(release, "25.12.")
+	if isApk {
 		upd = fenceApkUpdateCmd
 	}
-	if _, err := fenceRunStdin(cl, upd, "", send); err != nil {
-		return fmt.Errorf("%s: %w", upd, err)
+	if _, err := fenceRunStdin(cl, fencePathPrefix+upd, "", send); err != nil {
+		if isApk {
+			return fmt.Errorf("%s: %w", upd, err)
+		}
+		// opkg update failed (its downloader may not honour PATH):
+		// fetch the lists directly, then carry on to the install.
+		send(upd + " failed; fetching the package lists directly (IPv4)")
+		if _, ferr := fenceRunStdin(cl, fenceListFetchCmd, "", send); ferr != nil {
+			return fmt.Errorf("%s: %w", upd, ferr)
+		}
 	}
-	if _, err := fenceRunStdin(cl, "cd "+dir+" && "+inst, "", send); err != nil {
+	if _, err := fenceRunStdin(cl, "cd "+dir+" && "+fencePathPrefix+inst, "", send); err != nil {
 		return err
 	}
 	if _, err := fenceRunStdin(cl, fenceRepoCmd, "", send); err != nil {
