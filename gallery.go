@@ -438,7 +438,6 @@ func galleryCheckHandler(w http.ResponseWriter, r *http.Request) {
 // real hardware, 2026-11-18.)
 
 func galleryListHandler(w http.ResponseWriter, r *http.Request) {
-	started := time.Now()
 	q := r.URL.Query()
 	ip, src, lang := q.Get("ip"), q.Get("src"), q.Get("lang")
 	if !validIP(ip) {
@@ -470,7 +469,6 @@ func galleryListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
 		"items": items, "photos": photos, "videos": videos, "src": used,
-		"secs": float64(time.Since(started).Milliseconds()) / 1000,
 	})
 }
 
