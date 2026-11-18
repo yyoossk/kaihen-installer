@@ -1,6 +1,9 @@
 package main
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +11,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -204,12 +210,34 @@ func fenceChkHandler(w http.ResponseWriter, r *http.Request) {
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}
-	jsonOK(w, map[string]any{
+	resp := map[string]any{
 		"ok": true, "supported": true, "release": rel,
 		"installed": installed, "enabled": enabled, "guards": fenceGuardsUp(cl),
 		"leases": fenceLeases(cl),
 		"cidr":   fenceLANPrefix(cl, host),
-	})
+	}
+	// When the SWFence bundle is already downloaded, also learn
+	// what this router will need at install time (feeds, installed
+	// packages, missing dependencies) so the download step can
+	// fetch the missing .ipk files while the phone has internet.
+	if strings.HasPrefix(rel, "24.10.") {
+		if tag := fenceCachedTag(); tag != "" {
+			if _, instSet, _, missing, err := fenceDepState(cl, tag); err == nil {
+				feeds := []fenceFeed{}
+				if out, err := fenceExec(cl, "cat /etc/opkg/distfeeds.conf"); err == nil {
+					feeds = fenceParseFeeds(out)
+				}
+				names := make([]string, 0, len(instSet))
+				for n := range instSet {
+					names = append(names, n)
+				}
+				sort.Strings(names)
+				fenceSaveProfile(&fenceProfile{Release: rel, Feeds: feeds, Installed: names, Missing: missing})
+				resp["missing"] = missing
+			}
+		}
+	}
+	jsonOK(w, resp)
 }
 
 func fenceLatestTag() (string, error) {
@@ -338,6 +366,11 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 
 	send(tr(lang, "fInst"))
 	if err := fenceInstallBundle(cl, tag, rel, send); err != nil {
+		var me *fenceMissingError
+		if errors.As(err, &me) {
+			fail(errors.New(tr(lang, "fMissingDeps") + strings.Join(me.Names, ", ") + " — " + tr(lang, "fMissingHint")))
+			return
+		}
 		fail(fmt.Errorf("%s: %w", tr(lang, "fNoSw"), err))
 		return
 	}
@@ -504,7 +537,24 @@ func fenceDlHandler(w http.ResponseWriter, r *http.Request) {
 		failMsg(err)
 		return
 	}
-	jsonOK(w, map[string]any{"ok": true, "tag": tag})
+	deps := []string{}
+	if prof := fenceLoadProfile(); prof != nil && len(prof.Missing) > 0 {
+		fetched, unresolved, err := fenceFetchDeps(prof)
+		if err != nil {
+			failMsg(err)
+			return
+		}
+		if len(unresolved) > 0 {
+			prof.Missing = unresolved
+			fenceSaveProfile(prof)
+			failMsg(errors.New(tr(lang, "fMissingDeps") + strings.Join(unresolved, ", ")))
+			return
+		}
+		deps = fetched
+		prof.Missing = nil
+		fenceSaveProfile(prof)
+	}
+	jsonOK(w, map[string]any{"ok": true, "tag": tag, "deps": deps})
 }
 
 func fenceCacheHandler(w http.ResponseWriter, r *http.Request) {
@@ -600,6 +650,395 @@ func fenceNetDiag(cl *ssh.Client, send logFn) string {
 		gw, gwPing, netPing, dns, v4, strings.Join(addrs, ","))
 }
 
+// ---- offline dependency handling ----
+//
+// Verified against the real opkg (OpenWrt 24.10.0 rootfs, sandbox
+// experiments E1-E5): installing local .ipk files needs NO package
+// lists and NO router internet, as long as every dependency is
+// either already installed on the router or given as a file in the
+// same command. When one is missing, opkg refuses with the
+// misleading "Unknown package 'swfence'". So the app computes the
+// missing set itself: it reads the Depends fields out of the
+// downloaded bundle, compares them with the router's installed
+// packages, and the phone downloads any missing .ipk from the
+// router's own feeds (learned at connection-check time) to hand
+// over at install time.
+
+type ipkInfo struct {
+	Package string
+	Depends []string
+}
+
+// depNamesOf flattens a Depends field ("kernel (= 1.2), a | b, c")
+// into plain package names ("kernel", "a", "c").
+func depNamesOf(s string) []string {
+	var out []string
+	for _, tok := range strings.Split(s, ",") {
+		tok = strings.TrimSpace(tok)
+		if i := strings.Index(tok, "("); i >= 0 {
+			tok = strings.TrimSpace(tok[:i])
+		}
+		if strings.Contains(tok, "|") {
+			tok = strings.TrimSpace(strings.SplitN(tok, "|", 2)[0])
+		}
+		if tok != "" {
+			out = append(out, tok)
+		}
+	}
+	return out
+}
+
+// parseControlFields parses a debian-style control stanza,
+// honouring continuation lines.
+func parseControlFields(text string) map[string]string {
+	fields := map[string]string{}
+	key := ""
+	for _, line := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		if line[0] == ' ' || line[0] == '\t' {
+			if key != "" {
+				fields[key] += "\n" + line
+			}
+			continue
+		}
+		i := strings.Index(line, ":")
+		if i < 0 {
+			continue
+		}
+		key = line[:i]
+		fields[key] = strings.TrimSpace(line[i+1:])
+	}
+	return fields
+}
+
+func tarGzMember(data []byte, base string) ([]byte, error) {
+	gz, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	tr := tar.NewReader(gz)
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if filepath.Base(h.Name) == base {
+			return io.ReadAll(tr)
+		}
+	}
+	return nil, errors.New(base + " not found in archive")
+}
+
+// parseIPKBytes reads the control fields of an .ipk (a tar.gz
+// wrapping control.tar.gz wrapping ./control).
+func parseIPKBytes(data []byte) (ipkInfo, error) {
+	ctrlGz, err := tarGzMember(data, "control.tar.gz")
+	if err != nil {
+		return ipkInfo{}, err
+	}
+	ctl, err := tarGzMember(ctrlGz, "control")
+	if err != nil {
+		return ipkInfo{}, err
+	}
+	f := parseControlFields(string(ctl))
+	return ipkInfo{Package: f["Package"], Depends: depNamesOf(f["Depends"])}, nil
+}
+
+// fenceBundleIPKs parses every .ipk inside the cached bundle.
+func fenceBundleIPKs(tag string) ([]ipkInfo, error) {
+	data, err := os.ReadFile(filepath.Join(fenceCacheDir(), fenceBundleName(tag)))
+	if err != nil {
+		return nil, err
+	}
+	gz, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	tr := tar.NewReader(gz)
+	var out []ipkInfo
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if !strings.HasSuffix(h.Name, ".ipk") {
+			continue
+		}
+		b, err := io.ReadAll(tr)
+		if err != nil {
+			return nil, err
+		}
+		info, err := parseIPKBytes(b)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, info)
+	}
+	if len(out) == 0 {
+		return nil, errors.New("no .ipk packages in the bundle")
+	}
+	return out, nil
+}
+
+// fenceInstalledSet returns the router's installed package names.
+func fenceInstalledSet(cl *ssh.Client) (map[string]bool, error) {
+	out, err := fenceExec(cl, "opkg list-installed")
+	if err != nil {
+		return nil, err
+	}
+	set := map[string]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if i := strings.Index(line, " - "); i > 0 {
+			line = line[:i]
+		}
+		set[line] = true
+	}
+	return set, nil
+}
+
+var fenceDepFileRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._+-]*\.ipk$`)
+
+// fenceCachedDeps maps package name -> local file for every
+// dependency .ipk the phone downloaded into the cache.
+func fenceCachedDeps() (map[string]string, error) {
+	out := map[string]string{}
+	ents, err := os.ReadDir(filepath.Join(fenceCacheDir(), "deps"))
+	if err != nil {
+		return out, nil
+	}
+	for _, e := range ents {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".ipk") {
+			continue
+		}
+		p := filepath.Join(fenceCacheDir(), "deps", e.Name())
+		b, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		info, err := parseIPKBytes(b)
+		if err != nil || info.Package == "" {
+			continue
+		}
+		out[info.Package] = p
+	}
+	return out, nil
+}
+
+// fenceMissingError reports dependency packages that are neither
+// installed on the router nor in the local cache.
+type fenceMissingError struct{ Names []string }
+
+func (e *fenceMissingError) Error() string {
+	return "missing dependency packages: " + strings.Join(e.Names, ", ")
+}
+
+// fenceDepState gathers the offline-install facts for the cached
+// bundle: its packages, the router's installed set, the cached
+// dependency files, and what is still missing.
+func fenceDepState(cl *ssh.Client, tag string) (infos []ipkInfo, installed map[string]bool, cached map[string]string, missing []string, err error) {
+	infos, err = fenceBundleIPKs(tag)
+	if err != nil {
+		return
+	}
+	installed, err = fenceInstalledSet(cl)
+	if err != nil {
+		return
+	}
+	cached, err = fenceCachedDeps()
+	if err != nil {
+		return
+	}
+	have := map[string]bool{}
+	for _, in := range infos {
+		have[in.Package] = true
+	}
+	for name := range cached {
+		have[name] = true
+	}
+	seen := map[string]bool{}
+	for _, in := range infos {
+		for _, d := range in.Depends {
+			if !installed[d] && !have[d] && !seen[d] {
+				seen[d] = true
+				missing = append(missing, d)
+			}
+		}
+	}
+	sort.Strings(missing)
+	return
+}
+
+type fenceFeed struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+	Gz   bool   `json:"gz"`
+}
+
+// fenceProfile is what the connection check learns about a router
+// (its package feeds, installed set and missing dependencies), so
+// the download step can fetch exactly the .ipk files the install
+// will need while the phone still has internet.
+type fenceProfile struct {
+	Release   string      `json:"release"`
+	Feeds     []fenceFeed `json:"feeds"`
+	Installed []string    `json:"installed"`
+	Missing   []string    `json:"missing"`
+}
+
+func fenceProfilePath() string { return filepath.Join(fenceCacheDir(), "router.json") }
+
+func fenceSaveProfile(p *fenceProfile) {
+	if err := os.MkdirAll(fenceCacheDir(), 0o755); err != nil {
+		return
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		return
+	}
+	os.WriteFile(fenceProfilePath(), b, 0o644)
+}
+
+func fenceLoadProfile() *fenceProfile {
+	b, err := os.ReadFile(fenceProfilePath())
+	if err != nil {
+		return nil
+	}
+	var p fenceProfile
+	if json.Unmarshal(b, &p) != nil {
+		return nil
+	}
+	return &p
+}
+
+func fenceParseFeeds(conf string) []fenceFeed {
+	var out []fenceFeed
+	for _, line := range strings.Split(conf, "\n") {
+		f := strings.Fields(line)
+		if len(f) >= 3 && (f[0] == "src/gz" || f[0] == "src") {
+			out = append(out, fenceFeed{Name: f[1], URL: f[2], Gz: f[0] == "src/gz"})
+		}
+	}
+	return out
+}
+
+func gunzipBytes(data []byte) ([]byte, error) {
+	gz, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	return io.ReadAll(gz)
+}
+
+type pkgStanza struct {
+	name, file string
+	deps       []string
+}
+
+func parsePackagesIndex(text string) []pkgStanza {
+	var out []pkgStanza
+	for _, block := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n\n") {
+		f := parseControlFields(block)
+		if f["Package"] == "" || f["Filename"] == "" {
+			continue
+		}
+		out = append(out, pkgStanza{f["Package"], f["Filename"], depNamesOf(f["Depends"])})
+	}
+	return out
+}
+
+// fenceFetchDeps downloads the profile's missing packages (and,
+// recursively, their own missing dependencies) from the router's
+// feeds into the local cache. It runs on the phone/PC side, which
+// has internet at download time.
+func fenceFetchDeps(prof *fenceProfile) (fetched []string, unresolved []string, err error) {
+	type stanza struct {
+		file string
+		deps []string
+		feed fenceFeed
+	}
+	index := map[string]stanza{}
+	for _, f := range prof.Feeds {
+		u := f.URL + "/Packages"
+		if f.Gz {
+			u += ".gz"
+		}
+		raw, err := httpGet(u)
+		if err != nil {
+			return nil, nil, err
+		}
+		if f.Gz {
+			if raw, err = gunzipBytes(raw); err != nil {
+				return nil, nil, err
+			}
+		}
+		for _, st := range parsePackagesIndex(string(raw)) {
+			if _, dup := index[st.name]; !dup {
+				index[st.name] = stanza{st.file, st.deps, f}
+			}
+		}
+	}
+	installed := map[string]bool{}
+	for _, n := range prof.Installed {
+		installed[n] = true
+	}
+	selected := map[string]stanza{}
+	queue := append([]string{}, prof.Missing...)
+	for len(queue) > 0 {
+		name := queue[0]
+		queue = queue[1:]
+		if installed[name] || name == "kernel" {
+			continue
+		}
+		if _, ok := selected[name]; ok {
+			continue
+		}
+		st, ok := index[name]
+		if !ok {
+			unresolved = append(unresolved, name)
+			continue
+		}
+		selected[name] = st
+		queue = append(queue, st.deps...)
+	}
+	dir := filepath.Join(fenceCacheDir(), "deps")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, nil, err
+	}
+	for name, st := range selected {
+		base := path.Base(st.file)
+		if !fenceDepFileRe.MatchString(base) {
+			unresolved = append(unresolved, name)
+			continue
+		}
+		data, err := httpGet(st.feed.URL + "/" + st.file)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(data) < 2 || data[0] != 0x1f || data[1] != 0x8b {
+			return nil, nil, errors.New("downloaded dependency is not a gzip archive: " + base)
+		}
+		if err := os.WriteFile(filepath.Join(dir, base), data, 0o644); err != nil {
+			return nil, nil, err
+		}
+		fetched = append(fetched, name)
+	}
+	sort.Strings(fetched)
+	sort.Strings(unresolved)
+	return fetched, unresolved, nil
+}
+
 func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
 	data, err := os.ReadFile(filepath.Join(fenceCacheDir(), fenceBundleName(tag)))
 	if err != nil {
@@ -633,44 +1072,66 @@ func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
 	if _, err := fenceRunStdin(cl, "cd "+dir+" && sha256sum -c SHA256SUMS", "", send); err != nil {
 		return err
 	}
-	// Upstream's installer and INSTALL.md both refresh the package
-	// lists before installing the local files: without lists, opkg
-	// cannot resolve the packages' dependencies (not even the luci
-	// app's dependency on the swfence package installed alongside it)
-	// and fails with "Unknown package 'swfence'". This runs on the
-	// router, so the router needs its own internet connection here;
-	// the phone/PC still downloads nothing at install time.
-	// The downloads go through the IPv4-forcing wget shim above:
-	// uclient-fetch fails on routers whose DNS answers with IPv6
-	// addresses they cannot route to.
-	if _, err := fenceRunStdin(cl, fenceWgetWrapCmd, "", send); err != nil {
-		return err
-	}
-	upd := fenceOpkgUpdateCmd
 	isApk := strings.HasPrefix(release, "25.12.")
 	if isApk {
-		upd = fenceApkUpdateCmd
-	}
-	updErr := error(nil)
-	if _, err := fenceRunStdin(cl, fencePathPrefix+upd, "", send); err != nil {
-		updErr = err
-		if !isApk {
-			// opkg update failed (its downloader may not honour
-			// PATH): fetch the lists directly, then carry on.
-			send(upd + " failed; fetching the package lists directly (IPv4)")
-			if _, ferr := fenceRunStdin(cl, fenceListFetchCmd, "", send); ferr == nil {
-				updErr = nil
+		// The apk flavour keeps the upstream flow: refresh the
+		// package lists on the router, then add the local files.
+		if _, err := fenceRunStdin(cl, fenceWgetWrapCmd, "", send); err != nil {
+			return err
+		}
+		if _, err := fenceRunStdin(cl, fencePathPrefix+fenceApkUpdateCmd, "", send); err != nil {
+			return fmt.Errorf("%s: %w | %s", fenceApkUpdateCmd, err, fenceNetDiag(cl, send))
+		}
+		if _, err := fenceRunStdin(cl, "cd "+dir+" && "+fencePathPrefix+inst, "", send); err != nil {
+			return err
+		}
+	} else {
+		// Offline opkg install (see the dependency notes above):
+		// no package lists, no router internet. Dependencies must
+		// already be installed or sit in the local cache as files
+		// the phone downloaded earlier; otherwise stop and name
+		// them instead of letting opkg fail with "Unknown package".
+		_, installed, cached, missing, err := fenceDepState(cl, tag)
+		_ = installed
+		if err != nil {
+			return err
+		}
+		if len(missing) > 0 {
+			return &fenceMissingError{Names: missing}
+		}
+		var depFiles []string
+		for _, f := range cached {
+			depFiles = append(depFiles, f)
+		}
+		sort.Strings(depFiles)
+		if len(depFiles) > 0 {
+			if _, err := fenceRunStdin(cl, "mkdir -p /tmp/swfence-deps", "", send); err != nil {
+				return err
+			}
+			for _, f := range depFiles {
+				base := filepath.Base(f)
+				if !fenceDepFileRe.MatchString(base) {
+					return errors.New("bad dependency file name: " + base)
+				}
+				b, err := os.ReadFile(f)
+				if err != nil {
+					return err
+				}
+				if _, err := fenceRunStdin(cl, "cat > /tmp/swfence-deps/"+base, string(b), send); err != nil {
+					return err
+				}
+				inst += " /tmp/swfence-deps/" + base
 			}
 		}
-	}
-	if updErr != nil {
-		// The router cannot fetch its package lists either way:
-		// diagnose its network and put the summary in the failure
-		// message itself.
-		return fmt.Errorf("%s: %w | %s", upd, updErr, fenceNetDiag(cl, send))
-	}
-	if _, err := fenceRunStdin(cl, "cd "+dir+" && "+fencePathPrefix+inst, "", send); err != nil {
-		return fmt.Errorf("%w | %s", err, fenceNetDiag(cl, send))
+		if _, err := fenceRunStdin(cl, "cd "+dir+" && "+inst, "", send); err != nil {
+			// opkg's exit code is unreliable in edge cases (it can
+			// report errors after configuring everything); the
+			// ground truth is whether swfence is on the router now.
+			if out, _ := fenceExec(cl, "command -v swfence"); strings.TrimSpace(out) == "" {
+				return err
+			}
+			send("opkg reported an error, but swfence is installed; continuing")
+		}
 	}
 	if _, err := fenceRunStdin(cl, fenceRepoCmd, "", send); err != nil {
 		return err

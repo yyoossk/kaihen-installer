@@ -1,12 +1,14 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
 	"compress/gzip"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/json"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -21,6 +23,7 @@ import (
 type fakeOpenWrt struct {
 	ln       net.Listener
 	failCmds map[string]bool
+	extra    map[string]string
 }
 
 var fakeWrtOutputs = map[string]string{
@@ -39,7 +42,9 @@ var fakeWrtOutputs = map[string]string{
 	fenceExtractCmd:                                             "",
 	fenceFindCmd:                                                "/tmp/swfence-bundle/SWFence/SHA256SUMS\n",
 	"cd /tmp/swfence-bundle/SWFence && sha256sum -c SHA256SUMS": "swfence-24.10.ipk: OK\nluc" + "i-app-swfence-24.10.ipk: OK\n",
-	"cd /tmp/swfence-bundle/SWFence && " + fencePathPrefix + "opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk": "",
+	"cd /tmp/swfence-bundle/SWFence && opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk": "",
+	"opkg list-installed":                "libc - 1.0-r1\nkmod-nft-bridge - 6.6.73-r1\n",
+	"cat /etc/opkg/distfeeds.conf":       "src/gz openwrt_core https://example.invalid/core\n",
 	fenceRepoCmd:                         "",
 	fenceOpkgUpdateCmd:                   "",
 	fenceApkUpdateCmd:                    "",
@@ -77,7 +82,7 @@ func newFakeOpenWrt(t *testing.T) *fakeOpenWrt {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := &fakeOpenWrt{ln: ln, failCmds: map[string]bool{}}
+	f := &fakeOpenWrt{ln: ln, failCmds: map[string]bool{}, extra: map[string]string{}}
 	go func() {
 		for {
 			c, err := ln.Accept()
@@ -128,7 +133,11 @@ func (f *fakeOpenWrt) handleConn(c net.Conn, conf *ssh.ServerConfig) {
 					channel.SendRequest("exit-status", false, []byte{0, 0, 0, 1})
 					return
 				}
-				channel.Write([]byte(fakeWrtOutputs[payload.Command]))
+				out, ok := f.extra[payload.Command]
+				if !ok {
+					out = fakeWrtOutputs[payload.Command]
+				}
+				channel.Write([]byte(out))
 				channel.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
 				return
 			}
@@ -235,7 +244,7 @@ func TestFenceInstallBundle(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "tag.txt"), []byte("v9.9.9-test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, fenceBundleName("v9.9.9-test")), []byte("bundle"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, fenceBundleName("v9.9.9-test")), makeTestBundle(), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if got := fenceCachedTag(); got != "v9.9.9-test" {
@@ -265,6 +274,65 @@ func TestFenceInstallNeedsDownload(t *testing.T) {
 	}
 }
 
+// makeTestIPK builds a minimal but structurally real .ipk whose
+// control file declares the given package and dependencies.
+func makeTestIPK(pkg, deps string) []byte {
+	var ctl bytes.Buffer
+	{
+		gw := gzip.NewWriter(&ctl)
+		tw := tar.NewWriter(gw)
+		body := "Package: " + pkg + "\nVersion: 1.0-r1\nDepends: " + deps + "\nArchitecture: all\n"
+		tw.WriteHeader(&tar.Header{Name: "./control", Mode: 0o644, Size: int64(len(body))})
+		tw.Write([]byte(body))
+		tw.Close()
+		gw.Close()
+	}
+	var data bytes.Buffer
+	{
+		gw := gzip.NewWriter(&data)
+		tw := tar.NewWriter(gw)
+		tw.Close()
+		gw.Close()
+	}
+	var out bytes.Buffer
+	gw := gzip.NewWriter(&out)
+	tw := tar.NewWriter(gw)
+	for name, b := range map[string][]byte{
+		"./debian-binary":  []byte("2.0\n"),
+		"./control.tar.gz": ctl.Bytes(),
+		"./data.tar.gz":    data.Bytes(),
+	} {
+		tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(b))})
+		tw.Write(b)
+	}
+	tw.Close()
+	gw.Close()
+	return out.Bytes()
+}
+
+// makeTestBundle builds a structurally real SWFence bundle:
+// swfence depends on libc + kmod-nft-bridge; the LuCI app on
+// libc + swfence.
+func makeTestBundle() []byte {
+	var out bytes.Buffer
+	gw := gzip.NewWriter(&out)
+	tw := tar.NewWriter(gw)
+	files := map[string][]byte{
+		"SWFence/swfence-24.10.ipk":          makeTestIPK("swfence", "libc, kmod-nft-bridge"),
+		"SWFence/luci-app-swfence-24.10.ipk": makeTestIPK("luci-app-swfence", "libc, swfence"),
+		"SWFence/SHA256SUMS":                 []byte("deadbeef  swfence-24.10.ipk\n"),
+	}
+	names := []string{"SWFence/SHA256SUMS", "SWFence/luci-app-swfence-24.10.ipk", "SWFence/swfence-24.10.ipk"}
+	for _, name := range names {
+		b := files[name]
+		tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(b))})
+		tw.Write(b)
+	}
+	tw.Close()
+	gw.Close()
+	return out.Bytes()
+}
+
 func seedFenceCache(t *testing.T) {
 	t.Helper()
 	dir := fenceCacheDir()
@@ -274,7 +342,7 @@ func seedFenceCache(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "tag.txt"), []byte("v9.9.9-test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, fenceBundleName("v9.9.9-test")), []byte("bundle"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, fenceBundleName("v9.9.9-test")), makeTestBundle(), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -317,61 +385,154 @@ func TestFenceInstallBackupFailureDetail(t *testing.T) {
 	}
 }
 
-// When opkg update fails on the router (its downloader is the
-// usual casualty of the IPv6 fallback problem), the install must
-// fall back to fetching the package lists directly and still
-// complete.
-func TestFenceInstallUpdateFallback(t *testing.T) {
-	old := exeDir
-	exeDir = t.TempDir()
-	defer func() { exeDir = old }()
-	seedFenceCache(t)
-	f := newFakeOpenWrt(t)
-	f.failCmds[fencePathPrefix+fenceOpkgUpdateCmd] = true
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
-	fenceInstallHandler(rec, req)
-	body := rec.Body.String()
-	if !strings.Contains(body, "fetching the package lists directly") || !strings.Contains(body, "RESULT|ok") {
-		t.Fatalf("install should fall back to a direct list fetch and succeed: %s", body)
+func TestFenceDepParsing(t *testing.T) {
+	got := depNamesOf("kernel (= 6.6.73~a21259-r1), kmod-nft-core, a | b, libc")
+	want := []string{"kernel", "kmod-nft-core", "a", "libc"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("depNamesOf = %v, want %v", got, want)
+	}
+	info, err := parseIPKBytes(makeTestIPK("swfence", "libc, kmod-nft-bridge"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Package != "swfence" || strings.Join(info.Depends, ",") != "libc,kmod-nft-bridge" {
+		t.Fatalf("parseIPKBytes = %+v", info)
+	}
+	infos, err := func() ([]ipkInfo, error) {
+		old := exeDir
+		exeDir = t.TempDir()
+		defer func() { exeDir = old }()
+		seedFenceCache(t)
+		return fenceBundleIPKs("v9.9.9-test")
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(infos) != 2 {
+		t.Fatalf("bundle ipks = %d, want 2", len(infos))
 	}
 }
 
-// When the lists cannot be fetched either way, the install fails
-// and the log carries the router network diagnostics.
-func TestFenceInstallDiagOnFetchFailure(t *testing.T) {
+// The router lacks kmod-nft-bridge and the cache has no dependency
+// files: the install must stop and NAME the missing package (this
+// is the failure opkg used to report as "Unknown package 'swfence'").
+func TestFenceInstallMissingDep(t *testing.T) {
 	old := exeDir
 	exeDir = t.TempDir()
 	defer func() { exeDir = old }()
 	seedFenceCache(t)
 	f := newFakeOpenWrt(t)
-	f.failCmds[fencePathPrefix+fenceOpkgUpdateCmd] = true
-	f.failCmds[fenceListFetchCmd] = true
+	f.extra["opkg list-installed"] = "libc - 1.0-r1\n"
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
 	fenceInstallHandler(rec, req)
 	body := rec.Body.String()
-	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "router network diagnostics") {
-		t.Fatalf("a total list-fetch failure should fail with diagnostics in the log: %s", body)
+	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "kmod-nft-bridge") || !strings.Contains(body, "不足している依存パッケージがあります") {
+		t.Fatalf("a missing dependency should be named in the failure: %s", body)
 	}
 }
 
-// A partial opkg update can exit 0 with the decisive feed missing;
-// the install step then fails. That path must also diagnose, and
-// the one-line summary must ride in the failure message itself.
-func TestFenceInstallDiagOnInstallFailure(t *testing.T) {
+// Same router, but the phone downloaded the dependency beforehand:
+// it is uploaded and installed in the same opkg command, offline.
+func TestFenceInstallWithCachedDep(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	depsDir := filepath.Join(fenceCacheDir(), "deps")
+	if err := os.MkdirAll(depsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	depFile := "kmod-nft-bridge_6.6.73-r1_mipsel_24kc.ipk"
+	if err := os.WriteFile(filepath.Join(depsDir, depFile), makeTestIPK("kmod-nft-bridge", "kernel, kmod-nft-core"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f := newFakeOpenWrt(t)
+	f.extra["opkg list-installed"] = "libc - 1.0-r1\n"
+	f.extra["mkdir -p /tmp/swfence-deps"] = ""
+	f.extra["cat > /tmp/swfence-deps/"+depFile] = ""
+	f.extra["cd /tmp/swfence-bundle/SWFence && opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk /tmp/swfence-deps/"+depFile] = ""
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	if body := rec.Body.String(); !strings.Contains(body, "RESULT|ok") {
+		t.Fatalf("install with the dependency file supplied should succeed: %s", body)
+	}
+}
+
+// The download step resolves missing packages (and their own
+// missing dependencies) against the router's own feed indexes.
+func TestFenceDepsDownload(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	bridge := "kmod-nft-bridge_6.6.73-r1_mipsel_24kc.ipk"
+	core := "kmod-nft-core_6.6.73-r1_mipsel_24kc.ipk"
+	index := "Package: kmod-nft-bridge\nVersion: 6.6.73-r1\nDepends: kernel (= 6.6.73~a21259-r1), kmod-nft-core\nFilename: " + bridge + "\n\n" +
+		"Package: kmod-nft-core\nVersion: 6.6.73-r1\nDepends: kernel (= 6.6.73~a21259-r1)\nFilename: " + core + "\n\n"
+	mux := http.NewServeMux()
+	mux.HandleFunc("/core/Packages.gz", func(w http.ResponseWriter, r *http.Request) {
+		gw := gzip.NewWriter(w)
+		gw.Write([]byte(index))
+		gw.Close()
+	})
+	mux.HandleFunc("/core/"+bridge, func(w http.ResponseWriter, r *http.Request) {
+		w.Write(makeTestIPK("kmod-nft-bridge", "kernel, kmod-nft-core"))
+	})
+	mux.HandleFunc("/core/"+core, func(w http.ResponseWriter, r *http.Request) {
+		w.Write(makeTestIPK("kmod-nft-core", "kernel"))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	prof := &fenceProfile{
+		Feeds:     []fenceFeed{{Name: "openwrt_core", URL: srv.URL + "/core", Gz: true}},
+		Installed: []string{"kernel", "libc"},
+		Missing:   []string{"kmod-nft-bridge"},
+	}
+	fetched, unresolved, err := fenceFetchDeps(prof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(unresolved) != 0 || len(fetched) != 2 {
+		t.Fatalf("fetched = %v, unresolved = %v", fetched, unresolved)
+	}
+	cached, err := fenceCachedDeps()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cached["kmod-nft-bridge"] == "" || cached["kmod-nft-core"] == "" {
+		t.Fatalf("cached deps = %v", cached)
+	}
+}
+
+// The connection check records the router profile (feeds +
+// missing deps) for the download step, and reports the missing
+// set to the page.
+func TestFenceChkSavesProfile(t *testing.T) {
 	old := exeDir
 	exeDir = t.TempDir()
 	defer func() { exeDir = old }()
 	seedFenceCache(t)
 	f := newFakeOpenWrt(t)
-	f.failCmds["cd /tmp/swfence-bundle/SWFence && "+fencePathPrefix+"opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk"] = true
+	f.extra["opkg list-installed"] = "libc - 1.0-r1\n"
+	body := `{"host":"` + f.addr() + `","user":"root","pass":"pw","lang":"ja"}`
+	req := httptest.NewRequest("POST", "/api/fencechk", strings.NewReader(body))
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
-	fenceInstallHandler(rec, req)
-	body := rec.Body.String()
-	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "router network diagnostics") || !strings.Contains(body, "diag[") {
-		t.Fatalf("an install-step failure should carry diagnostics and the summary line: %s", body)
+	fenceChkHandler(rec, req)
+	var j map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &j); err != nil {
+		t.Fatalf("response not JSON: %v (%s)", err, rec.Body.String())
+	}
+	miss, _ := j["missing"].([]any)
+	if len(miss) != 1 || miss[0] != "kmod-nft-bridge" {
+		t.Fatalf("chk missing = %v (body: %s)", j["missing"], rec.Body.String())
+	}
+	prof := fenceLoadProfile()
+	if prof == nil || len(prof.Missing) != 1 || prof.Missing[0] != "kmod-nft-bridge" {
+		t.Fatalf("saved profile = %+v", prof)
+	}
+	if len(prof.Feeds) != 1 || prof.Feeds[0].URL != "https://example.invalid/core" {
+		t.Fatalf("profile feeds = %+v", prof.Feeds)
 	}
 }
 
