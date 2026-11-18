@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -215,6 +216,47 @@ func fenceLatestTag() (string, error) {
 	return rel.TagName, nil
 }
 
+// fenceTagFetchCmd asks GitHub for the latest SWFence release. It runs
+// ON the router (uclient-fetch is OpenWrt's own HTTPS client) because
+// the install itself downloads from the router over its WAN anyway --
+// and the phone may be on the router's isolated Wi-Fi with no working
+// path to GitHub at all (seen on real hardware, 2026-11-19: the check
+// passed over SSH while the phone-side tag lookup failed).
+const fenceTagFetchCmd = "uclient-fetch -qO- https://api.github.com/repos/byizmysh/SWFence/releases/latest"
+
+var fenceTagRe = regexp.MustCompile(`"tag_name"\s*:\s*"([^"]+)"`)
+
+// fenceValidTag gates a tag before it is interpolated into a shell
+// command on the router.
+func fenceValidTag(tag string) bool {
+	if tag == "" || len(tag) > 64 {
+		return false
+	}
+	for i, c := range tag {
+		ok := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' ||
+			c == '.' || c == '_' || c == '-'
+		if !ok || i == 0 && !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9') {
+			return false
+		}
+	}
+	return true
+}
+
+func fenceLatestTagRemote(cl *ssh.Client) (string, error) {
+	out, err := fenceExec(cl, fenceTagFetchCmd)
+	if err != nil {
+		return "", err
+	}
+	m := fenceTagRe.FindStringSubmatch(out)
+	if m == nil {
+		return "", errors.New("tag_name not found in the GitHub response")
+	}
+	if !fenceValidTag(m[1]) {
+		return "", errors.New("unexpected tag format: " + m[1])
+	}
+	return m[1], nil
+}
+
 func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	if r.URL.RawQuery != "" {
@@ -265,9 +307,17 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 		fail(errors.New(tr(lang, "fUnsup")))
 		return
 	}
-	tag, err := fenceLatestTag()
-	if err != nil || tag == "" {
-		fail(errors.New(tr(lang, "fTagFail")))
+	tag, perr := fenceLatestTag()
+	if perr != nil || !fenceValidTag(tag) {
+		tag = ""
+		if rtag, rerr := fenceLatestTagRemote(cl); rerr == nil {
+			tag = rtag
+		} else if perr == nil {
+			perr = rerr
+		}
+	}
+	if tag == "" {
+		fail(fmt.Errorf("%s: %w", tr(lang, "fTagFail"), perr))
 		return
 	}
 	send(tr(lang, "fTag") + tag)

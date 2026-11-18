@@ -28,6 +28,7 @@ var fakeWrtOutputs = map[string]string{
 	"nft list chain inet fw4 swfence_early 2>/dev/null":    "table inet fw4 { chain swfence_early { } }\n",
 	"cat /tmp/dhcp.leases 2>/dev/null":                     "1732000000 aa:bb:cc:dd:ee:ff 192.168.1.50 switch2 *\n",
 	"swfence status 2>&1; swfence diagnostics 2>&1 | head -40": "swfence: active\n",
+	fenceTagFetchCmd: "{\"tag_name\": \"v9.9.9-test\", \"name\": \"x\"}\n",
 }
 
 func newFakeOpenWrt(t *testing.T) *fakeOpenWrt {
@@ -186,5 +187,33 @@ func TestFenceChkStaleLANIPFallback(t *testing.T) {
 	}
 	if got["ok"] != true {
 		t.Fatalf("stale KAIHEN_LAN_IP should fall back to an unbound dial: %v", got)
+	}
+}
+
+func TestFenceLatestTagRemote(t *testing.T) {
+	cl, err := fenceDial(newFakeOpenWrt(t).addr(), "pw")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl.Close()
+	tag, err := fenceLatestTagRemote(cl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag != "v9.9.9-test" {
+		t.Fatalf("tag = %q, want v9.9.9-test", tag)
+	}
+}
+
+func TestFenceValidTag(t *testing.T) {
+	for _, ok := range []string{"v1.0.0", "1.2.3", "v0.1.0-beta"} {
+		if !fenceValidTag(ok) {
+			t.Errorf("%q should be valid", ok)
+		}
+	}
+	for _, ng := range []string{"", "v1;rm -rf /", "a b", "$(x)", "../x", "-lead"} {
+		if fenceValidTag(ng) {
+			t.Errorf("%q should be invalid", ng)
+		}
 	}
 }
