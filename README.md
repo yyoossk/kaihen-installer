@@ -81,6 +81,18 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
   FTP でファイルを消すと本体のアルバムに項目だけが残り、その項目は
   本体側でも消せなくなるためです (ファイルが無いと本体の画面写真
   サービスがエラー 2206-0023 を出します)。
+- **File Manager** — browse the whole SD card over the same FTP
+  connection (OunceShell or the FTPD plugin): create folders,
+  rename, copy, move and delete files and folders, upload and
+  download. Every operation reports its result in a dialog. On a
+  computer you can also drag files and folders onto the window to
+  upload them, and drag a file out of the window to copy it.
+  **ファイルマネージャー** — 同じ FTP 接続 (OunceShell または
+  FTPD プラグイン) で SD カード全体を見て、フォルダ作成・名前変更・
+  コピー・移動・削除・アップロード・ダウンロードができます。
+  操作ごとに結果がダイアログで表示されます。パソコンでは、
+  ファイルやフォルダを画面にドロップしてアップロードしたり、
+  ファイルを画面の外へドラッグしてコピーしたりもできます。
 - **Self-update** — the app checks this repository's releases at startup.
   On Windows it replaces itself and restarts (your settings and
   downloaded files are kept). On Android it downloads the new APK and
