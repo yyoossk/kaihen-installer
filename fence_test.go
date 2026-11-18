@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/json"
@@ -17,24 +19,36 @@ import (
 // fakeOpenWrt is a minimal SSH server answering the exec commands
 // the SWFence handlers run, with canned OpenWrt output.
 type fakeOpenWrt struct {
-	ln net.Listener
+	ln       net.Listener
+	failCmds map[string]bool
 }
 
 var fakeWrtOutputs = map[string]string{
 	`grep DISTRIB_RELEASE /etc/openwrt_release | cut -d= -f2 | tr -d "'\""`: "24.10.2\n",
-	"command -v fw4":     "/usr/sbin/fw4\n",
-	"command -v swfence": "/usr/bin/swfence\n",
-	"uci get swfence.main.enabled":                         "1\n",
-	"nft list chain inet fw4 swfence_policy 2>/dev/null":   "table inet fw4 { chain swfence_policy { } }\n",
-	"nft list chain inet fw4 swfence_early 2>/dev/null":    "table inet fw4 { chain swfence_early { } }\n",
-	"cat /tmp/dhcp.leases 2>/dev/null":                     "1732000000 aa:bb:cc:dd:ee:ff 192.168.1.50 switch2 *\n",
-	"swfence status 2>&1; swfence diagnostics 2>&1 | head -40": "swfence: active\n",
-	fenceUploadCmd:  "",
-	fenceExtractCmd: "",
-	fenceFindCmd:    "/tmp/swfence-bundle/SWFence/SHA256SUMS\n",
+	"command -v fw4":                                            "/usr/sbin/fw4\n",
+	"command -v swfence":                                        "/usr/bin/swfence\n",
+	"uci get swfence.main.enabled":                              "1\n",
+	"nft list chain inet fw4 swfence_policy 2>/dev/null":        "table inet fw4 { chain swfence_policy { } }\n",
+	"nft list chain inet fw4 swfence_early 2>/dev/null":         "table inet fw4 { chain swfence_early { } }\n",
+	"cat /tmp/dhcp.leases 2>/dev/null":                          "1732000000 aa:bb:cc:dd:ee:ff 192.168.1.50 switch2 *\n",
+	"ip -4 -o addr show scope global":                           "2: br-lan    inet 127.0.0.1/24 brd 127.0.0.255 scope global br-lan\n",
+	"/sbin/sysupgrade -b /tmp/swfence-backup.tar.gz":            "",
+	"swfence configure":                                         "{\"ok\": true}\n",
+	"swfence status 2>&1; swfence diagnostics 2>&1 | head -40":  "swfence: active\n",
+	fenceUploadCmd:                                              "",
+	fenceExtractCmd:                                             "",
+	fenceFindCmd:                                                "/tmp/swfence-bundle/SWFence/SHA256SUMS\n",
 	"cd /tmp/swfence-bundle/SWFence && sha256sum -c SHA256SUMS": "swfence-24.10.ipk: OK\nluc" + "i-app-swfence-24.10.ipk: OK\n",
 	"cd /tmp/swfence-bundle/SWFence && opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk": "",
 	fenceRepoCmd: "",
+}
+
+func init() {
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	gw.Write([]byte("swfence backup test"))
+	gw.Close()
+	fakeWrtOutputs["cat /tmp/swfence-backup.tar.gz"] = buf.String()
 }
 
 func newFakeOpenWrt(t *testing.T) *fakeOpenWrt {
@@ -57,7 +71,7 @@ func newFakeOpenWrt(t *testing.T) *fakeOpenWrt {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := &fakeOpenWrt{ln: ln}
+	f := &fakeOpenWrt{ln: ln, failCmds: map[string]bool{}}
 	go func() {
 		for {
 			c, err := ln.Accept()
@@ -103,6 +117,11 @@ func (f *fakeOpenWrt) handleConn(c net.Conn, conf *ssh.ServerConfig) {
 				if req.WantReply {
 					req.Reply(true, nil)
 				}
+				if f.failCmds[payload.Command] {
+					channel.Write([]byte("fake error output\n"))
+					channel.SendRequest("exit-status", false, []byte{0, 0, 0, 1})
+					return
+				}
 				channel.Write([]byte(fakeWrtOutputs[payload.Command]))
 				channel.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
 				return
@@ -133,6 +152,9 @@ func TestFenceChkPageContract(t *testing.T) {
 	}
 	if j["release"] != "24.10.2" {
 		t.Errorf("release = %v", j["release"])
+	}
+	if j["cidr"] != "127.0.0.0/24" {
+		t.Errorf("cidr = %v, want the LAN network of the connected address (the page fills the subnet field from it)", j["cidr"])
 	}
 	leases, _ := j["leases"].([]any)
 	if len(leases) != 1 {
@@ -234,6 +256,58 @@ func TestFenceInstallNeedsDownload(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "ダウンロード") {
 		t.Fatalf("install without a downloaded bundle should fail asking for the download first: %s", body)
+	}
+}
+
+func seedFenceCache(t *testing.T) {
+	t.Helper()
+	dir := fenceCacheDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tag.txt"), []byte("v9.9.9-test"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, fenceBundleName("v9.9.9-test")), []byte("bundle"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The whole install handler against the fake router, backup step
+// included: this path shipped broken once (it had never been
+// exercised end to end), so it stays covered.
+func TestFenceInstallHandlerFull(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	addr := newFakeOpenWrt(t).addr()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+addr+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&subnet=192.168.1.0/24&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "RESULT|ok") {
+		t.Fatalf("full install should succeed against the fake router: %s", body)
+	}
+	ents, err := os.ReadDir(filepath.Join(exeDir, "swfence-backups"))
+	if err != nil || len(ents) != 1 || !strings.HasPrefix(ents[0].Name(), "swfence-backup-") {
+		t.Fatalf("router backup should be saved locally: ents=%v err=%v", ents, err)
+	}
+}
+
+func TestFenceInstallBackupFailureDetail(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	f := newFakeOpenWrt(t)
+	f.failCmds["/sbin/sysupgrade -b /tmp/swfence-backup.tar.gz"] = true
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "status 1") {
+		t.Fatalf("a failed backup must surface the underlying error, not just the generic message: %s", body)
 	}
 }
 

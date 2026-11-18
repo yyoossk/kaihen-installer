@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -158,6 +158,26 @@ func fenceLeases(cl *ssh.Client) []map[string]string {
 	return leases
 }
 
+// fenceLANPrefix asks the router for its global IPv4 addresses and
+// returns the LAN network (e.g. "192.168.1.0/24") of the address the
+// user connected to. The check response carries it as "cidr" and the
+// page fills the allowed-subnet field with it.
+func fenceLANPrefix(cl *ssh.Client, routerIP string) string {
+	out, _ := fenceExec(cl, "ip -4 -o addr show scope global")
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Fields(line)
+		for i, tok := range f {
+			if tok == "inet" && i+1 < len(f) {
+				ip, ipnet, err := net.ParseCIDR(f[i+1])
+				if err == nil && ip.String() == routerIP {
+					return ipnet.String()
+				}
+			}
+		}
+	}
+	return ""
+}
+
 func fenceChkHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	json.NewDecoder(r.Body).Decode(&b)
@@ -180,10 +200,15 @@ func fenceChkHandler(w http.ResponseWriter, r *http.Request) {
 	if out, _ := fenceExec(cl, "uci get swfence.main.enabled"); strings.TrimSpace(out) == "1" {
 		enabled = true
 	}
+	host := b.addr()
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
 	jsonOK(w, map[string]any{
 		"ok": true, "supported": true, "release": rel,
 		"installed": installed, "enabled": enabled, "guards": fenceGuardsUp(cl),
 		"leases": fenceLeases(cl),
+		"cidr":   fenceLANPrefix(cl, host),
 	})
 }
 
@@ -275,25 +300,34 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	send(tr(lang, "fTag") + tag)
 
-	// back up the router configuration to the PC first
-	if _, err := fenceExec(cl, "sysupgrade -b /tmp/swfence-backup.tar.gz"); err != nil {
-		fail(errors.New(tr(lang, "fBkFail")))
-		return
-	}
-	b64out, err := fenceExec(cl, "base64 /tmp/swfence-backup.tar.gz")
+	// Back up the router configuration first. sysupgrade is called by
+	// its absolute path (an SSH exec session's PATH is not guaranteed
+	// to include /sbin), and the archive is fetched with cat: the SSH
+	// channel is 8-bit clean, and a base64 round-trip only adds a
+	// failure mode. Every failure carries the underlying error so the
+	// log says what actually went wrong on the router.
+	bkOut, err := fenceExec(cl, "/sbin/sysupgrade -b /tmp/swfence-backup.tar.gz")
 	if err != nil {
-		fail(errors.New(tr(lang, "fBkFail")))
+		if s := strings.TrimSpace(bkOut); s != "" {
+			send(s)
+		}
+		fail(fmt.Errorf("%s: %w", tr(lang, "fBkFail"), err))
 		return
 	}
-	raw, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(strings.TrimSpace(b64out), "\n", ""))
-	if err != nil || len(raw) == 0 {
-		fail(errors.New(tr(lang, "fBkFail")))
+	bkData, err := fenceExec(cl, "cat /tmp/swfence-backup.tar.gz")
+	if err != nil {
+		fail(fmt.Errorf("%s: %w", tr(lang, "fBkFail"), err))
+		return
+	}
+	raw := []byte(bkData)
+	if len(raw) < 2 || raw[0] != 0x1f || raw[1] != 0x8b {
+		fail(fmt.Errorf("%s (%d bytes)", tr(lang, "fBkFail"), len(raw)))
 		return
 	}
 	os.MkdirAll(pathOf("swfence-backups"), 0o755)
 	bkName := "swfence-backup-" + time.Now().Format("20060102-150405") + ".tar.gz"
 	if err := os.WriteFile(filepath.Join(pathOf("swfence-backups"), bkName), raw, 0o644); err != nil {
-		fail(errors.New(tr(lang, "fBkFail")))
+		fail(fmt.Errorf("%s: %w", tr(lang, "fBkFail"), err))
 		return
 	}
 	send(tr(lang, "fBackup") + bkName)
