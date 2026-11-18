@@ -224,6 +224,7 @@ Node.js — 同梱ランタイム (OpenJS Foundation)</p>
 <h2 data-i18n="fence_sec">ルーターで隔離</h2>
 <p><button class="widebtn" onclick="showPage('fence')"><span data-i18n="fence_h">SWFence （ルーターで隔離）</span></button></p>
 <p class="note" data-i18n="fence_note">OpenWrt 用ファイアウォール SWFence をルーターに入れて、本体の MAC アドレスだけを隔離します。LAN 内 （このツールとの通信） は使えて、インターネットには出られなくなります。90DNS と違い、ルーターで物理的に止めるので、ドメインのリスト漏れや IP 直打ちでも抜けられません。要るもの: OpenWrt 24.10.x / 25.12.x のルーター (SSH の root ログイン)。インストールが終わるまで、本体はインターネットに繋がないでください。</p>
+<div id="oweslot-hb"><div id="owewrap">
 <h2 data-i18n="owe_h">Offline WAN Emulator (Raspberry Pi)</h2>
 <p class="note" data-i18n="owe_note">Raspberry Pi 4B をルーターの WAN ポートにつなぎ、本体の接続テストへの応答を Pi がローカルで返す仕組みです。ルーターがインターネットに繋がっていなくても、本体の接続テストが成功するようになります (SWFence や 90DNS とは別の方式です)。実験的なベータ版 (v0.1.0-beta) です。要るもの: Raspberry Pi 4B (Raspberry Pi OS Lite 64-bit を書き込み、SSH を有効にしたもの)。最初は Pi をルーターの LAN ポートに繋ぎ、この欄で「Pi にインストール」を押してください (設定を入れるだけで、この時点ではネットワークは切り替わりません)。</p>
 <p><span data-i18n="owe_ip">Raspberry Pi の IP アドレス</span><br><input id="oip" type="text" size="18"></p>
@@ -231,6 +232,7 @@ Node.js — 同梱ランタイム (OpenJS Foundation)</p>
 <p><span data-i18n="owe_pass">Pi のパスワード</span><br><input id="opass" type="password" size="18"></p>
 <p><button class="btn" onclick="oweInstall()" data-i18n="owe_install">Pi にインストール</button> <button onclick="oweVerify()" data-i18n="owe_verify">検証を実行</button></p>
 <p class="note" data-i18n="owe_after">インストールが終わったら: ① ルーターのインターネット設定で WAN を静的に設定します (IP 10.42.0.2、マスク 255.255.255.0、ゲートウェイ 10.42.0.1、DNS 10.42.0.1)。② Pi の電源を切り、LAN ケーブルをルーターの黄色い WAN ポートに差し替えてから、電源を入れ直します。③ Pi のアドレスは 10.42.0.1 になるので、この欄の IP を 10.42.0.1 に変えて「検証を実行」を押すと、設定が効いているか確認できます。</p>
+</div></div>
 <div id="prepslot-hb"></div>
 <h2 data-i18n="hbstep_h">kaiHEN の導入手順</h2>
 <p class="note" data-i18n="hb_note">① 本体でローダーを起動 (「ゲームをロード」でローダー画面を出すか、Pico で起動)
@@ -268,6 +270,9 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 <h2 data-i18n="al_h">オートローダー</h2>
 <p class="note" data-i18n="al_note">SeanHeuc の civ-autoloader を使う方式です。専用のセーブデータを入れておくと、次回からは「ゲームをロード」するだけで、本体側で FS の取得から kaiHEN の起動まで自動で進みます。PC もネットワーク接続も要りません。FS の取得はタイミング勝負なので失敗することもあります。その場合は、もう一度「ゲームをロード」して読み直してください。</p>
 <p class="note" data-i18n="al_learn">タイミングの学習: 起動に成功すると、そのときに当たったタイミングをセーブ内に記録し、次回からはそのタイミングから開始します。効果がない・戻したい場合は、このページからセーブを入れ直すと記録はリセットされます。</p>
+<h2 data-i18n="autosave_h">ゲーム内の設定</h2>
+<p class="note" data-i18n="autosave_note">シヴィライゼーション7 の設定で、オートセーブの数量を 1、間隔を 25 ターンにしてください。オートセーブは完全には切れません。間隔を広げておくと、kaiHEN の起動中にセーブ処理が割り込んで失敗する可能性を減らせます。</p>
+<div id="oweslot-auto"></div>
 <h2 data-i18n="al_s1h">ステップ1: SD カードの準備</h2>
 <p class="note" data-i18n="al_s1">下の「SD 用フォルダを開く」を押すと、必要なファイルが GitHub からダウンロードされ、このツールの autoloader-sd フォルダに用意されて、フォルダが開きます。そのフォルダの中身を、SD カードのルートにコピーしてください。SD を本体に入れてから次へ進みます。</p>
 <p><button onclick="alOpenSd()" data-i18n="al_open">SD 用フォルダを開く</button></p>
@@ -329,6 +334,7 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 </div>
 <div id="logwrap">
 <h2 data-i18n="log_h">実行ログ</h2>
+<p><button id="logcopybtn" onclick="copyLog()" data-i18n="log_copy">ログをコピー</button></p>
 <div id="log"></div>
 </div>
 <div id="chkmodal"><div class="chkbox"><div id="chkline1"></div><div id="chkline2"></div><div id="chkline3"></div><p><button onclick="hideChk()" data-i18n="dlg_ok">OK</button></p></div></div>
@@ -421,7 +427,7 @@ var AU = {"ja": {}, "en": {}, "fr": {}, "de": {}, "it": {}, "es": {}, "ru": {}, 
 for (var au1 in AU) { if (I18N[au1]) { for (var au2 in AU[au1]) I18N[au1][au2] = AU[au1][au2]; } }
 var AS = {"ja": {"chk_ok": "接続できました", "chk_ng": "接続できませんでした"}, "en": {"chk_ok": "Connected", "chk_ng": "Could not connect"}, "fr": {"chk_ok": "Connecté", "chk_ng": "Connexion impossible"}, "de": {"chk_ok": "Verbunden", "chk_ng": "Verbindung nicht möglich"}, "it": {"chk_ok": "Connesso", "chk_ng": "Connessione non riuscita"}, "es": {"chk_ok": "Conectado", "chk_ng": "No se pudo conectar"}, "ru": {"chk_ok": "Подключено", "chk_ng": "Не удалось подключиться"}, "pt": {"chk_ok": "Conectado", "chk_ng": "Não foi possível conectar"}, "pl": {"chk_ok": "Połączono", "chk_ng": "Nie udało się połączyć"}, "ko": {"chk_ok": "연결되었습니다", "chk_ng": "연결할 수 없습니다"}, "zh-Hans": {"chk_ok": "已连接", "chk_ng": "无法连接"}, "zh-Hant": {"chk_ok": "已連線", "chk_ng": "無法連線"}};
 for (var as1 in AS) { if (I18N[as1]) { for (var as2 in AS[as1]) I18N[as1][as2] = AS[as1][as2]; } }
-var AT = {"ja": {"ping_ok": "ping: 正常に応答しました", "ping_ng": "ping: 応答がありません"}, "en": {"ping_ok": "Ping: responded normally", "ping_ng": "Ping: no response"}, "fr": {"ping_ok": "Ping : réponse normale", "ping_ng": "Ping : aucune réponse"}, "de": {"ping_ok": "Ping: normale Antwort", "ping_ng": "Ping: keine Antwort"}, "it": {"ping_ok": "Ping: risposta normale", "ping_ng": "Ping: nessuna risposta"}, "es": {"ping_ok": "Ping: respondió normalmente", "ping_ng": "Ping: sin respuesta"}, "ru": {"ping_ok": "Ping: ответ в норме", "ping_ng": "Ping: нет ответа"}, "pt": {"ping_ok": "Ping: respondeu normalmente", "ping_ng": "Ping: sem resposta"}, "pl": {"ping_ok": "Ping: odpowiedź prawidłowa", "ping_ng": "Ping: brak odpowiedzi"}, "ko": {"ping_ok": "ping: 정상적으로 응답했습니다", "ping_ng": "ping: 응답이 없습니다"}, "zh-Hans": {"ping_ok": "ping: 响应正常", "ping_ng": "ping: 无响应"}, "zh-Hant": {"ping_ok": "ping: 回應正常", "ping_ng": "ping: 無回應"}};
+var AT = {"ja": {"ping_ok": "ping: 正常に応答しました", "ping_ng": "ping: 応答がありません", "log_copy": "ログをコピー", "log_copied": "コピーしました"}, "en": {"ping_ok": "Ping: responded normally", "ping_ng": "Ping: no response", "log_copy": "Copy log", "log_copied": "Copied"}, "fr": {"ping_ok": "Ping : réponse normale", "ping_ng": "Ping : aucune réponse", "log_copy": "Copier le journal", "log_copied": "Copié"}, "de": {"ping_ok": "Ping: normale Antwort", "ping_ng": "Ping: keine Antwort", "log_copy": "Log kopieren", "log_copied": "Kopiert"}, "it": {"ping_ok": "Ping: risposta normale", "ping_ng": "Ping: nessuna risposta", "log_copy": "Copia il registro", "log_copied": "Copiato"}, "es": {"ping_ok": "Ping: respondió normalmente", "ping_ng": "Ping: sin respuesta", "log_copy": "Copiar el registro", "log_copied": "Copiado"}, "ru": {"ping_ok": "Ping: ответ в норме", "ping_ng": "Ping: нет ответа", "log_copy": "Копировать журнал", "log_copied": "Скопировано"}, "pt": {"ping_ok": "Ping: respondeu normalmente", "ping_ng": "Ping: sem resposta", "log_copy": "Copiar o registo", "log_copied": "Copiado"}, "pl": {"ping_ok": "Ping: odpowiedź prawidłowa", "ping_ng": "Ping: brak odpowiedzi", "log_copy": "Kopiuj dziennik", "log_copied": "Skopiowano"}, "ko": {"ping_ok": "ping: 정상적으로 응답했습니다", "ping_ng": "ping: 응답이 없습니다", "log_copy": "로그 복사", "log_copied": "복사했습니다"}, "zh-Hans": {"ping_ok": "ping: 响应正常", "ping_ng": "ping: 无响应", "log_copy": "复制日志", "log_copied": "已复制"}, "zh-Hant": {"ping_ok": "ping: 回應正常", "ping_ng": "ping: 無回應", "log_copy": "複製日誌", "log_copied": "已複製"}};
 for (var at1 in AT) { if (I18N[at1]) { for (var at2 in AT[at1]) I18N[at1][at2] = AT[at1][at2]; } }
 var AU = {"ja": {"dlg_ok": "OK"}, "en": {"dlg_ok": "OK"}, "fr": {"dlg_ok": "OK"}, "de": {"dlg_ok": "OK"}, "it": {"dlg_ok": "OK"}, "es": {"dlg_ok": "OK"}, "ru": {"dlg_ok": "OK"}, "pt": {"dlg_ok": "OK"}, "pl": {"dlg_ok": "OK"}, "ko": {"dlg_ok": "확인"}, "zh-Hans": {"dlg_ok": "确定"}, "zh-Hant": {"dlg_ok": "確定"}};
 for (var au1 in AU) { if (I18N[au1]) { for (var au2 in AU[au1]) I18N[au1][au2] = AU[au1][au2]; } }
@@ -528,6 +534,11 @@ function showPage(p, isBack) {
   if (tq) tq.style.display = p === "home" ? "" : "none";
   var tbk = document.getElementById("topback");
   if (tbk) tbk.style.display = p === "home" ? "none" : "";
+  var ow = document.getElementById("owewrap");
+  if (ow) {
+    var oslot = document.getElementById(p === "auto" ? "oweslot-auto" : "oweslot-hb");
+    if (oslot && ow.parentNode !== oslot) oslot.appendChild(ow);
+  }
   var pw = document.getElementById("prepwrap");
   if (pw) {
     var hidePrep = (p === "home" || p === "mig" || p === "fence" || p === "credits" || p === "galview");
@@ -873,6 +884,22 @@ function addLog(s) {
   var el = document.getElementById("log");
   el.textContent += s + "\n";
   el.scrollTop = el.scrollHeight;
+}
+function legacyCopy(txt) {
+  var ta = document.createElement("textarea");
+  ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); } catch (e) {}
+  document.body.removeChild(ta);
+}
+function copyLog() {
+  var el = document.getElementById("log");
+  var txt = el ? el.innerText : "";
+  var btn = document.getElementById("logcopybtn");
+  var done = function() { if (btn) { btn.textContent = t("log_copied"); setTimeout(function() { btn.textContent = t("log_copy"); }, 1600); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(done, function() { legacyCopy(txt); done(); });
+  } else { legacyCopy(txt); done(); }
 }
 async function doCheck() {
   if (curView === "gallery" || curView === "galview") { await galCheck(); return; }

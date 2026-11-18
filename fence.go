@@ -608,10 +608,16 @@ func fenceCacheHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 const (
-	fenceUploadCmd     = "cat > /tmp/swfence-bundle.tar.gz"
-	fenceExtractCmd    = "rm -rf /tmp/swfence-bundle && mkdir -p /tmp/swfence-bundle && tar -xzf /tmp/swfence-bundle.tar.gz -C /tmp/swfence-bundle"
-	fenceFindCmd       = "find /tmp/swfence-bundle -name SHA256SUMS | head -n 1"
-	fenceRepoCmd       = "mkdir -p /etc/swfence && printf '%s\n' 'byizmysh/SWFence' > /etc/swfence/repository && swfence setup"
+	fenceUploadCmd  = "cat > /tmp/swfence-bundle.tar.gz"
+	fenceExtractCmd = "rm -rf /tmp/swfence-bundle && mkdir -p /tmp/swfence-bundle && tar -xzf /tmp/swfence-bundle.tar.gz -C /tmp/swfence-bundle"
+	fenceFindCmd    = "find /tmp/swfence-bundle -name SHA256SUMS | head -n 1"
+	// fenceRepoCmd records the upstream repository (read by
+	// "swfence status" for the project URL). Upstream's install.sh
+	// follows it with "swfence setup", but that is an interactive
+	// wizard (it reads MACs/subnet from the terminal and dies on
+	// EOF); this app collects the same values in its own steps and
+	// sends them to "swfence configure" as JSON instead.
+	fenceRepoCmd       = "mkdir -p /etc/swfence && printf '%s\n' 'byizmysh/SWFence' > /etc/swfence/repository"
 	fenceOpkgUpdateCmd = "opkg update"
 	fenceApkUpdateCmd  = "apk update"
 
