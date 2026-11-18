@@ -22,10 +22,19 @@ const pageHTML = `<!DOCTYPE html>
 .tabs button.active { font-weight: bold; border-bottom: 3px solid #2a7; }
 .drop { border: 2px dashed #888; padding: 18px; text-align: center; margin: 8px 0; } .drop.over { border-color: #2a7; background: rgba(42,170,119,.08); }
  .widebtn { display: block; width: 100%; margin: .3em 0; }
- #chkmodal, #quitmodal, #cfmodal, #updmodal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
+ #chkmodal, #quitmodal, #cfmodal, #updmodal, #galmodal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
  #consent { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 10000; }
  #consent .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; min-width: 340px; max-width: 600px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
- #chkmodal .chkbox, #quitmodal .chkbox, #cfmodal .chkbox, #updmodal .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; text-align: center; min-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
+ #chkmodal .chkbox, #quitmodal .chkbox, #cfmodal .chkbox, #updmodal .chkbox, #galmodal .chkbox { background: #fff; border-radius: 10px; padding: 1.8em 2.4em; text-align: center; min-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
+ .galgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: .8em; }
+ .galcell { border: 1px solid #ccc; border-radius: 8px; overflow: hidden; cursor: pointer; background: #000; aspect-ratio: 4/3; }
+ .galcell img, .galcell video { width: 100%; height: 100%; object-fit: cover; display: block; }
+ body.dark .galcell { border-color: #444; }
+ #galmodal .chkbox { max-width: 94vw; max-height: 92vh; overflow: auto; }
+ .galview img, .galview video { max-width: 100%; max-height: 55vh; display: block; margin: 0 auto; }
+ .galtable { margin: .8em auto 0; border-collapse: collapse; text-align: left; }
+ .galtable td { padding: .25em .8em; }
+ .galtable td:first-child { font-weight: bold; }
  #updline1 { font-size: 1.4em; font-weight: bold; margin-bottom: .4em; }
  #updline2 { font-size: 1.05em; margin-bottom: 1em; white-space: pre-line; }
  #chkline1 { font-size: 1.5em; font-weight: bold; margin-bottom: .4em; }
@@ -41,7 +50,7 @@ const pageHTML = `<!DOCTYPE html>
  body.dark .langbar { background: #121417; border-bottom-color: #333; }
  body.dark button { background: #2b2f36; color: #eee; border: 1px solid #565d66; border-radius: 4px; }
  body.dark input, body.dark select { background: #1d2025; color: #eee; border: 1px solid #565d66; border-radius: 4px; }
- body.dark #chkmodal .chkbox, body.dark #quitmodal .chkbox, body.dark #cfmodal .chkbox, body.dark #updmodal .chkbox, body.dark #consent .chkbox { background: #1d2025; color: #eee; }
+ body.dark #chkmodal .chkbox, body.dark #quitmodal .chkbox, body.dark #cfmodal .chkbox, body.dark #updmodal .chkbox, body.dark #galmodal .chkbox, body.dark #consent .chkbox { background: #1d2025; color: #eee; }
  body.dark #chkline3 { color: #a8adb5; }
  body.dark .drop { border-color: #666; }
  body.dark .langbar .cap { color: #a8adb5; }
@@ -144,8 +153,25 @@ const pageHTML = `<!DOCTYPE html>
 <h2 data-i18n="app_open">自作ソフトをインストール</h2>
 <p><button class="widebtn" onclick="showPage('backup')">kaiHEN</button></p>
 
+<h2 data-i18n="gal_title">ギャラリー</h2>
+<p><button class="widebtn" onclick="showPage('gallery')" data-i18n="gal_title">ギャラリー</button></p>
 
 <p style="text-align:center"><button onclick="showPage('credits')" data-i18n="credits_btn">クレジット</button></p>
+</div>
+<div id="page-gallery" style="display:none">
+<h2 data-i18n="gal_title">ギャラリー</h2>
+<div id="prepslot-gallery"></div>
+<p class="note" data-i18n="gal_note">SD カードのアルバム (Nintendo/Album) の写真と動画を、NXGallery と同じように表示します。本体の内部ストレージのキャプチャは FTP では見られないため表示されません。</p>
+<p><span data-i18n="gal_src">接続先</span>:
+<select id="galsrc">
+<option value="auto" data-i18n="gal_auto">自動</option>
+<option value="oz">OunceShell (1337)</option>
+<option value="plugin" data-i18n="gal_plugin">FTPD プラグイン (5000)</option>
+</select>
+<button class="btn" onclick="galLoad()" data-i18n="gal_load">読み込む</button></p>
+<p id="galstats" class="note"></p>
+<div id="galgrid" class="galgrid"></div>
+<p id="galpager" style="text-align:center; display:none"><button onclick="galStep(-1)">&#8592;</button> <span id="galpageinfo"></span> <button onclick="galStep(1)">&#8594;</button></p>
 </div>
 <div id="page-credits" style="display:none">
 <h2 data-i18n="credits_h">クレジット</h2>
@@ -291,6 +317,7 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 <div id="chkmodal"><div class="chkbox"><div id="chkline1"></div><div id="chkline2"></div><div id="chkline3"></div><p><button onclick="hideChk()" data-i18n="dlg_ok">OK</button></p></div></div>
 <div id="quitmodal"><div class="chkbox"><div style="font-size:1.25em" data-i18n="quit_q">本当に終了しますか？</div><p><button onclick="quitDo()" data-i18n="quit_yes">終了する</button> <button onclick="quitCancel()" data-i18n="quit_cancel">キャンセル</button></p></div></div>
 <div id="updmodal"><div class="chkbox"><div id="updline1"></div><div id="updline2"></div><p><button id="updbtn-now" onclick="updApply()" data-i18n="upd_now">更新する</button> <button id="updbtn-later" onclick="updHide()" data-i18n="upd_later">あとで</button></p></div></div>
+<div id="galmodal"><div class="chkbox"><div class="galview" id="galview"></div><table class="galtable"><tr><td data-i18n="gal_type">種類</td><td id="galv-type"></td></tr><tr><td data-i18n="gal_taken">撮影日時</td><td id="galv-taken"></td></tr><tr><td data-i18n="gal_stored">保存先</td><td id="galv-stored"></td></tr><tr><td data-i18n="gal_size">サイズ</td><td id="galv-size"></td></tr></table><p><a id="galv-dl" href="#" download><button class="btn" data-i18n="gal_dl">ダウンロード</button></a> <button onclick="galClose()" data-i18n="dlg_ok">OK</button></p></div></div>
 <div id="cfmodal"><div class="chkbox"><div style="font-size:1.25em" data-i18n="app_del_list_q">本当にリストから削除しますか？</div><div id="cfname" class="note"></div><p><button onclick="cfAnswer(true)" data-i18n="cf_yes">はい</button> <button onclick="cfAnswer(false)" data-i18n="cf_no">いいえ</button></p></div></div>
 <script>
 var I18N = {"ja":{"title":"kaiHEN Installer","prep_h":"インストール方法","ip_label":"本体の IP アドレス","check_btn":"接続を確認する","log_h":"実行ログ","lang_label":"言語","checking":"--- 接続の確認: ","connected":"ローダーに接続できました","conn_fail":"接続できません: ","enter_ip":"IP アドレスを入力してください","started":" 開始: ","nameA":"手順1","st_bytes":" バイト"},"en":{"title":"kaiHEN Installer","prep_h":"How to install","ip_label":"Console IP address","check_btn":"Check connection","log_h":"Log","lang_label":"Language","checking":"--- Checking connection: ","connected":"Connected to the loader","conn_fail":"Could not connect: ","enter_ip":"Please enter an IP address","started":" started: ","nameA":"Step 1","st_bytes":" bytes"},"fr":{"title":"kaiHEN Installer","prep_h":"Méthode d'installation","ip_label":"Adresse IP de la console","check_btn":"Vérifier la connexion","log_h":"Journal","lang_label":"Langue","checking":"--- Vérification de la connexion : ","connected":"Connecté au chargeur","conn_fail":"Connexion impossible : ","enter_ip":"Veuillez saisir une adresse IP","started":" démarré : ","nameA":"Étape 1","st_bytes":" octets"},"de":{"title":"kaiHEN Installer","prep_h":"Installationsmethode","ip_label":"IP-Adresse der Konsole","check_btn":"Verbindung prüfen","log_h":"Protokoll","lang_label":"Sprache","checking":"--- Verbindung wird geprüft: ","connected":"Mit dem Loader verbunden","conn_fail":"Keine Verbindung: ","enter_ip":"Bitte eine IP-Adresse eingeben","started":" gestartet: ","nameA":"Schritt 1","st_bytes":" Bytes"},"it":{"title":"kaiHEN Installer","prep_h":"Metodo di installazione","ip_label":"Indirizzo IP della console","check_btn":"Verifica connessione","log_h":"Registro","lang_label":"Lingua","checking":"--- Verifica connessione: ","connected":"Connesso al loader","conn_fail":"Connessione impossibile: ","enter_ip":"Inserisci un indirizzo IP","started":" avviato: ","nameA":"Passo 1","st_bytes":" byte"},"es":{"title":"kaiHEN Installer","prep_h":"Método de instalación","ip_label":"Dirección IP de la consola","check_btn":"Comprobar conexión","log_h":"Registro","lang_label":"Idioma","checking":"--- Comprobando conexión: ","connected":"Conectado al cargador","conn_fail":"No se pudo conectar: ","enter_ip":"Introduce una dirección IP","started":" iniciado: ","nameA":"Paso 1","st_bytes":" bytes"},"ru":{"title":"kaiHEN Installer","prep_h":"Способ установки","ip_label":"IP-адрес консоли","check_btn":"Проверить соединение","log_h":"Журнал","lang_label":"Язык","checking":"--- Проверка соединения: ","connected":"Подключено к загрузчику","conn_fail":"Не удалось подключиться: ","enter_ip":"Введите IP-адрес","started":" запущено: ","nameA":"Шаг 1","st_bytes":" байт"},"pt":{"title":"kaiHEN Installer","prep_h":"Método de instalação","ip_label":"Endereço IP do console","check_btn":"Verificar conexão","log_h":"Log","lang_label":"Idioma","checking":"--- Verificando conexão: ","connected":"Conectado ao loader","conn_fail":"Não foi possível conectar: ","enter_ip":"Digite um endereço IP","started":" iniciado: ","nameA":"Passo 1","st_bytes":" bytes"},"pl":{"title":"kaiHEN Installer","prep_h":"Sposób instalacji","ip_label":"Adres IP konsoli","check_btn":"Sprawdź połączenie","log_h":"Dziennik","lang_label":"Język","checking":"--- Sprawdzanie połączenia: ","connected":"Połączono z loaderem","conn_fail":"Nie udało się połączyć: ","enter_ip":"Wpisz adres IP","started":" rozpoczęto: ","nameA":"Krok 1","st_bytes":" bajtów"},"ko":{"title":"kaiHEN Installer","prep_h":"설치 방법","ip_label":"본체 IP 주소","check_btn":"연결 확인","log_h":"실행 로그","lang_label":"언어","checking":"--- 연결 확인: ","connected":"로더에 연결되었습니다","conn_fail":"연결할 수 없습니다: ","enter_ip":"IP 주소를 입력하세요","started":" 시작: ","nameA":"1단계","st_bytes":" 바이트"},"zh-Hans":{"title":"kaiHEN Installer","prep_h":"安装方法","ip_label":"主机 IP 地址","check_btn":"检查连接","log_h":"执行日志","lang_label":"语言","checking":"--- 检查连接: ","connected":"已连接到加载器","conn_fail":"无法连接: ","enter_ip":"请输入 IP 地址","started":" 开始: ","nameA":"步骤1","st_bytes":" 字节"},"zh-Hant":{"title":"kaiHEN Installer","prep_h":"安裝方法","ip_label":"主機 IP 位址","check_btn":"檢查連線","log_h":"執行日誌","lang_label":"語言","checking":"--- 檢查連線: ","connected":"已連線到載入器","conn_fail":"無法連線: ","enter_ip":"請輸入 IP 位址","started":" 開始: ","nameA":"步驟1","st_bytes":" 位元組"}};
@@ -313,6 +340,8 @@ var TH = {"ja": {theme_label: "テーマ", theme_light: "ライト", theme_dark:
 for (var kT in TH) { if (I18N[kT]) { for (var kkT in TH[kT]) I18N[kT][kkT] = TH[kT][kkT]; } }
 var UP = {"ja": {upd_title: "新しい版があります", upd_cur: "現在の版: ", upd_new: "新しい版: ", upd_now: "更新する", upd_later: "あとで", upd_reopen: "自動で再起動しない場合は、アプリを開き直してください。", upd_install: "ダウンロードしました。このあとスマホのインストール画面が開くので、画面の指示に従ってインストールしてください。", upd_perm: "先に、このアプリからのインストールを許可してください。設定画面が開くので許可して、もう一度「更新する」を押してください。"}, "en": {upd_title: "An update is available", upd_cur: "Current: ", upd_new: "New: ", upd_now: "Update now", upd_later: "Later", upd_reopen: "If the app does not restart on its own, please reopen it.", upd_install: "Downloaded. The phone's install screen will open next; follow its instructions to install.", upd_perm: "First, allow installs from this app. The settings screen will open; allow it there, then tap Update again."}, "fr": {upd_title: "Une mise à jour est disponible", upd_cur: "Version actuelle : ", upd_new: "Nouvelle : ", upd_now: "Mettre à jour", upd_later: "Plus tard", upd_reopen: "Si l'application ne redémarre pas toute seule, rouvrez-la.", upd_install: "Téléchargement terminé. L'écran d'installation du téléphone va s'ouvrir ; suivez ses instructions.", upd_perm: "Autorisez d'abord les installations depuis cette application. L'écran des réglages va s'ouvrir ; autorisez-y l'installation, puis touchez à nouveau Mettre à jour."}, "de": {upd_title: "Ein Update ist verfügbar", upd_cur: "Aktuell: ", upd_new: "Neu: ", upd_now: "Jetzt aktualisieren", upd_later: "Später", upd_reopen: "Wenn die App nicht von selbst neu startet, öffnen Sie sie bitte erneut.", upd_install: "Heruntergeladen. Der Installationsbildschirm des Telefons öffnet sich gleich; folgen Sie den Anweisungen.", upd_perm: "Erlauben Sie zuerst Installationen aus dieser App. Die Einstellungen öffnen sich; erlauben Sie es dort und tippen Sie dann erneut auf Aktualisieren."}, "it": {upd_title: "È disponibile un aggiornamento", upd_cur: "Attuale: ", upd_new: "Nuova: ", upd_now: "Aggiorna ora", upd_later: "Più tardi", upd_reopen: "Se l'app non si riavvia da sola, riaprila.", upd_install: "Download completato. Si aprirà la schermata di installazione del telefono; segui le sue istruzioni.", upd_perm: "Prima consenti le installazioni da questa app. Si aprirà la schermata delle impostazioni; consenti lì, poi tocca di nuovo Aggiorna."}, "es": {upd_title: "Hay una actualización disponible", upd_cur: "Actual: ", upd_new: "Nueva: ", upd_now: "Actualizar ahora", upd_later: "Más tarde", upd_reopen: "Si la app no se reinicia sola, vuelve a abrirla.", upd_install: "Descargado. A continuación se abrirá la pantalla de instalación del teléfono; sigue sus instrucciones.", upd_perm: "Primero permite las instalaciones desde esta app. Se abrirá la pantalla de ajustes; permítelo allí y vuelve a tocar Actualizar."}, "ru": {upd_title: "Доступно обновление", upd_cur: "Текущая: ", upd_new: "Новая: ", upd_now: "Обновить", upd_later: "Позже", upd_reopen: "Если приложение не перезапустится само, откройте его снова.", upd_install: "Загружено. Далее откроется экран установки телефона; следуйте его инструкциям.", upd_perm: "Сначала разрешите установку из этого приложения. Откроется экран настроек; разрешите там, затем снова нажмите «Обновить»."}, "pt": {upd_title: "Há uma atualização disponível", upd_cur: "Atual: ", upd_new: "Nova: ", upd_now: "Atualizar agora", upd_later: "Depois", upd_reopen: "Se o app não reiniciar sozinho, abra-o novamente.", upd_install: "Download concluído. A tela de instalação do telefone será aberta; siga as instruções.", upd_perm: "Primeiro, permita instalações a partir deste app. A tela de configurações será aberta; permita lá e toque em Atualizar novamente."}, "pl": {upd_title: "Dostępna jest aktualizacja", upd_cur: "Obecna: ", upd_new: "Nowa: ", upd_now: "Aktualizuj teraz", upd_later: "Później", upd_reopen: "Jeśli aplikacja nie uruchomi się ponownie sama, otwórz ją jeszcze raz.", upd_install: "Pobrano. Za chwilę otworzy się ekran instalacji telefonu; postępuj zgodnie z instrukcjami.", upd_perm: "Najpierw zezwól na instalacje z tej aplikacji. Otworzy się ekran ustawień; zezwól tam, a potem znów dotknij Aktualizuj."}, "ko": {upd_title: "새 버전이 있습니다", upd_cur: "현재: ", upd_new: "새 버전: ", upd_now: "업데이트", upd_later: "나중에", upd_reopen: "앱이 자동으로 다시 시작되지 않으면 앱을 다시 열어 주세요.", upd_install: "다운로드했습니다. 이어서 휴대전화의 설치 화면이 열리니 안내에 따라 설치해 주세요.", upd_perm: "먼저 이 앱에서의 설치를 허용해 주세요. 설정 화면이 열리면 허용한 뒤 다시 '업데이트'를 눌러 주세요."}, "zh-Hans": {upd_title: "有新版本可用", upd_cur: "当前版本：", upd_new: "新版本：", upd_now: "立即更新", upd_later: "以后再说", upd_reopen: "如果应用没有自动重启，请重新打开它。", upd_install: "已下载。接下来会打开手机的安装界面，请按界面提示安装。", upd_perm: "请先允许从此应用安装。设置界面会打开，在那里允许后，再点一次“立即更新”。"}, "zh-Hant": {upd_title: "有新版本可用", upd_cur: "目前版本：", upd_new: "新版本：", upd_now: "立即更新", upd_later: "稍後", upd_reopen: "如果應用程式沒有自動重新啟動，請重新開啟它。", upd_install: "已下載。接下來會開啟手機的安裝畫面，請依畫面指示安裝。", upd_perm: "請先允許從此應用程式安裝。設定畫面會開啟，在那裡允許後，再點一次「立即更新」。"}};
 for (var kU in UP) { if (I18N[kU]) { for (var kkU in UP[kU]) I18N[kU][kkU] = UP[kU][kkU]; } }
+var GAL = {"ja": {gal_title: "ギャラリー", gal_note: "SD カードのアルバム (Nintendo/Album) の写真と動画を、NXGallery と同じように表示します。本体の内部ストレージのキャプチャは FTP では見られないため表示されません。", gal_src: "接続先", gal_auto: "自動", gal_plugin: "FTPD プラグイン (5000)", gal_load: "読み込む", gal_stats: "写真 {p} 枚・動画 {v} 本", gal_empty: "アルバムに写真や動画がありません。", gal_err: "接続できませんでした。OunceShell の FTP (SELECT で開始) か FTPD プラグインが動いているか確認してください。", gal_type: "種類", gal_shot: "スクリーンショット", gal_video: "動画", gal_taken: "撮影日時", gal_stored: "保存先", gal_sd: "SD カード", gal_size: "サイズ", gal_dl: "ダウンロード", gal_page: "{p} / {t} ページ"}, "en": {gal_title: "Gallery", gal_note: "Shows photos and videos from the SD card album (Nintendo/Album), like NXGallery. Captures in the console's internal storage cannot be seen over FTP and are not shown.", gal_src: "Server", gal_auto: "Auto", gal_plugin: "FTPD Plugin (5000)", gal_load: "Load", gal_stats: "{p} photos and {v} videos", gal_empty: "No photos or videos in the album.", gal_err: "Could not connect. Make sure OunceShell's FTP (started with SELECT) or the FTPD plugin is running.", gal_type: "Type", gal_shot: "Screenshot", gal_video: "Video", gal_taken: "Taken at", gal_stored: "Stored at", gal_sd: "SD Card", gal_size: "Size", gal_dl: "Download", gal_page: "Page {p} / {t}"}, "fr": {gal_title: "Galerie", gal_note: "Affiche les photos et vidéos de l'album de la carte SD (Nintendo/Album), comme NXGallery. Les captures du stockage interne de la console ne sont pas visibles en FTP et ne s'affichent pas.", gal_src: "Serveur", gal_auto: "Auto", gal_plugin: "Plugin FTPD (5000)", gal_load: "Charger", gal_stats: "{p} photos et {v} vidéos", gal_empty: "Aucune photo ni vidéo dans l'album.", gal_err: "Connexion impossible. Vérifiez que le FTP d'OunceShell (démarré avec SELECT) ou le plugin FTPD est actif.", gal_type: "Type", gal_shot: "Capture d'écran", gal_video: "Vidéo", gal_taken: "Prise le", gal_stored: "Enregistré sur", gal_sd: "Carte SD", gal_size: "Taille", gal_dl: "Télécharger", gal_page: "Page {p} / {t}"}, "de": {gal_title: "Galerie", gal_note: "Zeigt Fotos und Videos aus dem Album der SD-Karte (Nintendo/Album), wie NXGallery. Aufnahmen aus dem internen Speicher der Konsole sind per FTP nicht sichtbar und werden nicht angezeigt.", gal_src: "Server", gal_auto: "Automatisch", gal_plugin: "FTPD-Plugin (5000)", gal_load: "Laden", gal_stats: "{p} Fotos und {v} Videos", gal_empty: "Keine Fotos oder Videos im Album.", gal_err: "Keine Verbindung. Prüfen Sie, ob der FTP von OunceShell (mit SELECT gestartet) oder das FTPD-Plugin läuft.", gal_type: "Typ", gal_shot: "Screenshot", gal_video: "Video", gal_taken: "Aufgenommen", gal_stored: "Gespeichert auf", gal_sd: "SD-Karte", gal_size: "Größe", gal_dl: "Herunterladen", gal_page: "Seite {p} / {t}"}, "it": {gal_title: "Galleria", gal_note: "Mostra foto e video dall'album della scheda SD (Nintendo/Album), come NXGallery. Le catture nella memoria interna della console non sono visibili via FTP e non vengono mostrate.", gal_src: "Server", gal_auto: "Automatico", gal_plugin: "Plugin FTPD (5000)", gal_load: "Carica", gal_stats: "{p} foto e {v} video", gal_empty: "Nessuna foto o video nell'album.", gal_err: "Impossibile connettersi. Verifica che l'FTP di OunceShell (avviato con SELECT) o il plugin FTPD sia attivo.", gal_type: "Tipo", gal_shot: "Screenshot", gal_video: "Video", gal_taken: "Scattata il", gal_stored: "Salvata su", gal_sd: "Scheda SD", gal_size: "Dimensioni", gal_dl: "Scarica", gal_page: "Pagina {p} / {t}"}, "es": {gal_title: "Galería", gal_note: "Muestra fotos y videos del álbum de la tarjeta SD (Nintendo/Album), como NXGallery. Las capturas del almacenamiento interno de la consola no se pueden ver por FTP y no se muestran.", gal_src: "Servidor", gal_auto: "Automático", gal_plugin: "Plugin FTPD (5000)", gal_load: "Cargar", gal_stats: "{p} fotos y {v} videos", gal_empty: "No hay fotos ni videos en el álbum.", gal_err: "No se pudo conectar. Comprueba que el FTP de OunceShell (iniciado con SELECT) o el plugin FTPD esté activo.", gal_type: "Tipo", gal_shot: "Captura", gal_video: "Video", gal_taken: "Tomada el", gal_stored: "Guardada en", gal_sd: "Tarjeta SD", gal_size: "Tamaño", gal_dl: "Descargar", gal_page: "Página {p} / {t}"}, "ru": {gal_title: "Галерея", gal_note: "Показывает фото и видео из альбома SD-карты (Nintendo/Album), как NXGallery. Снимки из внутренней памяти консоли по FTP недоступны и не отображаются.", gal_src: "Сервер", gal_auto: "Авто", gal_plugin: "Плагин FTPD (5000)", gal_load: "Загрузить", gal_stats: "Фото: {p}, видео: {v}", gal_empty: "В альбоме нет фото и видео.", gal_err: "Не удалось подключиться. Убедитесь, что запущен FTP OunceShell (кнопка SELECT) или плагин FTPD.", gal_type: "Тип", gal_shot: "Скриншот", gal_video: "Видео", gal_taken: "Снято", gal_stored: "Хранится", gal_sd: "SD-карта", gal_size: "Размер", gal_dl: "Скачать", gal_page: "Страница {p} / {t}"}, "pt": {gal_title: "Galeria", gal_note: "Mostra fotos e vídeos do álbum do cartão SD (Nintendo/Album), como o NXGallery. As capturas no armazenamento interno do console não podem ser vistas por FTP e não são mostradas.", gal_src: "Servidor", gal_auto: "Automático", gal_plugin: "Plugin FTPD (5000)", gal_load: "Carregar", gal_stats: "{p} fotos e {v} vídeos", gal_empty: "Sem fotos nem vídeos no álbum.", gal_err: "Não foi possível ligar. Verifique se o FTP do OunceShell (iniciado com SELECT) ou o plugin FTPD está ativo.", gal_type: "Tipo", gal_shot: "Captura de tela", gal_video: "Vídeo", gal_taken: "Capturado em", gal_stored: "Guardado em", gal_sd: "Cartão SD", gal_size: "Tamanho", gal_dl: "Baixar", gal_page: "Página {p} / {t}"}, "pl": {gal_title: "Galeria", gal_note: "Pokazuje zdjęcia i filmy z albumu karty SD (Nintendo/Album), jak NXGallery. Zrzuty z pamięci wewnętrznej konsoli nie są widoczne przez FTP i nie są wyświetlane.", gal_src: "Serwer", gal_auto: "Automatycznie", gal_plugin: "Wtyczka FTPD (5000)", gal_load: "Wczytaj", gal_stats: "Zdjęcia: {p}, filmy: {v}", gal_empty: "Brak zdjęć i filmów w albumie.", gal_err: "Nie udało się połączyć. Sprawdź, czy działa FTP OunceShell (uruchamiany przyciskiem SELECT) lub wtyczka FTPD.", gal_type: "Typ", gal_shot: "Zrzut ekranu", gal_video: "Film", gal_taken: "Wykonano", gal_stored: "Zapisano na", gal_sd: "Karta SD", gal_size: "Rozmiar", gal_dl: "Pobierz", gal_page: "Strona {p} / {t}"}, "ko": {gal_title: "갤러리", gal_note: "SD 카드 앨범(Nintendo/Album)의 사진과 동영상을 NXGallery처럼 표시합니다. 본체 내장 저장소의 캡처는 FTP로 볼 수 없어 표시되지 않습니다.", gal_src: "서버", gal_auto: "자동", gal_plugin: "FTPD 플러그인 (5000)", gal_load: "불러오기", gal_stats: "사진 {p}장 · 동영상 {v}개", gal_empty: "앨범에 사진이나 동영상이 없습니다.", gal_err: "연결할 수 없습니다. OunceShell의 FTP(SELECT로 시작) 또는 FTPD 플러그인이 실행 중인지 확인하세요.", gal_type: "종류", gal_shot: "스크린샷", gal_video: "동영상", gal_taken: "촬영 일시", gal_stored: "저장 위치", gal_sd: "SD 카드", gal_size: "크기", gal_dl: "다운로드", gal_page: "{p} / {t} 페이지"}, "zh-Hans": {gal_title: "图库", gal_note: "像 NXGallery 一样显示 SD 卡相册(Nintendo/Album)中的照片和视频。本机内置存储中的截图无法通过 FTP 查看,因此不会显示。", gal_src: "服务器", gal_auto: "自动", gal_plugin: "FTPD 插件 (5000)", gal_load: "加载", gal_stats: "{p} 张照片 · {v} 个视频", gal_empty: "相册中没有照片或视频。", gal_err: "无法连接。请确认 OunceShell 的 FTP(按 SELECT 启动)或 FTPD 插件正在运行。", gal_type: "类型", gal_shot: "截图", gal_video: "视频", gal_taken: "拍摄时间", gal_stored: "保存位置", gal_sd: "SD 卡", gal_size: "大小", gal_dl: "下载", gal_page: "第 {p} / {t} 页"}, "zh-Hant": {gal_title: "圖庫", gal_note: "像 NXGallery 一樣顯示 SD 卡相簿(Nintendo/Album)中的照片和影片。本機內置儲存空間中的截圖無法透過 FTP 查看,因此不會顯示。", gal_src: "伺服器", gal_auto: "自動", gal_plugin: "FTPD 外掛 (5000)", gal_load: "載入", gal_stats: "{p} 張照片 · {v} 部影片", gal_empty: "相簿中沒有照片或影片。", gal_err: "無法連接。請確認 OunceShell 的 FTP(按 SELECT 啟動)或 FTPD 外掛正在執行。", gal_type: "種類", gal_shot: "截圖", gal_video: "影片", gal_taken: "拍攝時間", gal_stored: "儲存位置", gal_sd: "SD 卡", gal_size: "大小", gal_dl: "下載", gal_page: "第 {p} / {t} 頁"}};
+for (var kGA in GAL) { if (I18N[kGA]) { for (var kkGA in GAL[kGA]) I18N[kGA][kkGA] = GAL[kGA][kkGA]; } }
 var AE = {
 ja: { app_add: "追加", app_check: "更新を確認", app_install: "インストール", app_delete: "削除", app_update_badge: "更新あり", app_update_found: "更新があります (ダウンロード済み)", app_got: "本体の版", app_none2: "まだ登録がありません" },
 en: { app_add: "Add", app_check: "Check for updates", app_install: "Install", app_delete: "Remove", app_update_badge: "Update", app_update_found: "Update available (downloaded)", app_got: "On console", app_none2: "Nothing registered yet" },
@@ -462,7 +491,7 @@ function backTop() {
 var pageHist = [];
 function showPage(p, isBack) {
   if (!isBack && curView && curView !== p) pageHist.push(curView);
-  var pages = ["home", "hb", "mig", "backup", "fence", "credits", "auto"];
+  var pages = ["home", "hb", "mig", "backup", "fence", "credits", "auto", "gallery"];
   for (var i = 0; i < pages.length; i++) {
     var el = document.getElementById("page-" + pages[i]);
     if (el) el.style.display = pages[i] === p ? "" : "none";
@@ -1264,6 +1293,110 @@ function updWaitReload() {
     } catch (e) {}
     if (tries > 40) { clearInterval(iv); document.getElementById("updline2").textContent = t("upd_reopen"); updOkMode(); }
   }, 1500);
+}
+var galSt = { items: [], page: 1, per: 30, src: "auto" };
+function galBase() {
+  return "ip=" + encodeURIComponent(document.getElementById("ip").value.trim()) +
+    "&src=" + encodeURIComponent(galSt.src) + "&lang=" + encodeURIComponent(LANG);
+}
+function galFileURL(it, dl) {
+  return "/api/gallery/file?" + galBase() + "&path=" + encodeURIComponent(it.path) + (dl ? "&dl=1" : "");
+}
+function galThumbURL(it) {
+  return "/api/gallery/thumb?" + galBase() + "&path=" + encodeURIComponent(it.path);
+}
+async function galLoad() {
+  galSt.src = document.getElementById("galsrc").value;
+  var st = document.getElementById("galstats");
+  st.textContent = "...";
+  document.getElementById("galgrid").innerHTML = "";
+  document.getElementById("galpager").style.display = "none";
+  try {
+    var r = await fetch("/api/gallery/list?" + galBase());
+    var j = await r.json();
+    if (!r.ok) throw new Error("ng");
+    galSt.items = j.items || [];
+    galSt.page = 1;
+    if (!galSt.items.length) { st.textContent = t("gal_empty"); return; }
+    st.textContent = t("gal_stats").replace("{p}", j.photos).replace("{v}", j.videos);
+    galRender();
+  } catch (e) { st.textContent = t("gal_err"); }
+}
+function galPages() { return Math.max(1, Math.ceil(galSt.items.length / galSt.per)); }
+function galRender() {
+  var grid = document.getElementById("galgrid");
+  grid.innerHTML = "";
+  var start = (galSt.page - 1) * galSt.per;
+  galSt.items.slice(start, start + galSt.per).forEach(function(it, k) {
+    var idx = start + k;
+    var cell = document.createElement("div");
+    cell.className = "galcell";
+    cell.onclick = function() { galOpen(idx); };
+    if (it.type === "video") {
+      var v = document.createElement("video");
+      v.src = galFileURL(it) + "#t=0.1";
+      v.preload = "metadata"; v.muted = true; v.playsInline = true;
+      cell.appendChild(v);
+    } else {
+      var im = document.createElement("img");
+      im.src = galThumbURL(it); im.loading = "lazy"; im.alt = it.name;
+      cell.appendChild(im);
+    }
+    grid.appendChild(cell);
+  });
+  var pg = document.getElementById("galpager");
+  if (galPages() > 1) {
+    pg.style.display = "";
+    document.getElementById("galpageinfo").textContent =
+      t("gal_page").replace("{p}", galSt.page).replace("{t}", galPages());
+  } else {
+    pg.style.display = "none";
+  }
+}
+function galStep(d) {
+  var p = galSt.page + d;
+  if (p < 1 || p > galPages()) return;
+  galSt.page = p;
+  galRender();
+}
+function galTakenStr(s) {
+  if (!s || s.length < 14) return "-";
+  var d = new Date(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8),
+    +s.slice(8, 10), +s.slice(10, 12), +s.slice(12, 14));
+  return d.toLocaleDateString() + " " + d.toLocaleTimeString();
+}
+function galSizeStr(n) {
+  if (!n) return "-";
+  var u = ["B", "KB", "MB", "GB"], i = 0, v = n;
+  while (v >= 1024 && i < 3) { v /= 1024; i++; }
+  return (Math.round(v * 100) / 100) + " " + u[i];
+}
+function galOpen(idx) {
+  var it = galSt.items[idx];
+  if (!it) return;
+  var view = document.getElementById("galview");
+  view.innerHTML = "";
+  if (it.type === "video") {
+    var v = document.createElement("video");
+    v.src = galFileURL(it); v.controls = true; v.autoplay = true; v.playsInline = true;
+    view.appendChild(v);
+  } else {
+    var im = document.createElement("img");
+    im.src = galFileURL(it); im.alt = it.name;
+    view.appendChild(im);
+  }
+  document.getElementById("galv-type").textContent = it.type === "video" ? t("gal_video") : t("gal_shot");
+  document.getElementById("galv-taken").textContent = galTakenStr(it.taken);
+  document.getElementById("galv-stored").textContent = t("gal_sd");
+  document.getElementById("galv-size").textContent = galSizeStr(it.size);
+  var a = document.getElementById("galv-dl");
+  a.href = galFileURL(it, true);
+  a.setAttribute("download", it.name);
+  document.getElementById("galmodal").style.display = "flex";
+}
+function galClose() {
+  document.getElementById("galmodal").style.display = "none";
+  document.getElementById("galview").innerHTML = "";
 }
 var IS_ANDROID = /Android/.test(navigator.userAgent || "");
 function themeMode() { try { return localStorage.getItem("ci_theme") || "light"; } catch (e) { return "light"; } }

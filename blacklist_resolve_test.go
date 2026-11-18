@@ -3,18 +3,17 @@ package main
 import "testing"
 
 // Live resolution check for the Blacklist Tool catalog entry. The
-// newest release (v1.1.0) was published without any attached binary,
-// so resolution must fall back to v1.0.0, the newest release that
-// actually ships blacklist-tool-switch2.nro. When the author
-// attaches the v1.1.0 binary, update the expected tag to v1.1.0.
+// newest release (v1.1.0) was first published without any attached
+// binary, so resolution fell back to v1.0.0; the author has since
+// attached the v1.1.0 binary, so it now resolves directly.
 func TestBlacklistToolResolves(t *testing.T) {
 	a := &appEntry{ID: "s8n/blacklist-tool", Kind: "nro", Source: "release"}
 	tag, assets, err := fetchRelease(a)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tag != "v1.0.0" {
-		t.Fatalf("tag = %q, want v1.0.0 (v1.1.0 ships no binary)", tag)
+	if tag != "v1.1.0" {
+		t.Fatalf("tag = %q, want v1.1.0", tag)
 	}
 	found := false
 	for _, as := range assets {

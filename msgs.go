@@ -43,6 +43,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "GitHub に接続できません",
 
 		"ftpErr": "FTP 送信に失敗しました",
+		"galErr": "無法連接到圖庫",
 
 		"appNotFound": "登録が見つかりません",
 		"appNoAsset":  "最新のリリースに合うファイルがありません",
@@ -124,6 +125,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "Cannot reach GitHub",
 
 		"ftpErr": "FTP upload failed",
+		"galErr": "无法连接到图库",
 
 		"appNotFound": "App not registered",
 		"appNoAsset":  "No matching file in the latest release",
@@ -206,6 +208,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "Impossible de joindre GitHub",
 
 		"ftpErr": "Échec de l'envoi FTP",
+		"galErr": "갤러리에 연결할 수 없습니다",
 
 		"appNotFound": "Application non enregistrée",
 		"appNoAsset":  "Aucun fichier correspondant dans la dernière version",
@@ -288,6 +291,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "GitHub nicht erreichbar",
 
 		"ftpErr": "FTP-Upload fehlgeschlagen",
+		"galErr": "Nie udało się połączyć z galerią",
 
 		"appNotFound": "App nicht registriert",
 		"appNoAsset":  "Keine passende Datei im neuesten Release",
@@ -370,6 +374,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "Impossibile raggiungere GitHub",
 
 		"ftpErr": "Caricamento FTP non riuscito",
+		"galErr": "Não foi possível ligar à galeria",
 
 		"appNotFound": "App non registrata",
 		"appNoAsset":  "Nessun file corrispondente nella versione più recente",
@@ -452,6 +457,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "No se puede contactar con GitHub",
 
 		"ftpErr": "La subida FTP falló",
+		"galErr": "Не удалось подключиться к галерее",
 
 		"appNotFound": "App no registrada",
 		"appNoAsset":  "No hay un archivo coincidente en la versión más reciente",
@@ -534,6 +540,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "Не удаётся связаться с GitHub",
 
 		"ftpErr": "Загрузка по FTP не удалась",
+		"galErr": "No se pudo conectar con la galería",
 
 		"appNotFound": "Приложение не зарегистрировано",
 		"appNoAsset":  "В новейшем релизе нет подходящего файла",
@@ -616,6 +623,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "Não é possível contactar o GitHub",
 
 		"ftpErr": "O envio FTP falhou",
+		"galErr": "Impossibile connettersi alla galleria",
 
 		"appNotFound": "App não registada",
 		"appNoAsset":  "Nenhum ficheiro correspondente na versão mais recente",
@@ -698,6 +706,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "Nie można połączyć się z GitHubem",
 
 		"ftpErr": "Wysyłanie FTP nie powiodło się",
+		"galErr": "Keine Verbindung zur Galerie",
 
 		"appNotFound": "Aplikacja niezarejestrowana",
 		"appNoAsset":  "Brak pasującego pliku w najnowszym wydaniu",
@@ -780,6 +789,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "GitHub에 연결할 수 없습니다",
 
 		"ftpErr": "FTP 업로드에 실패했습니다",
+		"galErr": "Impossible de se connecter à la galerie",
 
 		"appNotFound": "등록되지 않은 앱입니다",
 		"appNoAsset":  "최신 릴리스에 맞는 파일이 없습니다",
@@ -862,6 +872,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "无法连接 GitHub",
 
 		"ftpErr": "FTP 上传失败",
+		"galErr": "Could not connect to the gallery",
 
 		"appNotFound": "应用未注册",
 		"appNoAsset":  "最新版本中没有匹配的文件",
@@ -944,6 +955,7 @@ var msgs = map[string]map[string]string{
 		"apiErr": "無法連線 GitHub",
 
 		"ftpErr": "FTP 上傳失敗",
+		"galErr": "ギャラリーの接続に失敗しました",
 
 		"appNotFound": "應用未註冊",
 		"appNoAsset":  "最新版本中沒有相符的檔案",
