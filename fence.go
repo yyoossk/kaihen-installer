@@ -149,7 +149,7 @@ func fenceChkHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&b)
 	cl, err := fenceDial(b.addr(), b.Pass)
 	if err != nil {
-		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH")})
+		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH") + ": " + err.Error()})
 		return
 	}
 	defer cl.Close()
@@ -242,7 +242,7 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 
 	cl, err := fenceDial(b.addr(), b.Pass)
 	if err != nil {
-		fail(errors.New(tr(lang, "fSSH")))
+		fail(fmt.Errorf("%s: %w", tr(lang, "fSSH"), err))
 		return
 	}
 	defer cl.Close()
@@ -339,7 +339,7 @@ func fenceStatusHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&b)
 	cl, err := fenceDial(b.addr(), b.Pass)
 	if err != nil {
-		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH")})
+		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH") + ": " + err.Error()})
 		return
 	}
 	defer cl.Close()
@@ -352,7 +352,7 @@ func fenceOffHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&b)
 	cl, err := fenceDial(b.addr(), b.Pass)
 	if err != nil {
-		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH")})
+		jsonOK(w, map[string]any{"ok": false, "error": tr(b.Lang, "fSSH") + ": " + err.Error()})
 		return
 	}
 	defer cl.Close()
