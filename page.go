@@ -122,6 +122,7 @@ const pageHTML = `<!DOCTYPE html>
 <p><label data-i18n="fence_rtr_ip">ルーターの IP アドレス</label> <input id="fip" size="18"></p>
 <p><label data-i18n="fence_rtr_pass">root パスワード</label> <input id="fpass" type="password" size="18"></p>
 <p><button class="btn" onclick="fenceChk()" data-i18n="check_btn">接続を確認する</button></p>
+<p><label data-i18n="fence_subnet">許可する LAN の範囲</label> <input id="fsubnet" size="20"></p>
 <h2 data-i18n="fence_s2">ステップ2: 本体の MAC アドレス</h2>
 <p class="note" data-i18n="fence_mac_note">本体の 設定 → インターネット で「本体の MAC アドレス」を確認して入力してください。ドックで有線接続を使う場合は、そちらの MAC も入力します (任意)。</p>
 <p><label data-i18n="fence_mac_w">Wi-Fi の MAC</label> <input id="fmacw" size="20" placeholder="aa:bb:cc:dd:ee:ff"></p>
@@ -130,8 +131,7 @@ const pageHTML = `<!DOCTYPE html>
 <h2 data-i18n="fence_s3">ステップ3: SWFence を入れて保護を有効にする</h2>
 <p><button id="fencedlbtn" data-i18n="fdl_btn" onclick="fenceDl()">SWFence をダウンロード</button> <span id="fdlstate"></span></p>
 <p data-i18n="fdl_hint">インターネットにつながるネットワークで、先にダウンロードしてください。インストールではダウンロードしません。</p>
-<p><label data-i18n="fence_subnet">許可する LAN の範囲</label> <input id="fsubnet" size="20"></p>
-<p class="note" data-i18n="fence_inst_note">最新版を GitHub から自動で取得して入れます。入れる前に、ルーターの設定バックアップをこの PC に保存します。また、ファイアウォールのフローオフロードを無効にします (SWFence の前提条件)。ルーター自体にはインターネット接続が必要です。</p>
+<p class="note" data-i18n="fence_inst_note">インストールは、ダウンロード済みのファイルだけを使います（ダウンロードはしません）。入れる前に、ルーターの設定バックアップをこの端末に保存します。また、ファイアウォールのフローオフロードを無効にします (SWFence の前提条件)。</p>
 <p><button class="btn" onclick="fenceInstall()" data-i18n="fence_inst">SWFence をインストール</button>
 <button class="btn" onclick="fenceStatus()" data-i18n="fence_status">状態を確認する</button>
 <button class="btn" onclick="fenceOff()" data-i18n="fence_off">保護をオフにする</button></p>
