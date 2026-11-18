@@ -337,6 +337,25 @@ func TestFenceInstallUpdateFallback(t *testing.T) {
 	}
 }
 
+// When the lists cannot be fetched either way, the install fails
+// and the log carries the router network diagnostics.
+func TestFenceInstallDiagOnFetchFailure(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	f := newFakeOpenWrt(t)
+	f.failCmds[fencePathPrefix+fenceOpkgUpdateCmd] = true
+	f.failCmds[fenceListFetchCmd] = true
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "router network diagnostics") {
+		t.Fatalf("a total list-fetch failure should fail with diagnostics in the log: %s", body)
+	}
+}
+
 func TestFenceValidTag(t *testing.T) {
 	for _, ok := range []string{"v1.0.0", "1.2.3", "v0.1.0-beta"} {
 		if !fenceValidTag(ok) {

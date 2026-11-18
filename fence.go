@@ -537,6 +537,26 @@ const (
 // package pair for the router's release family, verifying SHA256SUMS
 // on the router exactly like upstream's offline procedure. No network
 // is used on either side.
+// fenceNetDiag streams a short router network self-check into the
+// install log: routing table, addresses, gateway and public-IP
+// reachability, DNS, and one IPv4 fetch of the first feed. It runs
+// when the package lists could not be fetched at all, so a single
+// failed install shows WHY the router cannot reach the internet.
+func fenceNetDiag(cl *ssh.Client, send logFn) {
+	send("--- router network diagnostics ---")
+	for _, c := range []string{
+		"ip -4 route",
+		"ip -4 -o addr show scope global",
+		"gw=$(ip -4 route | awk '/^default/{print $3; exit}'); echo gateway=$gw; [ -n \"$gw\" ] && ping -c 1 -W 2 $gw",
+		"ping -c 1 -W 2 1.1.1.1",
+		"nslookup downloads.openwrt.org 127.0.0.1 | head -8",
+		"u=$(awk '$1==\"src/gz\"{print $3; exit}' /etc/opkg/distfeeds.conf); echo feed=$u; uclient-fetch -4 -O /dev/null \"$u/Packages.gz\"; echo fetch_exit=$?",
+	} {
+		send("$ " + c)
+		fenceRunStdin(cl, c, "", send)
+	}
+}
+
 func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
 	data, err := os.ReadFile(filepath.Join(fenceCacheDir(), fenceBundleName(tag)))
 	if err != nil {
@@ -588,16 +608,25 @@ func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
 	if isApk {
 		upd = fenceApkUpdateCmd
 	}
+	updErr := error(nil)
 	if _, err := fenceRunStdin(cl, fencePathPrefix+upd, "", send); err != nil {
-		if isApk {
-			return fmt.Errorf("%s: %w", upd, err)
+		updErr = err
+		if !isApk {
+			// opkg update failed (its downloader may not honour
+			// PATH): fetch the lists directly, then carry on.
+			send(upd + " failed; fetching the package lists directly (IPv4)")
+			if _, ferr := fenceRunStdin(cl, fenceListFetchCmd, "", send); ferr == nil {
+				updErr = nil
+			}
 		}
-		// opkg update failed (its downloader may not honour PATH):
-		// fetch the lists directly, then carry on to the install.
-		send(upd + " failed; fetching the package lists directly (IPv4)")
-		if _, ferr := fenceRunStdin(cl, fenceListFetchCmd, "", send); ferr != nil {
-			return fmt.Errorf("%s: %w", upd, ferr)
-		}
+	}
+	if updErr != nil {
+		// The router cannot fetch its package lists either way.
+		// Leave a network self-check in the log so the cause
+		// (no default route, unreachable gateway, broken DNS,
+		// IPv6-only failure) can be read off one run.
+		fenceNetDiag(cl, send)
+		return fmt.Errorf("%s: %w", upd, updErr)
 	}
 	if _, err := fenceRunStdin(cl, "cd "+dir+" && "+fencePathPrefix+inst, "", send); err != nil {
 		return err
