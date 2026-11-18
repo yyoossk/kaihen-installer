@@ -287,6 +287,37 @@ func fenceLatestTag() (string, error) {
 	return rel.TagName, nil
 }
 
+// fenceASCII folds full-width ASCII variants (U+FF01-FF5E) and
+// the ideographic space to plain ASCII and drops zero-width
+// characters. SWFence accepts printable ASCII only, and a
+// Japanese IME easily produces full-width digits and colons in
+// the MAC and subnet fields.
+func fenceASCII(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= '！' && r <= '～':
+			r -= 0xFEE0
+		case r == '　':
+			r = ' '
+		case r == '\u200b' || r == '\u200c' || r == '\u200d' || r == '\ufeff':
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return strings.TrimSpace(b.String())
+}
+
+var fenceMACRe = regexp.MustCompile(`^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)
+
+// fenceNormMAC normalizes a user-entered MAC address (full-width
+// tolerant, hyphens become colons, lower case) and reports
+// whether the result is a well-formed MAC address.
+func fenceNormMAC(s string) (string, bool) {
+	m := strings.ToLower(strings.ReplaceAll(fenceASCII(s), "-", ":"))
+	return m, fenceMACRe.MatchString(m)
+}
+
 func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	if r.URL.RawQuery != "" {
@@ -400,23 +431,36 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 
 	macs := []string{}
 	for _, m := range []string{b.MacWiFi, b.MacEth} {
-		if m = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(m), "-", ":")); m != "" {
-			macs = append(macs, m)
+		if fenceASCII(m) == "" {
+			continue
 		}
+		nm, ok := fenceNormMAC(m)
+		if !ok {
+			fail(errors.New(tr(lang, "fBadMac")))
+			return
+		}
+		macs = append(macs, nm)
 	}
 	if len(macs) == 0 {
 		fail(errors.New(tr(lang, "fNoMac")))
 		return
 	}
-	routerIP := strings.TrimSpace(b.Router)
+	routerIP := fenceASCII(b.Router)
 	if i := strings.LastIndex(routerIP, ":"); i > 0 && !strings.Contains(routerIP[i:], ".") {
 		routerIP = routerIP[:i]
+	}
+	subnet := fenceASCII(b.Subnet)
+	if _, ipnet, err := net.ParseCIDR(subnet); err == nil {
+		subnet = ipnet.String()
+	} else {
+		fail(errors.New(tr(lang, "fBadSubnet")))
+		return
 	}
 	cfg := map[string]string{
 		"enabled":    "1",
 		"macs":       strings.Join(macs, " "),
 		"router_ip":  routerIP,
-		"lan_subnet": strings.TrimSpace(b.Subnet),
+		"lan_subnet": subnet,
 		"local_host": "",
 		"local_port": "",
 	}
@@ -424,7 +468,16 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 	send(tr(lang, "fCfg"))
 	out, err := fenceRunStdin(cl, "swfence configure", string(cfgJSON), send)
 	if err != nil || !strings.Contains(out, "\"ok\": true") && !strings.Contains(out, "\"ok\":true") {
-		fail(errors.New(tr(lang, "fCfgFail")))
+		msg := tr(lang, "fCfgFail")
+		var rep struct {
+			Message string `json:"message"`
+		}
+		if json.Unmarshal([]byte(strings.TrimSpace(out)), &rep) == nil && rep.Message != "" {
+			msg += ": " + rep.Message
+		} else if err != nil {
+			msg += ": " + err.Error()
+		}
+		fail(errors.New(msg))
 		return
 	}
 	send(tr(lang, "fVer"))

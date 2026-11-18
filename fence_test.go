@@ -267,7 +267,7 @@ func TestFenceInstallNeedsDownload(t *testing.T) {
 	defer func() { exeDir = old }()
 	addr := newFakeOpenWrt(t).addr()
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+addr+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+addr+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&subnet=192.168.1.0/24&lang=ja", nil)
 	fenceInstallHandler(rec, req)
 	body := rec.Body.String()
 	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "ダウンロード") {
@@ -370,6 +370,86 @@ func TestFenceInstallHandlerFull(t *testing.T) {
 	}
 }
 
+func TestFenceNormMAC(t *testing.T) {
+	if m, ok := fenceNormMAC("AA-BB-CC-DD-EE-FF"); !ok || m != "aa:bb:cc:dd:ee:ff" {
+		t.Fatalf("hyphen MAC should normalize: %q %v", m, ok)
+	}
+	if m, ok := fenceNormMAC("ＡＡ：ＢＢ：ＣＣ：ＤＤ：ＥＥ：ＦＦ"); !ok || m != "aa:bb:cc:dd:ee:ff" {
+		t.Fatalf("full-width MAC should normalize: %q %v", m, ok)
+	}
+	if _, ok := fenceNormMAC("aa:bb:cc:dd:ee"); ok {
+		t.Fatal("short MAC should be invalid")
+	}
+	if _, ok := fenceNormMAC("hello"); ok {
+		t.Fatal("garbage should be invalid")
+	}
+}
+
+// A full-width MAC (Japanese IME) installs fine after
+// normalization; a garbage MAC and a bad subnet fail with their
+// own messages before configure is ever sent.
+func TestFenceInstallFullWidthMAC(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	addr := newFakeOpenWrt(t).addr()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+addr+"&pass=pw&macw=%EF%BC%A1%EF%BC%A1%EF%BC%9A%EF%BC%A2%EF%BC%A2%EF%BC%9A%EF%BC%A3%EF%BC%A3%EF%BC%9A%EF%BC%A4%EF%BC%A4%EF%BC%9A%EF%BC%A5%EF%BC%A5%EF%BC%9A%EF%BC%A6%EF%BC%A6&subnet=192.168.1.0/24&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	if body := rec.Body.String(); !strings.Contains(body, "RESULT|ok") {
+		t.Fatalf("full-width MAC should install after normalization: %s", body)
+	}
+}
+
+func TestFenceInstallBadMAC(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	addr := newFakeOpenWrt(t).addr()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+addr+"&pass=pw&macw=not-a-mac&subnet=192.168.1.0/24&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "MAC アドレスの形式が正しくありません") {
+		t.Fatalf("garbage MAC should fail with fBadMac: %s", body)
+	}
+}
+
+func TestFenceInstallBadSubnet(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	addr := newFakeOpenWrt(t).addr()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+addr+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&subnet=banana&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "許可する LAN の範囲の形式が正しくありません") {
+		t.Fatalf("garbage subnet should fail with fBadSubnet: %s", body)
+	}
+}
+
+// When the router's configure rejects the values, its own
+// message rides along in the failure line.
+func TestFenceInstallConfigureMessage(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	fk := newFakeOpenWrt(t)
+	fk.extra = map[string]string{"swfence configure": `{"ok": false, "message": "Use printable ASCII configuration values."}`}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+fk.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&subnet=192.168.1.0/24&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "Use printable ASCII configuration values.") {
+		t.Fatalf("configure rejection should surface its message: %s", body)
+	}
+}
+
 func TestFenceInstallBackupFailureDetail(t *testing.T) {
 	old := exeDir
 	exeDir = t.TempDir()
@@ -378,7 +458,7 @@ func TestFenceInstallBackupFailureDetail(t *testing.T) {
 	f := newFakeOpenWrt(t)
 	f.failCmds["/sbin/sysupgrade -b /tmp/swfence-backup.tar.gz"] = true
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&subnet=192.168.1.0/24&lang=ja", nil)
 	fenceInstallHandler(rec, req)
 	body := rec.Body.String()
 	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "status 1") {
@@ -425,7 +505,7 @@ func TestFenceInstallMissingDep(t *testing.T) {
 	f := newFakeOpenWrt(t)
 	f.extra["opkg list-installed"] = "libc - 1.0-r1\n"
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&subnet=192.168.1.0/24&lang=ja", nil)
 	fenceInstallHandler(rec, req)
 	body := rec.Body.String()
 	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "kmod-nft-bridge") || !strings.Contains(body, "不足している依存パッケージがあります") {
@@ -454,7 +534,7 @@ func TestFenceInstallWithCachedDep(t *testing.T) {
 	f.extra["cat > /tmp/swfence-deps/"+depFile] = ""
 	f.extra["cd /tmp/swfence-bundle/SWFence && opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk /tmp/swfence-deps/"+depFile] = ""
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+f.addr()+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&subnet=192.168.1.0/24&lang=ja", nil)
 	fenceInstallHandler(rec, req)
 	if body := rec.Body.String(); !strings.Contains(body, "RESULT|ok") {
 		t.Fatalf("install with the dependency file supplied should succeed: %s", body)
