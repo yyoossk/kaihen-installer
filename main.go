@@ -134,6 +134,8 @@ func main() {
 	mux.HandleFunc("/api/fenceinstall", fenceInstallHandler)
 	mux.HandleFunc("/api/fencestatus", fenceStatusHandler)
 	mux.HandleFunc("/api/fenceoff", fenceOffHandler)
+	mux.HandleFunc("/api/fencedl", fenceDlHandler)
+	mux.HandleFunc("/api/fencecache", fenceCacheHandler)
 	mux.HandleFunc("/api/oweinstall", oweInstallHandler)
 	mux.HandleFunc("/api/oweverify", oweVerifyHandler)
 

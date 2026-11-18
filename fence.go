@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -216,47 +215,6 @@ func fenceLatestTag() (string, error) {
 	return rel.TagName, nil
 }
 
-// fenceTagFetchCmd asks GitHub for the latest SWFence release. It runs
-// ON the router (uclient-fetch is OpenWrt's own HTTPS client) because
-// the install itself downloads from the router over its WAN anyway --
-// and the phone may be on the router's isolated Wi-Fi with no working
-// path to GitHub at all (seen on real hardware, 2026-11-19: the check
-// passed over SSH while the phone-side tag lookup failed).
-const fenceTagFetchCmd = "uclient-fetch -qO- https://api.github.com/repos/byizmysh/SWFence/releases/latest"
-
-var fenceTagRe = regexp.MustCompile(`"tag_name"\s*:\s*"([^"]+)"`)
-
-// fenceValidTag gates a tag before it is interpolated into a shell
-// command on the router.
-func fenceValidTag(tag string) bool {
-	if tag == "" || len(tag) > 64 {
-		return false
-	}
-	for i, c := range tag {
-		ok := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' ||
-			c == '.' || c == '_' || c == '-'
-		if !ok || i == 0 && !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9') {
-			return false
-		}
-	}
-	return true
-}
-
-func fenceLatestTagRemote(cl *ssh.Client) (string, error) {
-	out, err := fenceExec(cl, fenceTagFetchCmd)
-	if err != nil {
-		return "", err
-	}
-	m := fenceTagRe.FindStringSubmatch(out)
-	if m == nil {
-		return "", errors.New("tag_name not found in the GitHub response")
-	}
-	if !fenceValidTag(m[1]) {
-		return "", errors.New("unexpected tag format: " + m[1])
-	}
-	return m[1], nil
-}
-
 func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	if r.URL.RawQuery != "" {
@@ -307,17 +265,12 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 		fail(errors.New(tr(lang, "fUnsup")))
 		return
 	}
-	tag, perr := fenceLatestTag()
-	if perr != nil || !fenceValidTag(tag) {
-		tag = ""
-		if rtag, rerr := fenceLatestTagRemote(cl); rerr == nil {
-			tag = rtag
-		} else if perr == nil {
-			perr = rerr
-		}
-	}
+	// The install uses only the bundle downloaded beforehand (the
+	// "Download SWFence" button): while the phone or PC is talking to
+	// the router it may have no path to GitHub at all.
+	tag := fenceCachedTag()
 	if tag == "" {
-		fail(fmt.Errorf("%s: %w", tr(lang, "fTagFail"), perr))
+		fail(errors.New(tr(lang, "fNeedDl")))
 		return
 	}
 	send(tr(lang, "fTag") + tag)
@@ -350,9 +303,8 @@ func fenceInstallHandler(w http.ResponseWriter, r *http.Request) {
 	send(tr(lang, "fOff"))
 
 	send(tr(lang, "fInst"))
-	dl := fmt.Sprintf("wget -O /tmp/swfence-install.sh https://github.com/byizmysh/SWFence/releases/download/%s/install.sh && sh /tmp/swfence-install.sh", tag)
-	if _, err := fenceRunStdin(cl, dl, "", send); err != nil {
-		fail(errors.New(tr(lang, "fNoSw")))
+	if err := fenceInstallBundle(cl, tag, rel, send); err != nil {
+		fail(fmt.Errorf("%s: %w", tr(lang, "fNoSw"), err))
 		return
 	}
 	if out, _ := fenceExec(cl, "command -v swfence"); strings.TrimSpace(out) == "" {
@@ -425,4 +377,155 @@ func fenceOffHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonOK(w, map[string]any{"ok": true})
+}
+
+// --- SWFence bundle: download first, install offline -----------------
+//
+// The release tarball (swfence-<version>.tar.gz) is upstream's own
+// offline bundle: install.sh, all four packages and SHA256SUMS. The
+// download step fetches it while the phone or PC still has internet;
+// the install step only uploads it over SSH and follows INSTALL.md's
+// local procedure, so neither side downloads anything at install time.
+
+func fenceCacheDir() string { return pathOf("swfence-cache") }
+
+func fenceBundleName(tag string) string {
+	return "swfence-" + strings.TrimPrefix(tag, "v") + ".tar.gz"
+}
+
+func fenceCachedTag() string {
+	b, err := os.ReadFile(filepath.Join(fenceCacheDir(), "tag.txt"))
+	if err != nil {
+		return ""
+	}
+	tag := strings.TrimSpace(string(b))
+	if !fenceValidTag(tag) {
+		return ""
+	}
+	if _, err := os.Stat(filepath.Join(fenceCacheDir(), fenceBundleName(tag))); err != nil {
+		return ""
+	}
+	return tag
+}
+
+// fenceValidTag gates a tag before it is used in a file name or a
+// command on the router.
+func fenceValidTag(tag string) bool {
+	if tag == "" || len(tag) > 64 {
+		return false
+	}
+	for i, c := range tag {
+		ok := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' ||
+			c == '.' || c == '_' || c == '-'
+		if !ok || i == 0 && !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9') {
+			return false
+		}
+	}
+	return true
+}
+
+func fenceDlHandler(w http.ResponseWriter, r *http.Request) {
+	var b fenceBody
+	json.NewDecoder(r.Body).Decode(&b)
+	lang := b.Lang
+	failMsg := func(err error) {
+		msg := tr(lang, "fDlFail")
+		if err != nil {
+			msg += ": " + err.Error()
+		}
+		jsonOK(w, map[string]any{"ok": false, "error": msg})
+	}
+	tag, err := fenceLatestTag()
+	if err != nil || !fenceValidTag(tag) {
+		failMsg(err)
+		return
+	}
+	name := fenceBundleName(tag)
+	data, err := httpGet("https://github.com/byizmysh/SWFence/releases/download/" + tag + "/" + name)
+	if err != nil {
+		failMsg(err)
+		return
+	}
+	if len(data) < 2 || data[0] != 0x1f || data[1] != 0x8b {
+		failMsg(errors.New("the downloaded file is not a gzip archive"))
+		return
+	}
+	dir := fenceCacheDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		failMsg(err)
+		return
+	}
+	if ents, _ := os.ReadDir(dir); ents != nil {
+		for _, e := range ents {
+			if strings.HasPrefix(e.Name(), "swfence-") && strings.HasSuffix(e.Name(), ".tar.gz") && e.Name() != name {
+				os.Remove(filepath.Join(dir, e.Name()))
+			}
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+		failMsg(err)
+		return
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tag.txt"), []byte(tag), 0o644); err != nil {
+		failMsg(err)
+		return
+	}
+	jsonOK(w, map[string]any{"ok": true, "tag": tag})
+}
+
+func fenceCacheHandler(w http.ResponseWriter, r *http.Request) {
+	jsonOK(w, map[string]any{"tag": fenceCachedTag()})
+}
+
+const (
+	fenceUploadCmd  = "cat > /tmp/swfence-bundle.tar.gz"
+	fenceExtractCmd = "rm -rf /tmp/swfence-bundle && mkdir -p /tmp/swfence-bundle && tar -xzf /tmp/swfence-bundle.tar.gz -C /tmp/swfence-bundle"
+	fenceFindCmd    = "find /tmp/swfence-bundle -name SHA256SUMS | head -n 1"
+	fenceRepoCmd    = "mkdir -p /etc/swfence && printf '%s\n' 'byizmysh/SWFence' > /etc/swfence/repository && swfence setup"
+)
+
+// fenceInstallBundle uploads the cached bundle and installs the
+// package pair for the router's release family, verifying SHA256SUMS
+// on the router exactly like upstream's offline procedure. No network
+// is used on either side.
+func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
+	data, err := os.ReadFile(filepath.Join(fenceCacheDir(), fenceBundleName(tag)))
+	if err != nil {
+		return err
+	}
+	var inst string
+	switch {
+	case strings.HasPrefix(release, "24.10."):
+		inst = "opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk"
+	case strings.HasPrefix(release, "25.12."):
+		inst = "apk add --allow-untrusted ./swfence-25.12.apk ./luci-app-swfence-25.12.apk"
+	default:
+		return errors.New("unsupported release " + release)
+	}
+	if _, err := fenceRunStdin(cl, fenceUploadCmd, string(data), send); err != nil {
+		return err
+	}
+	if _, err := fenceRunStdin(cl, fenceExtractCmd, "", send); err != nil {
+		return err
+	}
+	out, err := fenceExec(cl, fenceFindCmd)
+	if err != nil {
+		return err
+	}
+	sums := strings.TrimSpace(out)
+	dir := strings.TrimSuffix(sums, "/SHA256SUMS")
+	if sums == "" || dir == sums || !strings.HasPrefix(dir, "/tmp/swfence-bundle") ||
+		strings.ContainsAny(dir, "\"' \t") {
+		return errors.New("SHA256SUMS not found in the uploaded bundle")
+	}
+	if _, err := fenceRunStdin(cl, "cd "+dir+" && sha256sum -c SHA256SUMS", "", send); err != nil {
+		return err
+	}
+	if _, err := fenceRunStdin(cl, "cd "+dir+" && "+inst, "", send); err != nil {
+		return err
+	}
+	if _, err := fenceRunStdin(cl, fenceRepoCmd, "", send); err != nil {
+		return err
+	}
+	return nil
 }

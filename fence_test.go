@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -28,7 +29,12 @@ var fakeWrtOutputs = map[string]string{
 	"nft list chain inet fw4 swfence_early 2>/dev/null":    "table inet fw4 { chain swfence_early { } }\n",
 	"cat /tmp/dhcp.leases 2>/dev/null":                     "1732000000 aa:bb:cc:dd:ee:ff 192.168.1.50 switch2 *\n",
 	"swfence status 2>&1; swfence diagnostics 2>&1 | head -40": "swfence: active\n",
-	fenceTagFetchCmd: "{\"tag_name\": \"v9.9.9-test\", \"name\": \"x\"}\n",
+	fenceUploadCmd:  "",
+	fenceExtractCmd: "",
+	fenceFindCmd:    "/tmp/swfence-bundle/SWFence/SHA256SUMS\n",
+	"cd /tmp/swfence-bundle/SWFence && sha256sum -c SHA256SUMS": "swfence-24.10.ipk: OK\nluc" + "i-app-swfence-24.10.ipk: OK\n",
+	"cd /tmp/swfence-bundle/SWFence && opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk": "",
+	fenceRepoCmd: "",
 }
 
 func newFakeOpenWrt(t *testing.T) *fakeOpenWrt {
@@ -190,18 +196,44 @@ func TestFenceChkStaleLANIPFallback(t *testing.T) {
 	}
 }
 
-func TestFenceLatestTagRemote(t *testing.T) {
+func TestFenceInstallBundle(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	dir := fenceCacheDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tag.txt"), []byte("v9.9.9-test"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, fenceBundleName("v9.9.9-test")), []byte("bundle"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := fenceCachedTag(); got != "v9.9.9-test" {
+		t.Fatalf("fenceCachedTag = %q", got)
+	}
 	cl, err := fenceDial(newFakeOpenWrt(t).addr(), "pw")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cl.Close()
-	tag, err := fenceLatestTagRemote(cl)
-	if err != nil {
+	if err := fenceInstallBundle(cl, "v9.9.9-test", "24.10.2", func(string) {}); err != nil {
 		t.Fatal(err)
 	}
-	if tag != "v9.9.9-test" {
-		t.Fatalf("tag = %q, want v9.9.9-test", tag)
+}
+
+func TestFenceInstallNeedsDownload(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	addr := newFakeOpenWrt(t).addr()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fenceinstall?ip="+addr+"&pass=pw&macw=aa:bb:cc:dd:ee:ff&lang=ja", nil)
+	fenceInstallHandler(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, "RESULT|ng") || !strings.Contains(body, "ダウンロード") {
+		t.Fatalf("install without a downloaded bundle should fail asking for the download first: %s", body)
 	}
 }
 
