@@ -240,6 +240,25 @@ func fenceChkHandler(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, resp)
 }
 
+// fenceLatestTagFn is a seam for tests.
+var fenceLatestTagFn = fenceLatestTag
+
+// fenceNetErr reports whether err looks like "this device cannot
+// reach the internet" (DNS, dial, timeout), as opposed to a
+// protocol or data problem.
+func fenceNetErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	for _, p := range []string{"dial tcp", "dial udp", "lookup ", "i/o timeout", "no such host", "network is unreachable", "connection refused", "connection reset", "TLS handshake", "Client.Timeout", "server misbehaving"} {
+		if strings.Contains(s, p) {
+			return true
+		}
+	}
+	return false
+}
+
 func fenceLatestTag() (string, error) {
 	cl := &http.Client{
 		Timeout:   30 * time.Second,
@@ -491,6 +510,34 @@ func fenceValidTag(tag string) bool {
 	return true
 }
 
+// fenceDownloadBundle fetches a SWFence release bundle into the
+// cache, replacing any older bundle.
+func fenceDownloadBundle(tag string) error {
+	name := fenceBundleName(tag)
+	data, err := httpGet("https://github.com/byizmysh/SWFence/releases/download/" + tag + "/" + name)
+	if err != nil {
+		return err
+	}
+	if len(data) < 2 || data[0] != 0x1f || data[1] != 0x8b {
+		return errors.New("the downloaded file is not a gzip archive")
+	}
+	dir := fenceCacheDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	if ents, _ := os.ReadDir(dir); ents != nil {
+		for _, e := range ents {
+			if strings.HasPrefix(e.Name(), "swfence-") && strings.HasSuffix(e.Name(), ".tar.gz") && e.Name() != name {
+				os.Remove(filepath.Join(dir, e.Name()))
+			}
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "tag.txt"), []byte(tag), 0o644)
+}
+
 func fenceDlHandler(w http.ResponseWriter, r *http.Request) {
 	var b fenceBody
 	json.NewDecoder(r.Body).Decode(&b)
@@ -502,45 +549,44 @@ func fenceDlHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonOK(w, map[string]any{"ok": false, "error": msg})
 	}
-	tag, err := fenceLatestTag()
-	if err != nil || !fenceValidTag(tag) {
-		failMsg(err)
-		return
-	}
-	name := fenceBundleName(tag)
-	data, err := httpGet("https://github.com/byizmysh/SWFence/releases/download/" + tag + "/" + name)
-	if err != nil {
-		failMsg(err)
-		return
-	}
-	if len(data) < 2 || data[0] != 0x1f || data[1] != 0x8b {
-		failMsg(errors.New("the downloaded file is not a gzip archive"))
-		return
-	}
-	dir := fenceCacheDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		failMsg(err)
-		return
-	}
-	if ents, _ := os.ReadDir(dir); ents != nil {
-		for _, e := range ents {
-			if strings.HasPrefix(e.Name(), "swfence-") && strings.HasSuffix(e.Name(), ".tar.gz") && e.Name() != name {
-				os.Remove(filepath.Join(dir, e.Name()))
+	// Prefer the cached bundle: while this device is on the
+	// router's network it may have no internet at all, and a
+	// failed "latest" lookup must not discard a good download.
+	tag := fenceCachedTag()
+	lt, lerr := fenceLatestTagFn()
+	switch {
+	case lerr == nil && fenceValidTag(lt):
+		if lt != tag {
+			if err := fenceDownloadBundle(lt); err != nil {
+				if tag == "" {
+					if fenceNetErr(err) {
+						failMsg(errors.New(tr(lang, "fOffline")))
+						return
+					}
+					failMsg(err)
+					return
+				}
+				// A cached bundle exists: keep it and carry on.
+			} else {
+				tag = lt
 			}
 		}
-	}
-	if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
-		failMsg(err)
-		return
-	}
-	if err := os.WriteFile(filepath.Join(dir, "tag.txt"), []byte(tag), 0o644); err != nil {
-		failMsg(err)
+	case tag == "":
+		if lerr != nil && fenceNetErr(lerr) {
+			failMsg(errors.New(tr(lang, "fOffline")))
+			return
+		}
+		failMsg(lerr)
 		return
 	}
 	deps := []string{}
 	if prof := fenceLoadProfile(); prof != nil && len(prof.Missing) > 0 {
 		fetched, unresolved, err := fenceFetchDeps(prof)
 		if err != nil {
+			if fenceNetErr(err) {
+				failMsg(errors.New(tr(lang, "fOffline")))
+				return
+			}
 			failMsg(err)
 			return
 		}

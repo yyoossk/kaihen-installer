@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -533,6 +534,74 @@ func TestFenceChkSavesProfile(t *testing.T) {
 	}
 	if len(prof.Feeds) != 1 || prof.Feeds[0].URL != "https://example.invalid/core" {
 		t.Fatalf("profile feeds = %+v", prof.Feeds)
+	}
+}
+
+func stubTagOffline(t *testing.T) {
+	t.Helper()
+	old := fenceLatestTagFn
+	fenceLatestTagFn = func() (string, error) {
+		return "", errors.New("dial tcp: lookup api.github.com on [::1]:53: i/o timeout")
+	}
+	t.Cleanup(func() { fenceLatestTagFn = old })
+}
+
+func fenceDl(t *testing.T) map[string]any {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/fencedl", strings.NewReader(`{"lang":"ja"}`))
+	fenceDlHandler(rec, req)
+	var j map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &j); err != nil {
+		t.Fatalf("dl response not JSON: %v (%s)", err, rec.Body.String())
+	}
+	return j
+}
+
+// Offline, but the bundle is cached and nothing else is needed:
+// the download counts as done instead of failing on the lookup.
+func TestFenceDlOfflineCacheComplete(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	stubTagOffline(t)
+	j := fenceDl(t)
+	if j["ok"] != true || j["tag"] != "v9.9.9-test" {
+		t.Fatalf("offline with a complete cache should succeed: %v", j)
+	}
+}
+
+// Offline with dependency packages still to fetch: fail with the
+// plain "not connected to the internet" message, not a dial error.
+func TestFenceDlOfflineDepsPending(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	seedFenceCache(t)
+	fenceSaveProfile(&fenceProfile{
+		Feeds:     []fenceFeed{{Name: "openwrt_core", URL: "http://127.0.0.1:1/core", Gz: true}},
+		Installed: []string{"libc"},
+		Missing:   []string{"kmod-nft-bridge"},
+	})
+	stubTagOffline(t)
+	j := fenceDl(t)
+	errStr, _ := j["error"].(string)
+	if j["ok"] != false || !strings.Contains(errStr, "インターネットにつながっていません") {
+		t.Fatalf("offline with pending deps should say so plainly: %v", j)
+	}
+}
+
+// Offline with nothing cached: same plain message.
+func TestFenceDlOfflineNoCache(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	stubTagOffline(t)
+	j := fenceDl(t)
+	errStr, _ := j["error"].(string)
+	if j["ok"] != false || !strings.Contains(errStr, "インターネットにつながっていません") {
+		t.Fatalf("offline with no cache should say so plainly: %v", j)
 	}
 }
 
