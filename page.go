@@ -327,7 +327,8 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 <div id="chkmodal"><div class="chkbox"><div id="chkline1"></div><div id="chkline2"></div><div id="chkline3"></div><p><button onclick="hideChk()" data-i18n="dlg_ok">OK</button></p></div></div>
 <div id="quitmodal"><div class="chkbox"><div style="font-size:1.25em" data-i18n="quit_q">本当に終了しますか？</div><p><button onclick="quitDo()" data-i18n="quit_yes">終了する</button> <button onclick="quitCancel()" data-i18n="quit_cancel">キャンセル</button></p></div></div>
 <div id="updmodal"><div class="chkbox"><div id="updline1"></div><div id="updline2"></div><p><button id="updbtn-now" onclick="updApply()" data-i18n="upd_now">更新する</button> <button id="updbtn-later" onclick="updHide()" data-i18n="upd_later">あとで</button></p></div></div>
-<div id="galmodal"><div class="chkbox"><div class="galview" id="galview"></div><table class="galtable"><tr><td data-i18n="gal_type">種類</td><td id="galv-type"></td></tr><tr><td data-i18n="gal_taken">撮影日時</td><td id="galv-taken"></td></tr><tr><td data-i18n="gal_stored">保存先</td><td id="galv-stored"></td></tr><tr><td data-i18n="gal_size">サイズ</td><td id="galv-size"></td></tr></table><p><a id="galv-dl" href="#" download><button class="btn" data-i18n="gal_dl">ダウンロード</button></a> <button class="btn" style="background:#c0392b;color:#fff;border-color:#c0392b" onclick="galDelete()" data-i18n="gal_del">削除</button> <button onclick="galClose()" data-i18n="dlg_ok">OK</button></p></div></div>
+<div id="galmodal"><div class="chkbox"><div class="galview" id="galview"></div><table class="galtable"><tr><td data-i18n="gal_type">種類</td><td id="galv-type"></td></tr><tr><td data-i18n="gal_taken">撮影日時</td><td id="galv-taken"></td></tr><tr><td data-i18n="gal_stored">保存先</td><td id="galv-stored"></td></tr><tr><td data-i18n="gal_size">サイズ</td><td id="galv-size"></td></tr></table><p id="galv-status" class="note" style="min-height:1.2em; margin:.2em 0"></p>
+<p><button class="btn" onclick="galDownload()" data-i18n="gal_dl">ダウンロード</button> <button class="btn" style="background:#c0392b;color:#fff;border-color:#c0392b" onclick="galDelete()" data-i18n="gal_del">削除</button> <button onclick="galClose()" data-i18n="dlg_ok">OK</button></p></div></div>
 <div id="cfmodal"><div class="chkbox"><div style="font-size:1.25em" data-i18n="app_del_list_q">本当にリストから削除しますか？</div><div id="cfname" class="note"></div><p><button onclick="cfAnswer(true)" data-i18n="cf_yes">はい</button> <button onclick="cfAnswer(false)" data-i18n="cf_no">いいえ</button></p></div></div>
 <script>
 var I18N = {"ja":{"title":"kaiHEN Installer","prep_h":"インストール方法","ip_label":"本体の IP アドレス","check_btn":"接続を確認する","log_h":"実行ログ","lang_label":"言語","checking":"--- 接続の確認: ","connected":"ローダーに接続できました","conn_fail":"接続できません: ","enter_ip":"IP アドレスを入力してください","started":" 開始: ","nameA":"手順1","st_bytes":" バイト"},"en":{"title":"kaiHEN Installer","prep_h":"How to install","ip_label":"Console IP address","check_btn":"Check connection","log_h":"Log","lang_label":"Language","checking":"--- Checking connection: ","connected":"Connected to the loader","conn_fail":"Could not connect: ","enter_ip":"Please enter an IP address","started":" started: ","nameA":"Step 1","st_bytes":" bytes"},"fr":{"title":"kaiHEN Installer","prep_h":"Méthode d'installation","ip_label":"Adresse IP de la console","check_btn":"Vérifier la connexion","log_h":"Journal","lang_label":"Langue","checking":"--- Vérification de la connexion : ","connected":"Connecté au chargeur","conn_fail":"Connexion impossible : ","enter_ip":"Veuillez saisir une adresse IP","started":" démarré : ","nameA":"Étape 1","st_bytes":" octets"},"de":{"title":"kaiHEN Installer","prep_h":"Installationsmethode","ip_label":"IP-Adresse der Konsole","check_btn":"Verbindung prüfen","log_h":"Protokoll","lang_label":"Sprache","checking":"--- Verbindung wird geprüft: ","connected":"Mit dem Loader verbunden","conn_fail":"Keine Verbindung: ","enter_ip":"Bitte eine IP-Adresse eingeben","started":" gestartet: ","nameA":"Schritt 1","st_bytes":" Bytes"},"it":{"title":"kaiHEN Installer","prep_h":"Metodo di installazione","ip_label":"Indirizzo IP della console","check_btn":"Verifica connessione","log_h":"Registro","lang_label":"Lingua","checking":"--- Verifica connessione: ","connected":"Connesso al loader","conn_fail":"Connessione impossibile: ","enter_ip":"Inserisci un indirizzo IP","started":" avviato: ","nameA":"Passo 1","st_bytes":" byte"},"es":{"title":"kaiHEN Installer","prep_h":"Método de instalación","ip_label":"Dirección IP de la consola","check_btn":"Comprobar conexión","log_h":"Registro","lang_label":"Idioma","checking":"--- Comprobando conexión: ","connected":"Conectado al cargador","conn_fail":"No se pudo conectar: ","enter_ip":"Introduce una dirección IP","started":" iniciado: ","nameA":"Paso 1","st_bytes":" bytes"},"ru":{"title":"kaiHEN Installer","prep_h":"Способ установки","ip_label":"IP-адрес консоли","check_btn":"Проверить соединение","log_h":"Журнал","lang_label":"Язык","checking":"--- Проверка соединения: ","connected":"Подключено к загрузчику","conn_fail":"Не удалось подключиться: ","enter_ip":"Введите IP-адрес","started":" запущено: ","nameA":"Шаг 1","st_bytes":" байт"},"pt":{"title":"kaiHEN Installer","prep_h":"Método de instalação","ip_label":"Endereço IP do console","check_btn":"Verificar conexão","log_h":"Log","lang_label":"Idioma","checking":"--- Verificando conexão: ","connected":"Conectado ao loader","conn_fail":"Não foi possível conectar: ","enter_ip":"Digite um endereço IP","started":" iniciado: ","nameA":"Passo 1","st_bytes":" bytes"},"pl":{"title":"kaiHEN Installer","prep_h":"Sposób instalacji","ip_label":"Adres IP konsoli","check_btn":"Sprawdź połączenie","log_h":"Dziennik","lang_label":"Język","checking":"--- Sprawdzanie połączenia: ","connected":"Połączono z loaderem","conn_fail":"Nie udało się połączyć: ","enter_ip":"Wpisz adres IP","started":" rozpoczęto: ","nameA":"Krok 1","st_bytes":" bajtów"},"ko":{"title":"kaiHEN Installer","prep_h":"설치 방법","ip_label":"본체 IP 주소","check_btn":"연결 확인","log_h":"실행 로그","lang_label":"언어","checking":"--- 연결 확인: ","connected":"로더에 연결되었습니다","conn_fail":"연결할 수 없습니다: ","enter_ip":"IP 주소를 입력하세요","started":" 시작: ","nameA":"1단계","st_bytes":" 바이트"},"zh-Hans":{"title":"kaiHEN Installer","prep_h":"安装方法","ip_label":"主机 IP 地址","check_btn":"检查连接","log_h":"执行日志","lang_label":"语言","checking":"--- 检查连接: ","connected":"已连接到加载器","conn_fail":"无法连接: ","enter_ip":"请输入 IP 地址","started":" 开始: ","nameA":"步骤1","st_bytes":" 字节"},"zh-Hant":{"title":"kaiHEN Installer","prep_h":"安裝方法","ip_label":"主機 IP 位址","check_btn":"檢查連線","log_h":"執行日誌","lang_label":"語言","checking":"--- 檢查連線: ","connected":"已連線到載入器","conn_fail":"無法連線: ","enter_ip":"請輸入 IP 位址","started":" 開始: ","nameA":"步驟1","st_bytes":" 位元組"}};
@@ -354,6 +355,8 @@ var GAL = {"ja": {gal_title: "ギャラリー", gal_note: "SD カードのアル
 for (var kGA in GAL) { if (I18N[kGA]) { for (var kkGA in GAL[kGA]) I18N[kGA][kkGA] = GAL[kGA][kkGA]; } }
 var GAL2 = {"ja": {gal_chk_ok: "接続できました", gal_chk_ng: "接続できませんでした", gal_chk_hint: "OunceShell のファイル画面で SELECT (−) を押して FTP を開始するか、FTPD プラグインが動いているか、本体の IP が合っているか確認してください。", gal_del: "削除", gal_del_q: "このファイルを削除しますか？"}, "en": {gal_chk_ok: "Connected", gal_chk_ng: "Could not connect", gal_chk_hint: "Make sure OunceShell's FTP is started (SELECT (−) on its file screen) or the FTPD plugin is running, and that the console IP is correct.", gal_del: "Delete", gal_del_q: "Delete this file?"}, "fr": {gal_chk_ok: "Connecté", gal_chk_ng: "Connexion impossible", gal_chk_hint: "Vérifiez que le FTP d'OunceShell est démarré (SELECT (−) sur son écran de fichiers) ou que le plugin FTPD est actif, et que l'IP de la console est correcte.", gal_del: "Supprimer", gal_del_q: "Supprimer ce fichier ?"}, "de": {gal_chk_ok: "Verbunden", gal_chk_ng: "Keine Verbindung", gal_chk_hint: "Prüfen Sie, ob der FTP von OunceShell gestartet ist (SELECT (−) im Dateibildschirm) oder das FTPD-Plugin läuft, und ob die IP der Konsole stimmt.", gal_del: "Löschen", gal_del_q: "Diese Datei löschen?"}, "it": {gal_chk_ok: "Connesso", gal_chk_ng: "Impossibile connettersi", gal_chk_hint: "Verifica che l'FTP di OunceShell sia avviato (SELECT (−) nella schermata dei file) o che il plugin FTPD sia attivo, e che l'IP della console sia corretto.", gal_del: "Elimina", gal_del_q: "Eliminare questo file?"}, "es": {gal_chk_ok: "Conectado", gal_chk_ng: "No se pudo conectar", gal_chk_hint: "Comprueba que el FTP de OunceShell esté iniciado (SELECT (−) en su pantalla de archivos) o que el plugin FTPD esté activo, y que la IP de la consola sea correcta.", gal_del: "Eliminar", gal_del_q: "¿Eliminar este archivo?"}, "ru": {gal_chk_ok: "Подключено", gal_chk_ng: "Не удалось подключиться", gal_chk_hint: "Убедитесь, что FTP OunceShell запущен (SELECT (−) на экране файлов) или работает плагин FTPD, и что IP консоли указан верно.", gal_del: "Удалить", gal_del_q: "Удалить этот файл?"}, "pt": {gal_chk_ok: "Ligado", gal_chk_ng: "Não foi possível ligar", gal_chk_hint: "Verifique se o FTP do OunceShell está iniciado (SELECT (−) na tela de arquivos) ou se o plugin FTPD está ativo, e se o IP do console está correto.", gal_del: "Excluir", gal_del_q: "Excluir este arquivo?"}, "pl": {gal_chk_ok: "Połączono", gal_chk_ng: "Nie udało się połączyć", gal_chk_hint: "Sprawdź, czy FTP OunceShell jest uruchomiony (SELECT (−) na ekranie plików) lub czy działa wtyczka FTPD, oraz czy adres IP konsoli jest poprawny.", gal_del: "Usuń", gal_del_q: "Usunąć ten plik?"}, "ko": {gal_chk_ok: "연결되었습니다", gal_chk_ng: "연결할 수 없습니다", gal_chk_hint: "OunceShell의 FTP가 시작되었는지(파일 화면에서 SELECT(−)) 또는 FTPD 플러그인이 실행 중인지, 본체 IP가 맞는지 확인하세요.", gal_del: "삭제", gal_del_q: "이 파일을 삭제할까요?"}, "zh-Hans": {gal_chk_ok: "已连接", gal_chk_ng: "无法连接", gal_chk_hint: "请确认 OunceShell 的 FTP 已启动(在文件界面按 SELECT(−)),或 FTPD 插件正在运行,并且本机 IP 正确。", gal_del: "删除", gal_del_q: "要删除这个文件吗？"}, "zh-Hant": {gal_chk_ok: "已連接", gal_chk_ng: "無法連接", gal_chk_hint: "請確認 OunceShell 的 FTP 已啟動(在檔案畫面按 SELECT(−)),或 FTPD 外掛正在執行,並且本機 IP 正確。", gal_del: "刪除", gal_del_q: "要刪除這個檔案嗎？"}};
 for (var kGB in GAL2) { if (I18N[kGB]) { for (var kkGB in GAL2[kGB]) I18N[kGB][kkGB] = GAL2[kGB][kkGB]; } }
+var GAL3 = {"ja": {gal_dl_ing: "ダウンロードしています…", gal_dl_done: "ダウンロードしました", gal_dl_fail: "ダウンロードできませんでした", gal_del_done: "削除しました", gal_del_fail: "削除できませんでした"}, "en": {gal_dl_ing: "Downloading…", gal_dl_done: "Downloaded", gal_dl_fail: "Download failed", gal_del_done: "Deleted", gal_del_fail: "Delete failed"}, "fr": {gal_dl_ing: "Téléchargement…", gal_dl_done: "Téléchargé", gal_dl_fail: "Échec du téléchargement", gal_del_done: "Supprimé", gal_del_fail: "Échec de la suppression"}, "de": {gal_dl_ing: "Wird heruntergeladen…", gal_dl_done: "Heruntergeladen", gal_dl_fail: "Download fehlgeschlagen", gal_del_done: "Gelöscht", gal_del_fail: "Löschen fehlgeschlagen"}, "it": {gal_dl_ing: "Download in corso…", gal_dl_done: "Scaricato", gal_dl_fail: "Download non riuscito", gal_del_done: "Eliminato", gal_del_fail: "Eliminazione non riuscita"}, "es": {gal_dl_ing: "Descargando…", gal_dl_done: "Descargado", gal_dl_fail: "La descarga falló", gal_del_done: "Eliminado", gal_del_fail: "No se pudo eliminar"}, "ru": {gal_dl_ing: "Загрузка…", gal_dl_done: "Загружено", gal_dl_fail: "Не удалось загрузить", gal_del_done: "Удалено", gal_del_fail: "Не удалось удалить"}, "pt": {gal_dl_ing: "Baixando…", gal_dl_done: "Baixado", gal_dl_fail: "Falha no download", gal_del_done: "Excluído", gal_del_fail: "Falha ao excluir"}, "pl": {gal_dl_ing: "Pobieranie…", gal_dl_done: "Pobrano", gal_dl_fail: "Pobieranie nie powiodło się", gal_del_done: "Usunięto", gal_del_fail: "Nie udało się usunąć"}, "ko": {gal_dl_ing: "다운로드 중…", gal_dl_done: "다운로드했습니다", gal_dl_fail: "다운로드할 수 없습니다", gal_del_done: "삭제했습니다", gal_del_fail: "삭제할 수 없습니다"}, "zh-Hans": {gal_dl_ing: "正在下载…", gal_dl_done: "下载完成", gal_dl_fail: "下载失败", gal_del_done: "已删除", gal_del_fail: "删除失败"}, "zh-Hant": {gal_dl_ing: "正在下載…", gal_dl_done: "下載完成", gal_dl_fail: "下載失敗", gal_del_done: "已刪除", gal_del_fail: "刪除失敗"}};
+for (var kGC in GAL3) { if (I18N[kGC]) { for (var kkGC in GAL3[kGC]) I18N[kGC][kkGC] = GAL3[kGC][kkGC]; } }
 var AE = {
 ja: { app_add: "追加", app_check: "更新を確認", app_install: "インストール", app_delete: "削除", app_update_badge: "更新あり", app_update_found: "更新があります (ダウンロード済み)", app_got: "本体の版", app_none2: "まだ登録がありません" },
 en: { app_add: "Add", app_check: "Check for updates", app_install: "Install", app_delete: "Remove", app_update_badge: "Update", app_update_found: "Update available (downloaded)", app_got: "On console", app_none2: "Nothing registered yet" },
@@ -1450,34 +1453,93 @@ function galOpen(idx) {
   document.getElementById("galv-taken").textContent = galTakenStr(it.taken);
   document.getElementById("galv-stored").textContent = t("gal_sd");
   document.getElementById("galv-size").textContent = galSizeStr(it.size);
-  var a = document.getElementById("galv-dl");
-  a.href = galFileURL(it, true);
-  a.setAttribute("download", it.name);
+  var st = document.getElementById("galv-status");
+  st.textContent = "";
+  st.style.color = "";
   document.getElementById("galmodal").style.display = "flex";
 }
 function galClose() {
   document.getElementById("galmodal").style.display = "none";
   document.getElementById("galview").innerHTML = "";
 }
-// Delete the open item from the console's SD card (FTP DELE), after
-// the shared confirm dialog. The grid and stats update in place.
+// Download completion report, shared by both paths below and by
+// the Android shell (its DownloadManager receiver calls this).
+// Success closes the viewer and shows the result dialog; failure
+// is written into the viewer's status line.
+function galDlDone(ok) {
+  var it = galSt.items[galSt.cur];
+  var name = it ? it.name : "";
+  if (ok) {
+    galClose();
+    showChk(t("gal_dl_done"), name, true, "");
+  } else {
+    var st = document.getElementById("galv-status");
+    if (st) { st.textContent = t("gal_dl_fail"); st.style.color = "#c0392b"; }
+  }
+}
+// Save the open item on this device. Android: a plain link click
+// is handed by the WebView to the shell's DownloadManager listener
+// (a bare <a download> does nothing in a WebView); the result
+// comes back through galDlDone. Desktop: fetch the file and save
+// it through a blob URL, then report the same way.
+async function galDownload() {
+  var it = galSt.items[galSt.cur];
+  if (!it) return;
+  var st = document.getElementById("galv-status");
+  st.style.color = "";
+  st.textContent = t("gal_dl_ing");
+  var url = galFileURL(it, true);
+  if (IS_ANDROID) {
+    var a = document.createElement("a");
+    a.href = url;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  }
+  try {
+    var r = await fetch(url);
+    if (!r.ok) throw new Error("ng");
+    var blob = await r.blob();
+    var u = URL.createObjectURL(blob);
+    var a2 = document.createElement("a");
+    a2.href = u;
+    a2.download = it.name;
+    document.body.appendChild(a2);
+    a2.click();
+    a2.remove();
+    setTimeout(function() { URL.revokeObjectURL(u); }, 4000);
+    galDlDone(true);
+  } catch (e) { galDlDone(false); }
+}
+// Delete the open item from the console's SD card (FTP DELE),
+// after the shared confirm dialog. Success closes the viewer,
+// updates the grid and stats, and shows the result dialog;
+// failure is written into the viewer's status line.
 async function galDelete() {
   var it = galSt.items[galSt.cur];
   if (!it) return;
   var yes = await showConfirm(t("gal_del_q") + "\n" + it.name);
   if (!yes) return;
+  var fail = function() {
+    var st = document.getElementById("galv-status");
+    st.textContent = t("gal_del_fail");
+    st.style.color = "#c0392b";
+  };
   try {
     var r = await fetch("/api/gallery/delete", { method: "POST",
       body: JSON.stringify({ ip: ip(), src: galSt.src, path: it.path, lang: LANG }) });
     var j = await r.json();
-    if (!j.ok) { addLog(t("gal_err")); return; }
+    if (!j.ok) { fail(); return; }
     galSt.items.splice(galSt.cur, 1);
     galSt.cur = -1;
     galClose();
     if (galSt.page > galPages()) galSt.page = galPages();
     galStatsUpdate();
     galRender();
-  } catch (e) { addLog(t("gal_err")); }
+    showChk(t("gal_del_done"), it.name, true, "");
+  } catch (e) { fail(); }
 }
 var IS_ANDROID = /Android/.test(navigator.userAgent || "");
 function themeMode() { try { return localStorage.getItem("ci_theme") || "light"; } catch (e) { return "light"; } }
