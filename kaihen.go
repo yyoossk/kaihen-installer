@@ -47,17 +47,16 @@ import (
 // exits, when HEN startup reports failure, or when the page goes away.
 
 const (
-	// Pinned to 20261114c, the release the CivSwitch Kit v1.1.0 NOTICE
-	// names as its tested version. The engine validates only that the
-	// dist files exist (no version/hash check), and 20261114d's
-	// bootstrap.bin, ro/main, hen/main
-	// and game/main are byte-identical to 20261114c's (only hbmenu.nro,
-	// programs/ounceshell.nro and one license file differ), but there is no
-	// benefit to shipping the release the launcher does not specify.
-	kaihenTag  = "20261114c"
-	kaihenURL  = "https://github.com/ouncebrew/kaihen/releases/download/20261114c/kaiHEN-20261114c.zip"
-	kaihenSize = 12325073
-	kaihenSHA  = "63b91e5e7c6f411aad758758e5a1a3cbe1f855b4304d87916afe5319b9dfd967"
+	// Pinned to 20261117.1. Its hbmenu carries the official fix for
+	// the textInit() 2345-0011 failure (since 20261116, hbmenu no
+	// longer looks up the system language at startup), so the dist
+	// is used exactly as published, with no local modification. The
+	// engine validates only that the dist files exist (no version
+	// or hash check); the layout is unchanged from earlier releases.
+	kaihenTag  = "20261117.1"
+	kaihenURL  = "https://github.com/ouncebrew/kaihen/releases/download/20261117.1/kaiHEN-20261117.1.zip"
+	kaihenSize = 12347885
+	kaihenSHA  = "3f7ded0b360b2f0bf97f8e958c3bfe93a8d76dd8d43ce2e8f7d060e647ad0978"
 )
 
 var (
