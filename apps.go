@@ -86,6 +86,7 @@ func builtinApps() []*appEntry {
 		{ID: "Olmectron/dekopon", Kind: "nro", Builtin: true, Name: "Dekopon for SW2", Source: "release"},
 		{ID: "mizuiroame/kaiplayer", Kind: "nro", Builtin: true, Name: "KaiPlayer", Source: "release"},
 		{ID: "mizuiroame/kairadio", Kind: "nro", Builtin: true, Name: "KaiRadio", Source: "release"},
+		{ID: "mizuiroame/kaivideo", Kind: "nro", Builtin: true, Name: "KaiVideo", Source: "release"},
 	}
 }
 
