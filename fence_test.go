@@ -40,7 +40,9 @@ var fakeWrtOutputs = map[string]string{
 	fenceFindCmd:                                                "/tmp/swfence-bundle/SWFence/SHA256SUMS\n",
 	"cd /tmp/swfence-bundle/SWFence && sha256sum -c SHA256SUMS": "swfence-24.10.ipk: OK\nluc" + "i-app-swfence-24.10.ipk: OK\n",
 	"cd /tmp/swfence-bundle/SWFence && opkg install ./swfence-24.10.ipk ./luci-app-swfence-24.10.ipk": "",
-	fenceRepoCmd: "",
+	fenceRepoCmd:       "",
+	fenceOpkgUpdateCmd: "",
+	fenceApkUpdateCmd:  "",
 }
 
 func init() {

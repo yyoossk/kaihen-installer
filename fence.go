@@ -512,10 +512,12 @@ func fenceCacheHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 const (
-	fenceUploadCmd  = "cat > /tmp/swfence-bundle.tar.gz"
-	fenceExtractCmd = "rm -rf /tmp/swfence-bundle && mkdir -p /tmp/swfence-bundle && tar -xzf /tmp/swfence-bundle.tar.gz -C /tmp/swfence-bundle"
-	fenceFindCmd    = "find /tmp/swfence-bundle -name SHA256SUMS | head -n 1"
-	fenceRepoCmd    = "mkdir -p /etc/swfence && printf '%s\n' 'byizmysh/SWFence' > /etc/swfence/repository && swfence setup"
+	fenceUploadCmd     = "cat > /tmp/swfence-bundle.tar.gz"
+	fenceExtractCmd    = "rm -rf /tmp/swfence-bundle && mkdir -p /tmp/swfence-bundle && tar -xzf /tmp/swfence-bundle.tar.gz -C /tmp/swfence-bundle"
+	fenceFindCmd       = "find /tmp/swfence-bundle -name SHA256SUMS | head -n 1"
+	fenceRepoCmd       = "mkdir -p /etc/swfence && printf '%s\n' 'byizmysh/SWFence' > /etc/swfence/repository && swfence setup"
+	fenceOpkgUpdateCmd = "opkg update"
+	fenceApkUpdateCmd  = "apk update"
 )
 
 // fenceInstallBundle uploads the cached bundle and installs the
@@ -554,6 +556,20 @@ func fenceInstallBundle(cl *ssh.Client, tag, release string, send logFn) error {
 	}
 	if _, err := fenceRunStdin(cl, "cd "+dir+" && sha256sum -c SHA256SUMS", "", send); err != nil {
 		return err
+	}
+	// Upstream's installer and INSTALL.md both refresh the package
+	// lists before installing the local files: without lists, opkg
+	// cannot resolve the packages' dependencies (not even the luci
+	// app's dependency on the swfence package installed alongside it)
+	// and fails with "Unknown package 'swfence'". This runs on the
+	// router, so the router needs its own internet connection here;
+	// the phone/PC still downloads nothing at install time.
+	upd := fenceOpkgUpdateCmd
+	if strings.HasPrefix(release, "25.12.") {
+		upd = fenceApkUpdateCmd
+	}
+	if _, err := fenceRunStdin(cl, upd, "", send); err != nil {
+		return fmt.Errorf("%s: %w", upd, err)
 	}
 	if _, err := fenceRunStdin(cl, "cd "+dir+" && "+inst, "", send); err != nil {
 		return err
