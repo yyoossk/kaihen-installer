@@ -38,19 +38,32 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
 - **Installs kaiHEN in a few clicks** — install the loader save, then start
   kaiHEN with the bundled CivSwitch Kit engine (retries are automatic).
+  kaiHEN is pinned to **20261117.1** and used **exactly as published** —
+  no file is modified (its hbmenu carries the official fix for the
+  textInit 2345-0011 error).
   **数クリックで kaiHEN を導入** — ローダーのセーブを入れて、同梱の
   CivSwitch Kit エンジンで kaiHEN を起動します (リトライは自動)。
+  kaiHEN は **20261117.1** に固定し、**公開ファイルに一切手を加えず**
+  そのまま使います (hbmenu には textInit 2345-0011 エラーの公式修正が
+  含まれます)。
 - **Autoloader** — after a one-time setup, kaiHEN starts from **Load Game**
   alone: no PC, no phone, no Pico, no network. Includes the improved
   CivSwitchFS (timing learning + freeze fix) from the companion fork.
+  The SD files follow upstream civ-autoloader, whose bundled hbmenu is
+  now also the officially fixed kaiHEN 20261116 build.
   **オートローダー** — 初回だけ設定すれば、あとは**ゲームをロード**する
   だけで kaiHEN が起動します (PC・スマホ・Pico・ネットワーク不要)。
-  改良版 CivSwitchFS (タイミング学習+フリーズ修正) を同梱。
+  改良版 CivSwitchFS (タイミング学習+フリーズ修正) を同梱。SD ファイルは
+  上流 civ-autoloader に追随し、同梱 hbmenu も公式修正済みの kaiHEN
+  20261116 版になりました。
 - **Homebrew catalog** — install compatible homebrew to the console over
-  FTP (OunceShell), or send your own `.nro` files and folders.
+  FTP (OunceShell), or send your own `.nro` files and folders. The
+  newest release of each app is fetched automatically; if a release
+  ships no files, the newest release that does is used.
   **自作ソフトのカタログ** — 対応ソフトを FTP (OunceShell) で本体に
   インストールできます。自分の `.nro` ファイルやフォルダを送ることも
-  できます。
+  できます。各ソフトは最新リリースを自動で取得します (ファイルの無い
+  リリースしか無い場合は、ファイルのある一番新しいリリースを使います)。
 - **Self-update** — the app checks this repository's releases at startup.
   On Windows it replaces itself and restarts (your settings and
   downloaded files are kept). On Android it downloads the new APK and
@@ -70,6 +83,19 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 - **12 languages** — 日本語 / English / Français / Deutsch / Italiano /
   Español / Русский / Português / Polski / 한국어 / 简体中文 / 繁體中文.
   **12言語対応**です。
+
+## Homebrew catalog / 自作ソフトカタログ
+
+19 apps, installed over FTP into `/switch` (or their own folders
+where the release requires it):
+
+90DNS Tester / Force Internal Speaker / FTPD Plugin / Checkpoint /
+PKSM / NXGallery / Chiaki-ng/Akira / RetroArch / Kaizhar / mGBA /
+Dolphin NX2 / Moonlight / Moonlight-Switch / Dekopon for SW2 /
+KaiPlayer / KaiRadio / KaiVideo / BrewStore / Blacklist Tool
+
+19本のソフトを、FTP で `/switch` (リリースの指定するフォルダ) に
+インストールできます。
 
 ## Download / ダウンロード
 
@@ -308,7 +334,6 @@ This software is built on the work of the following people.
 - **kurumuz** — ns2jb
 - **byizmysh** — SWFence
 - **TheNxtBigThing8** — Offline WAN Emulator
-- **misshexa66** — OunceCake
 - **Node.js** (OpenJS Foundation) — bundled runtime / 同梱ランタイム
 
 The homebrew apps in the catalog are the work of their respective
