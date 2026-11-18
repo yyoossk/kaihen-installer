@@ -87,6 +87,7 @@ func builtinApps() []*appEntry {
 		{ID: "mizuiroame/kaiplayer", Kind: "nro", Builtin: true, Name: "KaiPlayer", Source: "release"},
 		{ID: "mizuiroame/kairadio", Kind: "nro", Builtin: true, Name: "KaiRadio", Source: "release"},
 		{ID: "mizuiroame/kaivideo", Kind: "nro", Builtin: true, Name: "KaiVideo", Source: "release"},
+		{ID: "HerXayah/brewstore", Kind: "nro", Builtin: true, Name: "BrewStore", Source: "release"},
 	}
 }
 
