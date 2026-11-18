@@ -1,0 +1,153 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"net"
+	"strings"
+	"sync"
+	"testing"
+)
+
+// fakeOzFTP is a minimal FTP server speaking just enough of the
+// protocol for ozConnect. A directory set decides CWD answers, and
+// MKD adds any path it is asked for (even a bogus one), so a test
+// can prove the client never probes with MKD. Every command is
+// recorded.
+type fakeOzFTP struct {
+	ln   net.Listener
+	mu   sync.Mutex
+	dirs map[string]bool
+	cmds []string
+}
+
+func newFakeOzFTP(t *testing.T, dirs ...string) *fakeOzFTP {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := &fakeOzFTP{ln: ln, dirs: map[string]bool{}}
+	for _, d := range dirs {
+		f.dirs[d] = true
+	}
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go f.handle(c)
+		}
+	}()
+	t.Cleanup(func() { ln.Close() })
+	return f
+}
+
+func (f *fakeOzFTP) handle(c net.Conn) {
+	defer c.Close()
+	w := bufio.NewWriter(c)
+	r := bufio.NewReader(c)
+	send := func(s string) { fmt.Fprintf(w, "%s\r\n", s); w.Flush() }
+	send("220 fake")
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			return
+		}
+		line = strings.TrimRight(line, "\r\n")
+		f.mu.Lock()
+		f.cmds = append(f.cmds, line)
+		f.mu.Unlock()
+		verb, arg := line, ""
+		if i := strings.Index(line, " "); i >= 0 {
+			verb, arg = line[:i], line[i+1:]
+		}
+		switch verb {
+		case "USER":
+			send("230 ok")
+		case "TYPE":
+			send("200 ok")
+		case "CWD":
+			f.mu.Lock()
+			ok := f.dirs[arg]
+			f.mu.Unlock()
+			if ok {
+				send("250 ok")
+			} else {
+				send("550 no such folder")
+			}
+		case "MKD":
+			f.mu.Lock()
+			f.dirs[arg] = true
+			f.mu.Unlock()
+			send("257 created")
+		case "QUIT":
+			send("221 bye")
+			return
+		default:
+			send("502 not implemented")
+		}
+	}
+}
+
+func (f *fakeOzFTP) saw(substr string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, c := range f.cmds {
+		if strings.Contains(c, substr) {
+			return true
+		}
+	}
+	return false
+}
+
+// ftpd layout (kaiHEN 20261114d and later): the SD card is the FTP
+// root and /switch exists. Even though this server would accept an
+// MKD of the bogus sdmc: path, the client must resolve the plain
+// dialect and never send that MKD.
+func TestOzDialectFtpd(t *testing.T) {
+	f := newFakeOzFTP(t, "/switch")
+	s, err := ozConnectAddr(f.ln.Addr().String(), "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	if s.prefix != "" {
+		t.Fatalf("prefix = %q, want \"\" (ftpd)", s.prefix)
+	}
+	if f.saw("MKD /sdmc:") {
+		t.Fatal("client probed the sdmc: path with MKD")
+	}
+}
+
+// ftpvita layout (kaiHEN 20261114c): the root lists devices, the SD
+// folder is /sdmc:/switch, and a device-less /switch does not exist.
+func TestOzDialectFtpvita(t *testing.T) {
+	f := newFakeOzFTP(t, "/sdmc:/switch")
+	s, err := ozConnectAddr(f.ln.Addr().String(), "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	if s.prefix != "/sdmc:" {
+		t.Fatalf("prefix = %q, want /sdmc: (ftpvita)", s.prefix)
+	}
+}
+
+// Fresh card on ftpd: /switch does not exist yet; the client creates
+// the plain folder and uses the plain dialect.
+func TestOzDialectFreshCard(t *testing.T) {
+	f := newFakeOzFTP(t)
+	s, err := ozConnectAddr(f.ln.Addr().String(), "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	if s.prefix != "" {
+		t.Fatalf("prefix = %q, want \"\" (ftpd, fresh card)", s.prefix)
+	}
+	if !f.saw("MKD /switch") {
+		t.Fatal("client did not create the missing /switch")
+	}
+}

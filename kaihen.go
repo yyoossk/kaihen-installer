@@ -522,9 +522,9 @@ func pushBridge(send logFn, consoleIP, pcIP string, done <-chan struct{}) error 
 // The path dialect depends on the kaiHEN release: 20261114c ships ftpvita,
 // whose root lists devices, so the SD folder is /sdmc:/switch; 20261114d
 // ships ftpd, which serves the SD card at its root, so the folder is
-// /switch. Both are tried in that order and the folder that answers CWD
-// wins. .nro files stored there are listed by hbmenu, which scans
-// sdmc:/switch.
+// /switch. Each session resolves which dialect answers by CWD at
+// connect time (see ozConnect). .nro files stored there are listed by
+// hbmenu, which scans sdmc:/switch.
 
 const ozFtpPort = 1337
 
@@ -540,7 +540,11 @@ type ozSession struct {
 }
 
 func ozConnect(ip, lang string) (*ozSession, error) {
-	ctrl, err := net.DialTimeout("tcp", net.JoinHostPort(ip, strconv.Itoa(ozFtpPort)), 10*time.Second)
+	return ozConnectAddr(net.JoinHostPort(ip, strconv.Itoa(ozFtpPort)), lang)
+}
+
+func ozConnectAddr(addr, lang string) (*ozSession, error) {
+	ctrl, err := net.DialTimeout("tcp", addr, 10*time.Second)
 	if err != nil {
 		return nil, errors.New(tr(lang, "khFtpConn"))
 	}
@@ -560,18 +564,26 @@ func ozConnect(ip, lang string) (*ozSession, error) {
 		return nil, errors.New(tr(lang, "khFtpConn"))
 	}
 	s.cmd("TYPE I")
-	// Resolve the dialect: whichever switch folder answers (or can be
-	// created) decides the prefix for every path on this session.
-	for _, cand := range []struct{ prefix, dir string }{{"/sdmc:", "/sdmc:/switch"}, {"", "/switch"}} {
-		if code, _ := s.cmd("CWD " + cand.dir); code == 250 {
-			s.prefix = cand.prefix
+	// Resolve the dialect by CWD alone, plain /switch first: it is
+	// the current (ftpd) layout, and on ftpvita a device-less path
+	// simply fails, so the sdmc: probe still gets its turn. Never
+	// probe the sdmc: path with MKD: on ftpd that could create a
+	// real folder literally named "sdmc:" on the card and make the
+	// probe pick the wrong dialect, stranding uploads where hbmenu
+	// never looks. MKD is used only to create a missing /switch on
+	// a fresh card.
+	if code, _ := s.cmd("CWD /switch"); code == 250 {
+		s.prefix = ""
+		return s, nil
+	}
+	if code, _ := s.cmd("CWD /sdmc:/switch"); code == 250 {
+		s.prefix = "/sdmc:"
+		return s, nil
+	}
+	if code, _ := s.cmd("MKD /switch"); code/100 == 2 {
+		if code, _ := s.cmd("CWD /switch"); code == 250 {
+			s.prefix = ""
 			return s, nil
-		}
-		if code, _ := s.cmd("MKD " + cand.dir); code/100 == 2 {
-			if code, _ := s.cmd("CWD " + cand.dir); code == 250 {
-				s.prefix = cand.prefix
-				return s, nil
-			}
 		}
 	}
 	ctrl.Close()
