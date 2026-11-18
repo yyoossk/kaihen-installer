@@ -615,6 +615,8 @@ function fenceChk() {
       showChk(t("res_ng"), t("fence_unsupported") + (j.release ? " (" + j.release + ")" : ""), false);
       return;
     }
+    var sn2 = document.getElementById("fsubnet");
+    if (sn2 && j.cidr) { sn2.value = j.cidr; try { localStorage.setItem("ci_fence_subnet", j.cidr); } catch (e) {} }
     addLog(t("res_ok") + ": OpenWrt " + (j.release || "") + (j.installed ? " / " + t("fence_installed") : ""));
     showChk(t("res_ok"), t("fence_supported") + (j.installed ? " / " + t("fence_installed") : ""), true);
   });
