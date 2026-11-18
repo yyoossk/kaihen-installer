@@ -161,7 +161,6 @@ const pageHTML = `<!DOCTYPE html>
 <div id="page-gallery" style="display:none">
 <h2 data-i18n="gal_title">ギャラリー</h2>
 <div id="prepslot-gallery"></div>
-<p class="note" data-i18n="gal_note">SD カードのアルバム (Nintendo/Album) の写真と動画を、NXGallery と同じように表示します。本体の内部ストレージのキャプチャは FTP では見られないため表示されません。</p>
 <p><span data-i18n="gal_src">接続先</span>:
 <select id="galsrc">
 <option value="auto" data-i18n="gal_auto">自動</option>
@@ -172,6 +171,7 @@ const pageHTML = `<!DOCTYPE html>
 <p id="galstats" class="note"></p>
 <div id="galgrid" class="galgrid"></div>
 <p id="galpager" style="text-align:center; display:none"><button onclick="galStep(-1)">&#8592;</button> <span id="galpageinfo"></span> <button onclick="galStep(1)">&#8594;</button></p>
+<p class="note" data-i18n="gal_note">SD カードのアルバム (Nintendo/Album) の写真と動画を、NXGallery と同じように表示します。本体の内部ストレージのキャプチャは FTP では見られないため表示されません。</p>
 </div>
 <div id="page-credits" style="display:none">
 <h2 data-i18n="credits_h">クレジット</h2>
