@@ -92,6 +92,7 @@ func builtinApps() []*appEntry {
 		{ID: "Rodpad/SW2NES", Kind: "nro", Builtin: true, Name: "SW2NES", Source: "release"},
 		{ID: "Rodpad/SW2SNES", Kind: "nro", Builtin: true, Name: "SW2SNES", Source: "release"},
 		{ID: "Rodpad/SW2Transfer", Kind: "nro", Builtin: true, Name: "SW2Transfer", Source: "release"},
+		{ID: "flex36ty/switch2-gamevault", Kind: "nro", Builtin: true, Name: "Game Vault", Source: "release"},
 	}
 }
 
