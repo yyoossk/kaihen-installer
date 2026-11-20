@@ -11,8 +11,8 @@ func TestKaiVideoResolves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tag != "v1.8.0" {
-		t.Fatalf("tag = %q, want v1.8.0", tag)
+	if tag != "v1.9.0" {
+		t.Fatalf("tag = %q, want v1.9.0", tag)
 	}
 	found := false
 	for _, as := range assets {

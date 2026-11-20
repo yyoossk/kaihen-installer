@@ -11,8 +11,8 @@ func TestBrewStoreResolves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tag != "1.2.1" {
-		t.Fatalf("tag = %q, want 1.2.1", tag)
+	if tag != "1.2.4" {
+		t.Fatalf("tag = %q, want 1.2.4", tag)
 	}
 	found := false
 	for _, as := range assets {
