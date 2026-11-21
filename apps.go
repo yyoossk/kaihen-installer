@@ -96,6 +96,7 @@ func builtinApps() []*appEntry {
 		{ID: "XITRIX/ppsspp-nx2", Kind: "nro", Builtin: true, Name: "PPSSPP NX2", Source: "release"},
 		{ID: "Rodpad/SW2PS2", Kind: "nro", Builtin: true, Name: "SW2PS2", Source: "release"},
 		{ID: "BlafKing/KaiDump", Kind: "nro", Builtin: true, Name: "KaiDump", Source: "release"},
+		{ID: "venustrikes/ouncemtp", Kind: "nro", Builtin: true, Name: "OunceMTP", Source: "release"},
 	}
 }
 
