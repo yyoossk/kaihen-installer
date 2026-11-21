@@ -3,13 +3,14 @@ package main
 import "testing"
 
 // Live resolution checks for the Rodpad catalog entries (SW2NES,
-// SW2SNES, SW2Transfer): each must resolve its newest release and
-// its single .nro asset.
+// SW2SNES, SW2Transfer, SW2PS2): each must resolve its newest
+// release and its single .nro asset.
 func TestRodpadResolves(t *testing.T) {
 	cases := []struct{ id, tag, nro string }{
 		{"Rodpad/SW2NES", "v2.12.2", "sw2nes.nro"},
 		{"Rodpad/SW2SNES", "v1.0.1", "sw2snes.nro"},
-		{"Rodpad/SW2Transfer", "v1.4.3", "sw2transfer.nro"},
+		{"Rodpad/SW2Transfer", "v2.0.0", "sw2transfer.nro"},
+		{"Rodpad/SW2PS2", "v1.1.0", "sw2ps2.nro"},
 	}
 	for _, c := range cases {
 		a := &appEntry{ID: c.id, Kind: "nro", Source: "release"}
