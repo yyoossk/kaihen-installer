@@ -24,9 +24,10 @@ import (
 // network. The save is installed through the already-running loader on
 // :9026, using the exact protocol of the fork's tools/persist-install.mjs:
 //
-//   1. send the persist bootstrap (the improved build — timing learning
-//      and the IPC freeze fix — published as a release asset of the
-//      yyoossk/CivSwitchFS fork; downloaded on use, with the zip and the
+//   1. send the persist bootstrap (the improved build — timing learning,
+//      the IPC freeze fix and the retry reliability port — published as
+//      a release asset of the yyoossk/CivSwitchFS fork; downloaded on
+//      use, with the zip and the
 //      bootstrap inside it both pinned by SHA-256),
 //   2. send the pristine save template (downloaded from the same fork,
 //      pinned by size + SHA-256) as base64 chunks of 400,000 chars,
@@ -43,14 +44,14 @@ import (
 // textInit() 2345-0011 failure does not occur and no patch is needed.
 
 const (
-	autoloaderBootstrapSHA = "8179c983aa2853ca4f56fa3f4bd9315eb1f304e85ec5fd6562145b9332082b9b"
+	autoloaderBootstrapSHA = "246786a36e0d42258f485bdfe28cf85dad448aeb24a8cbc10fe75ef94dbb3d77"
 
 	// The improved persist bundle (persist-bootstrap.js + save template)
 	// as published on the yyoossk/CivSwitchFS fork's release page. The
 	// whole zip is hash-pinned, and the bootstrap extracted from it is
 	// hash-pinned again before use.
-	autoloaderImprovedZipURL = "https://github.com/yyoossk/CivSwitchFS/releases/download/improved-20261117/civswitchfs-persist-improved-20261117.zip"
-	autoloaderImprovedZipSHA = "be0979e27c9482f38b57a8aed462cf93bba3edf6ef09b4743fcd05abddf56c0a"
+	autoloaderImprovedZipURL = "https://github.com/yyoossk/CivSwitchFS/releases/download/improved-20261121/civswitchfs-persist-improved-20261121.zip"
+	autoloaderImprovedZipSHA = "6f13da525e664d138fd2cb655f39355ec572abec288c57c4f11f20291f0f6c62"
 
 	autoloaderTplURL  = "https://raw.githubusercontent.com/SeanHeuc/CivSwitchFS/59a1ea6667944583b2305412472ec319deeee009/persist/save_template.bin"
 	autoloaderTplSize = 1159730
