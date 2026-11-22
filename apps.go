@@ -25,6 +25,7 @@ type appEntry struct {
 	Builtin       bool   `json:"builtin"`
 	Name          string `json:"name,omitempty"`
 	Source        string `json:"source,omitempty"` // "release" | "zip"
+	AssetHint     string `json:"assetHint,omitempty"` // exact release asset name to prefer (e.g. a Switch 2 build among several .nro assets)
 	AssetName     string `json:"assetName"`
 	AssetURL      string `json:"assetUrl,omitempty"`
 	ZipInner      string `json:"zipInner,omitempty"`
@@ -97,6 +98,10 @@ func builtinApps() []*appEntry {
 		{ID: "Rodpad/SW2PS2", Kind: "nro", Builtin: true, Name: "SW2PS2", Source: "release"},
 		{ID: "BlafKing/KaiDump", Kind: "nro", Builtin: true, Name: "KaiDump", Source: "release"},
 		{ID: "venustrikes/ouncemtp", Kind: "nro", Builtin: true, Name: "OunceMTP", Source: "release"},
+		{ID: "amariscalc/WinampNX2", Kind: "nro", Builtin: true, Name: "WinampNX2", Source: "release"},
+		{ID: "Olmectron/eden-switch2-poc", Kind: "nro", Builtin: true, Name: "Eden for SW2 (POC)", Source: "release"},
+		{ID: "shodowlo/chromium-nx", Kind: "nro", Builtin: true, Name: "Chromium NX", Source: "release", AssetHint: "chromium-nx2.nro"},
+		{ID: "davidkalil10/Vita3K-nx2", Kind: "nro", Builtin: true, Name: "Vita3K", Source: "release"},
 	}
 }
 
@@ -301,6 +306,22 @@ func fetchReleaseAssets(id, tag string) ([]relAsset, error) {
 // .zip (whose contents are classified when downloaded). Returns false
 // when neither exists.
 func pickNroAsset(a *appEntry, assets []relAsset) bool {
+	if a.AssetHint != "" {
+		// The entry names its asset exactly (e.g. a release that ships
+		// both a Switch 1 and a Switch 2 .nro). Fail closed when the
+		// named asset is absent rather than picking the wrong build.
+		for _, as := range assets {
+			if as.Name == a.AssetHint && strings.HasSuffix(strings.ToLower(as.Name), ".nro") {
+				a.Source = "release"
+				a.AssetName = as.Name
+				a.AssetURL = as.URL
+				a.Size = 0
+				a.ZipInner = ""
+				return true
+			}
+		}
+		return false
+	}
 	for _, as := range assets {
 		if strings.HasSuffix(strings.ToLower(as.Name), ".nro") {
 			a.Source = "release"
