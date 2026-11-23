@@ -732,6 +732,18 @@ func appsListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, appView(a))
 	}
+	// The catalog is shown in name order.
+	sort.SliceStable(out, func(i, j int) bool {
+		ni, _ := out[i]["name"].(string)
+		nj, _ := out[j]["name"].(string)
+		li, lj := strings.ToLower(ni), strings.ToLower(nj)
+		if li != lj {
+			return li < lj
+		}
+		ii, _ := out[i]["id"].(string)
+		ij, _ := out[j]["id"].(string)
+		return ii < ij
+	})
 	saveAppsLocked()
 	jsonOK(w, map[string]any{"apps": out})
 }
