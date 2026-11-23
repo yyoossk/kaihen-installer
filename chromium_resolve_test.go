@@ -30,6 +30,30 @@ func TestChromiumNxResolves(t *testing.T) {
 	}
 }
 
+// Regression (found on hardware, build 20261123-1818): an entry
+// carried over from an older build already has LatestTag and
+// AssetURL set. fetchRelease's unchanged-release fast path used to
+// return no asset list for it, so the extras never resolved and the
+// install failed with "no file matching the latest release" right
+// after downloading the main file. A refresh must resolve the
+// extras for such an entry too.
+func TestChromiumNxResolvesCarriedOver(t *testing.T) {
+	b := &appEntry{ID: "shodowlo/chromium-nx", Kind: "nro", Source: "release", AssetHint: "chromium-nx2.nro",
+		LatestTag:     "v0.2.0",
+		AssetURL:      "https://github.com/shodowlo/chromium-nx/releases/download/v0.2.0/chromium-nx2.nro",
+		DownloadedTag: "v0.2.0",
+		Extras:        []extraAsset{{Name: "chromium-full.ext4", Dir: "switch/chromium-nx"}}}
+	if !extrasUnresolved(b) {
+		t.Fatal("the carried-over entry should start with unresolved extras")
+	}
+	if err := refreshAppLocked(b, false, nil); err != nil {
+		t.Fatalf("refreshAppLocked: %v", err)
+	}
+	if b.Extras[0].URL == "" {
+		t.Fatal("carried-over entry: the ext4 extra URL is still unresolved after refresh")
+	}
+}
+
 // Offline picker check: with a hint set, the Switch 1 .nro listed
 // first must NOT be picked, and a missing hinted asset fails closed.
 func TestPickNroAssetHint(t *testing.T) {

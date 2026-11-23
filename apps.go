@@ -250,7 +250,7 @@ func fetchRelease(a *appEntry) (string, []relAsset, error) {
 		if rel.TagName == "" {
 			return "", nil, errNoRelease
 		}
-		if rel.TagName == a.LatestTag && a.AssetURL != "" {
+		if rel.TagName == a.LatestTag && a.AssetURL != "" && !extrasUnresolved(a) {
 			return rel.TagName, nil, nil
 		}
 		out := []relAsset{}
@@ -289,7 +289,7 @@ func fetchRelease(a *appEntry) (string, []relAsset, error) {
 		}
 		tag = t
 	}
-	if tag == a.LatestTag && a.AssetURL != "" {
+	if tag == a.LatestTag && a.AssetURL != "" && !extrasUnresolved(a) {
 		return tag, nil, nil
 	}
 	out, err := fetchReleaseAssets(a.ID, tag)
@@ -424,6 +424,19 @@ func refreshAppLocked(a *appEntry, allowDownload bool, log logFn) error {
 // always come from the latest release, like the main asset). An
 // extra the release does not carry fails the refresh: the app would
 // not run without it.
+// extrasUnresolved reports whether any extra still lacks its
+// download URL. The URL is not part of the builtin definition, so an
+// entry carried over from an older build has the definition (from
+// the appsInit merge) but no URL until a refresh resolves it.
+func extrasUnresolved(a *appEntry) bool {
+	for _, ex := range a.Extras {
+		if ex.URL == "" {
+			return true
+		}
+	}
+	return false
+}
+
 func resolveExtras(a *appEntry, assets []relAsset) error {
 	for i := range a.Extras {
 		a.Extras[i].URL = ""
@@ -462,29 +475,40 @@ func downloadAppLocked(a *appEntry, log logFn) error {
 	if a.AssetURL == "" {
 		return errors.New(tr("", "appNoAsset"))
 	}
-	if log != nil {
-		log(tr("", "fetching", a.AssetURL))
+	// When only the extras are missing (the entry is already at the
+	// latest tag and its main file is cached), skip re-downloading
+	// the main file and fetch just the extras.
+	skipMain := a.Source != "zip" && a.DownloadedTag == a.LatestTag && a.AssetName != ""
+	if skipMain {
+		if _, err := os.Stat(filepath.Join(appCacheDir(a.ID), a.AssetName)); err != nil {
+			skipMain = false
+		}
 	}
-	raw, err := httpGet(a.AssetURL)
-	if err != nil {
-		return errors.New(tr("", "dlErr"))
-	}
-	if a.Source == "zip" {
-		if err := downloadNroZipLocked(a, raw); err != nil {
-			return err
+	if !skipMain {
+		if log != nil {
+			log(tr("", "fetching", a.AssetURL))
 		}
-	} else {
-		data := raw
-		if a.SHA256 != "" && sha256Hex(data) != a.SHA256 {
-			return errors.New(tr("", "badSum"))
+		raw, err := httpGet(a.AssetURL)
+		if err != nil {
+			return errors.New(tr("", "dlErr"))
 		}
-		if a.Size > 0 && int64(len(data)) != a.Size {
-			return errors.New(tr("", "badContent"))
-		}
-		dir := appCacheDir(a.ID)
-		os.MkdirAll(dir, 0o755)
-		if err := os.WriteFile(filepath.Join(dir, a.AssetName), data, 0o644); err != nil {
-			return errors.New(tr("", "writeErr"))
+		if a.Source == "zip" {
+			if err := downloadNroZipLocked(a, raw); err != nil {
+				return err
+			}
+		} else {
+			data := raw
+			if a.SHA256 != "" && sha256Hex(data) != a.SHA256 {
+				return errors.New(tr("", "badSum"))
+			}
+			if a.Size > 0 && int64(len(data)) != a.Size {
+				return errors.New(tr("", "badContent"))
+			}
+			dir := appCacheDir(a.ID)
+			os.MkdirAll(dir, 0o755)
+			if err := os.WriteFile(filepath.Join(dir, a.AssetName), data, 0o644); err != nil {
+				return errors.New(tr("", "writeErr"))
+			}
 		}
 	}
 	if err := downloadExtrasLocked(a, log); err != nil {

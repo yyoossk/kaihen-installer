@@ -29,6 +29,55 @@ func TestResolveExtras(t *testing.T) {
 	}
 }
 
+func TestExtrasUnresolved(t *testing.T) {
+	if extrasUnresolved(&appEntry{}) {
+		t.Fatal("an entry without extras is unresolved")
+	}
+	a := &appEntry{Extras: []extraAsset{{Name: "a.bin", Dir: "switch/a", URL: "https://example.invalid/a"}}}
+	if extrasUnresolved(a) {
+		t.Fatal("an entry whose extras all have URLs is unresolved")
+	}
+	a.Extras[0].URL = ""
+	if !extrasUnresolved(a) {
+		t.Fatal("an extra without a URL was not detected")
+	}
+}
+
+// When the entry is already at the latest tag and only the extras
+// are missing from the cache, the main file is not downloaded again.
+func TestDownloadAppSkipsMainWhenOnlyExtrasMissing(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/big.bin", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(strings.Repeat("B", 5000)))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+	a := &appEntry{ID: "test/app3", Kind: "nro", Source: "release", AssetName: "main.nro",
+		AssetURL: srv.URL + "/gone.nro", LatestTag: "v1", DownloadedTag: "v1",
+		Extras: []extraAsset{{Name: "big.bin", Dir: "switch/app", URL: srv.URL + "/big.bin"}}}
+	// the main file is already cached from the earlier download
+	dir := appCacheDir(a.ID)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.nro"), []byte("CACHED"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := downloadAppLocked(a, nil); err != nil {
+		t.Fatalf("download with only extras missing: %v", err)
+	}
+	main, err := os.ReadFile(filepath.Join(dir, "main.nro"))
+	if err != nil || string(main) != "CACHED" {
+		t.Fatalf("cached main file = %q, %v; want it untouched", main, err)
+	}
+	if extrasCachedMissing(a) {
+		t.Fatal("extras should be cached after the download")
+	}
+}
+
 func TestExtrasEqual(t *testing.T) {
 	base := []extraAsset{{Name: "a.bin", Dir: "switch/a", URL: "https://example.invalid/1"}}
 	sameDef := []extraAsset{{Name: "a.bin", Dir: "switch/a"}}
