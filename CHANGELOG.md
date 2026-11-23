@@ -5,10 +5,16 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
-## 20261123-1928
+## 20261123-1949
 
+- The gallery now supports multi-select.
+- Check items, then download them together as one zip file (album.zip), or clear the selection.
+- There is still no delete in the gallery, on purpose.
 - Dialog messages now break lines at sentence ends, like the page notes already did.
 - The README was reformatted to one sentence per line, and this changelog was added.
+- ギャラリーで複数選択ができるようになりました。
+- チェックを入れた分をまとめて ZIP (album.zip) でダウンロードしたり、選択を解除したりできます。
+- ギャラリーに削除機能は今まで通りありません。
 - ダイアログの文章も、ページの説明文と同じく文ごとに改行するようになりました。
 - README を文ごとに改行する書式に整え、この更新履歴を追加しました。
 

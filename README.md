@@ -42,10 +42,12 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
   自分の `.nro` ファイルやフォルダを送ることもできます。
   各ソフトは最新リリースを自動で取得します (ファイルの無いリリースしか無い場合は、ファイルのある一番新しいリリースを使います)。
 - **Gallery** — an NXGallery-style album view over FTP (OunceShell or the FTPD plugin): the SD card album as a thumbnail grid; tap an item to view it full-size or play the video, see its details, and download it.
+  You can also check multiple items and download them together as one zip file.
   Captures in internal storage are not reachable over FTP, so only the SD card album is shown.
   There is intentionally no delete: removing an album file over FTP leaves an entry in the console's album that cannot be deleted even on the console itself (its screenshot service fails with error 2206-0023 when the file is missing).
   **ギャラリー** — FTP (OunceShell または FTPD プラグイン) 経由でNXGallery 風にアルバムを表示します。
   SD カードのアルバムをサムネイル一覧で表示し、タップで拡大表示・動画再生・詳細表示・ダウンロードができます。
+  複数にチェックを入れて、まとめて ZIP でダウンロードもできます。
   内部ストレージのキャプチャは FTP では見られないため、SD カードのアルバムだけが対象です。
   削除機能はあえて付けていません。
   FTP でファイルを消すと本体のアルバムに項目だけが残り、その項目は本体側でも消せなくなるためです (ファイルが無いと本体の画面写真サービスがエラー 2206-0023 を出します)。

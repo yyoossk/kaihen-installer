@@ -33,7 +33,9 @@ const pageHTML = `<!DOCTYPE html>
  .galsub { color: #666; font-weight: 300; margin-top: .2em; }
  body.dark .galsub { color: #aaa; }
  .galgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: .8em; }
- .galcell { border-radius: 4px; overflow: hidden; cursor: pointer; background: #000; aspect-ratio: 16/9; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+ .galcell { position: relative; border-radius: 4px; overflow: hidden; cursor: pointer; background: #000; aspect-ratio: 16/9; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+ .galselbox { position: absolute; top: .35em; left: .35em; width: 1.5em; height: 1.5em; z-index: 2; cursor: pointer; }
+ .galselon { outline: 3px solid #1a7f37; outline-offset: -3px; }
  .galcell img, .galcell video { width: 100%; height: 100%; object-fit: cover; display: block; }
  .galpages { text-align: center; margin: 1.1em 0 .4em; }
  .galpages button { width: 2.6em; height: 2.6em; padding: 0; margin: 0 .2em; border-radius: 50%; }
@@ -188,6 +190,7 @@ const pageHTML = `<!DOCTYPE html>
 <div id="page-galview" style="display:none">
 <div class="galhead"><div class="galtitle" data-i18n="gal_title">ギャラリー</div></div>
 <p style="text-align:center; margin:.2em 0"><button class="btn" onclick="galLoad()" data-i18n="gal_refresh">更新</button></p>
+<p style="text-align:center; margin:.2em 0"><span id="galselcount"></span> <button class="btn" id="galdlzip" onclick="galDownloadSel()" data-i18n="gal_dl_sel">選択をダウンロード (ZIP)</button> <button id="galclearsel" onclick="galClearSel()" data-i18n="gal_clearsel">選択を解除</button></p>
 <p id="galvmsg" class="note" style="text-align:center; min-height:1.2em"></p>
 <div id="galgrid" class="galgrid"></div>
 <div id="galpages" class="galpages"></div>
@@ -378,7 +381,7 @@ var GAL = {"ja": {gal_title: "ギャラリー", gal_note: "SD カードのアル
 for (var kGA in GAL) { if (I18N[kGA]) { for (var kkGA in GAL[kGA]) I18N[kGA][kkGA] = GAL[kGA][kkGA]; } }
 var GAL2 = {"ja": {gal_chk_ok: "接続できました", gal_chk_ng: "接続できませんでした", gal_chk_hint: "OunceShell のファイル画面で SELECT (−) を押して FTP を開始するか、FTPD プラグインが動いているか、本体の IP が合っているか確認してください。"}, "en": {gal_chk_ok: "Connected", gal_chk_ng: "Could not connect", gal_chk_hint: "Make sure OunceShell's FTP is started (SELECT (−) on its file screen) or the FTPD plugin is running, and that the console IP is correct."}, "fr": {gal_chk_ok: "Connecté", gal_chk_ng: "Connexion impossible", gal_chk_hint: "Vérifiez que le FTP d'OunceShell est démarré (SELECT (−) sur son écran de fichiers) ou que le plugin FTPD est actif, et que l'IP de la console est correcte."}, "de": {gal_chk_ok: "Verbunden", gal_chk_ng: "Keine Verbindung", gal_chk_hint: "Prüfen Sie, ob der FTP von OunceShell gestartet ist (SELECT (−) im Dateibildschirm) oder das FTPD-Plugin läuft, und ob die IP der Konsole stimmt."}, "it": {gal_chk_ok: "Connesso", gal_chk_ng: "Impossibile connettersi", gal_chk_hint: "Verifica che l'FTP di OunceShell sia avviato (SELECT (−) nella schermata dei file) o che il plugin FTPD sia attivo, e che l'IP della console sia corretto."}, "es": {gal_chk_ok: "Conectado", gal_chk_ng: "No se pudo conectar", gal_chk_hint: "Comprueba que el FTP de OunceShell esté iniciado (SELECT (−) en su pantalla de archivos) o que el plugin FTPD esté activo, y que la IP de la consola sea correcta."}, "ru": {gal_chk_ok: "Подключено", gal_chk_ng: "Не удалось подключиться", gal_chk_hint: "Убедитесь, что FTP OunceShell запущен (SELECT (−) на экране файлов) или работает плагин FTPD, и что IP консоли указан верно."}, "pt": {gal_chk_ok: "Ligado", gal_chk_ng: "Não foi possível ligar", gal_chk_hint: "Verifique se o FTP do OunceShell está iniciado (SELECT (−) na tela de arquivos) ou se o plugin FTPD está ativo, e se o IP do console está correto."}, "pl": {gal_chk_ok: "Połączono", gal_chk_ng: "Nie udało się połączyć", gal_chk_hint: "Sprawdź, czy FTP OunceShell jest uruchomiony (SELECT (−) na ekranie plików) lub czy działa wtyczka FTPD, oraz czy adres IP konsoli jest poprawny."}, "ko": {gal_chk_ok: "연결되었습니다", gal_chk_ng: "연결할 수 없습니다", gal_chk_hint: "OunceShell의 FTP가 시작되었는지(파일 화면에서 SELECT(−)) 또는 FTPD 플러그인이 실행 중인지, 본체 IP가 맞는지 확인하세요."}, "zh-Hans": {gal_chk_ok: "已连接", gal_chk_ng: "无法连接", gal_chk_hint: "请确认 OunceShell 的 FTP 已启动(在文件界面按 SELECT(−)),或 FTPD 插件正在运行,并且本机 IP 正确。"}, "zh-Hant": {gal_chk_ok: "已連接", gal_chk_ng: "無法連接", gal_chk_hint: "請確認 OunceShell 的 FTP 已啟動(在檔案畫面按 SELECT(−)),或 FTPD 外掛正在執行,並且本機 IP 正確。"}};
 for (var kGB in GAL2) { if (I18N[kGB]) { for (var kkGB in GAL2[kGB]) I18N[kGB][kkGB] = GAL2[kGB][kkGB]; } }
-var GAL3 = {"ja": {gal_dl_ing: "ダウンロードしています…", gal_dl_done: "ダウンロードしました", gal_dl_fail: "ダウンロードできませんでした"}, "en": {gal_dl_ing: "Downloading…", gal_dl_done: "Downloaded", gal_dl_fail: "Download failed"}, "fr": {gal_dl_ing: "Téléchargement…", gal_dl_done: "Téléchargé", gal_dl_fail: "Échec du téléchargement"}, "de": {gal_dl_ing: "Wird heruntergeladen…", gal_dl_done: "Heruntergeladen", gal_dl_fail: "Download fehlgeschlagen"}, "it": {gal_dl_ing: "Download in corso…", gal_dl_done: "Scaricato", gal_dl_fail: "Download non riuscito"}, "es": {gal_dl_ing: "Descargando…", gal_dl_done: "Descargado", gal_dl_fail: "La descarga falló"}, "ru": {gal_dl_ing: "Загрузка…", gal_dl_done: "Загружено", gal_dl_fail: "Не удалось загрузить"}, "pt": {gal_dl_ing: "Baixando…", gal_dl_done: "Baixado", gal_dl_fail: "Falha no download"}, "pl": {gal_dl_ing: "Pobieranie…", gal_dl_done: "Pobrano", gal_dl_fail: "Pobieranie nie powiodło się"}, "ko": {gal_dl_ing: "다운로드 중…", gal_dl_done: "다운로드했습니다", gal_dl_fail: "다운로드할 수 없습니다"}, "zh-Hans": {gal_dl_ing: "正在下载…", gal_dl_done: "下载完成", gal_dl_fail: "下载失败"}, "zh-Hant": {gal_dl_ing: "正在下載…", gal_dl_done: "下載完成", gal_dl_fail: "下載失敗"}};
+var GAL3 = {"ja": {gal_dl_ing: "ダウンロードしています…", gal_dl_done: "ダウンロードしました", gal_dl_fail: "ダウンロードできませんでした", gal_selcount: "選択 {n} 件", gal_dl_sel: "選択をダウンロード (ZIP)", gal_clearsel: "選択を解除"}, "en": {gal_dl_ing: "Downloading…", gal_dl_done: "Downloaded", gal_dl_fail: "Download failed", gal_selcount: "{n} selected", gal_dl_sel: "Download selected (ZIP)", gal_clearsel: "Clear selection"}, "fr": {gal_dl_ing: "Téléchargement…", gal_dl_done: "Téléchargé", gal_dl_fail: "Échec du téléchargement", gal_selcount: "{n} sélectionné(s)", gal_dl_sel: "Télécharger la sélection (ZIP)", gal_clearsel: "Effacer la sélection"}, "de": {gal_dl_ing: "Wird heruntergeladen…", gal_dl_done: "Heruntergeladen", gal_dl_fail: "Download fehlgeschlagen", gal_selcount: "{n} ausgewählt", gal_dl_sel: "Auswahl herunterladen (ZIP)", gal_clearsel: "Auswahl aufheben"}, "it": {gal_dl_ing: "Download in corso…", gal_dl_done: "Scaricato", gal_dl_fail: "Download non riuscito", gal_selcount: "{n} selezionati", gal_dl_sel: "Scarica selezionati (ZIP)", gal_clearsel: "Cancella selezione"}, "es": {gal_dl_ing: "Descargando…", gal_dl_done: "Descargado", gal_dl_fail: "La descarga falló", gal_selcount: "{n} seleccionados", gal_dl_sel: "Descargar seleccionados (ZIP)", gal_clearsel: "Borrar selección"}, "ru": {gal_dl_ing: "Загрузка…", gal_dl_done: "Загружено", gal_dl_fail: "Не удалось загрузить", gal_selcount: "Выбрано: {n}", gal_dl_sel: "Скачать выбранные (ZIP)", gal_clearsel: "Сбросить выбор"}, "pt": {gal_dl_ing: "Baixando…", gal_dl_done: "Baixado", gal_dl_fail: "Falha no download", gal_selcount: "{n} selecionados", gal_dl_sel: "Baixar selecionados (ZIP)", gal_clearsel: "Limpar seleção"}, "pl": {gal_dl_ing: "Pobieranie…", gal_dl_done: "Pobrano", gal_dl_fail: "Pobieranie nie powiodło się", gal_selcount: "Wybrano {n}", gal_dl_sel: "Pobierz wybrane (ZIP)", gal_clearsel: "Wyczyść wybór"}, "ko": {gal_dl_ing: "다운로드 중…", gal_dl_done: "다운로드했습니다", gal_dl_fail: "다운로드할 수 없습니다", gal_selcount: "{n}개 선택됨", gal_dl_sel: "선택 항목 다운로드 (ZIP)", gal_clearsel: "선택 해제"}, "zh-Hans": {gal_dl_ing: "正在下载…", gal_dl_done: "下载完成", gal_dl_fail: "下载失败", gal_selcount: "已选 {n} 项", gal_dl_sel: "下载所选 (ZIP)", gal_clearsel: "清除选择"}, "zh-Hant": {gal_dl_ing: "正在下載…", gal_dl_done: "下載完成", gal_dl_fail: "下載失敗", gal_selcount: "已選 {n} 項", gal_dl_sel: "下載所選 (ZIP)", gal_clearsel: "清除選擇"}};
 for (var kGC in GAL3) { if (I18N[kGC]) { for (var kkGC in GAL3[kGC]) I18N[kGC][kkGC] = GAL3[kGC][kkGC]; } }
 var AE = {
 ja: { app_add: "追加", app_check: "更新を確認", app_install: "インストール", app_delete: "削除", app_update_badge: "更新あり", app_update_found: "更新があります (ダウンロード済み)", app_got: "本体の版", app_none2: "まだ登録がありません" },
@@ -1430,7 +1433,7 @@ function updWaitReload() {
   }, 1500);
 }
 
-var galSt = { items: [], page: 1, per: 30, src: "auto", cur: -1 };
+var galSt = { items: [], page: 1, per: 30, src: "auto", cur: -1, sel: {}, dlName: "", dlZip: false };
 function galBase() {
   return "ip=" + encodeURIComponent(ip()) +
     "&src=" + encodeURIComponent(galSt.src) + "&lang=" + encodeURIComponent(LANG);
@@ -1487,6 +1490,17 @@ function galRender() {
     var cell = document.createElement("div");
     cell.className = "galcell";
     cell.onclick = function() { galOpen(idx); };
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "galselbox";
+    cb.checked = !!galSt.sel[it.path];
+    if (cb.checked) cell.classList.add("galselon");
+    cb.onclick = function(e) {
+      e.stopPropagation();
+      galToggleSel(it.path, cb.checked);
+      cell.classList.toggle("galselon", cb.checked);
+    };
+    cell.appendChild(cb);
     if (it.type === "video") {
       var v = document.createElement("video");
       v.src = galFileURL(it) + "#t=0.1";
@@ -1500,6 +1514,30 @@ function galRender() {
     grid.appendChild(cell);
   });
   galRenderPages();
+  galSelBar();
+}
+// Multi-select for the zip download: galSt.sel holds the checked
+// items' paths across pages.
+function galToggleSel(path, on) {
+  if (on) galSt.sel[path] = true; else delete galSt.sel[path];
+  galSelBar();
+}
+function galSelPaths() {
+  return galSt.items.filter(function(it) { return galSt.sel[it.path]; })
+    .map(function(it) { return it.path; });
+}
+function galSelBar() {
+  var n = galSelPaths().length;
+  var c = document.getElementById("galselcount");
+  if (c) c.textContent = t("gal_selcount").replace("{n}", n);
+  var b1 = document.getElementById("galdlzip");
+  var b2 = document.getElementById("galclearsel");
+  if (b1) b1.disabled = n === 0;
+  if (b2) b2.disabled = n === 0;
+}
+function galClearSel() {
+  galSt.sel = {};
+  galRender();
 }
 // Numbered pagination like NXGallery's, windowed when there are
 // many pages: 1 ... current-1 current current+1 ... last.
@@ -1592,9 +1630,13 @@ function galClose() {
 // Either way the result dialog replaces the downloading dialog.
 function galDlDone(ok) {
   var it = galSt.items[galSt.cur];
-  var name = it ? it.name : "";
+  var name = galSt.dlName || (it ? it.name : "");
+  var wasZip = galSt.dlZip;
+  galSt.dlName = "";
+  galSt.dlZip = false;
   if (ok) {
     galClose();
+    if (wasZip) { galSt.sel = {}; galRender(); }
     showChk(t("gal_dl_done"), name, true, "");
   } else {
     showChk(t("gal_dl_fail"), name, false, "");
@@ -1611,6 +1653,8 @@ async function galDownload() {
   var st = document.getElementById("galv-status");
   st.style.color = "";
   st.textContent = t("gal_dl_ing");
+  galSt.dlName = it.name;
+  galSt.dlZip = false;
   galClose();
   showDownloading(it.name);
   var url = galFileURL(it, true);
@@ -1631,6 +1675,42 @@ async function galDownload() {
     var a2 = document.createElement("a");
     a2.href = u;
     a2.download = it.name;
+    document.body.appendChild(a2);
+    a2.click();
+    a2.remove();
+    setTimeout(function() { URL.revokeObjectURL(u); }, 4000);
+    galDlDone(true);
+  } catch (e) { galDlDone(false); }
+}
+// Download every checked item as one zip (album.zip), through the
+// same dialog flow as a single download: Android hands the URL to
+// the DownloadManager, desktop saves the fetched blob.
+async function galDownloadSel() {
+  var paths = galSelPaths();
+  if (!paths.length) return;
+  galSt.dlName = "album.zip";
+  galSt.dlZip = true;
+  showDownloading("album.zip");
+  var url = "/api/gallery/zip?" + galBase() + paths.map(function(p) {
+    return "&p=" + encodeURIComponent(p);
+  }).join("");
+  if (IS_ANDROID) {
+    var a = document.createElement("a");
+    a.href = url;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  }
+  try {
+    var r = await fetch(url);
+    if (!r.ok) throw new Error("ng");
+    var blob = await r.blob();
+    var u = URL.createObjectURL(blob);
+    var a2 = document.createElement("a");
+    a2.href = u;
+    a2.download = "album.zip";
     document.body.appendChild(a2);
     a2.click();
     a2.remove();

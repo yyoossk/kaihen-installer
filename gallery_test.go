@@ -1,12 +1,14 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -192,7 +194,7 @@ func galTestFiles() map[string][]byte {
 		"/Nintendo/Album/2026/11/18/2026111812000000-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.jpg": jpg,
 		"/Nintendo/Album/2026/11/18/2026111813000000-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.mp4": []byte("fake mp4 data 0123456789"),
 		"/Nintendo/Album/2026/11/17/2026111710300000-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.jpg": jpg,
-		"/Nintendo/Album/2026/11/17/notes.txt": []byte("not media"),
+		"/Nintendo/Album/2026/11/17/notes.txt":                                             []byte("not media"),
 	}
 }
 
@@ -291,6 +293,48 @@ func TestGalRetrRangeAndThumb(t *testing.T) {
 	}
 	if img.Bounds().Dx() != 64 || img.Bounds().Dy() != 48 {
 		t.Errorf("thumb size = %v, want 64x48 (already small)", img.Bounds())
+	}
+}
+
+// The zip download packs the selected files with their
+// album-relative paths and exact contents.
+func TestGalWriteZip(t *testing.T) {
+	files := galTestFiles()
+	f := newFakeGalFTP(t, files, false)
+	s, err := galConnect("127.0.0.1", f.port())
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer s.close()
+	rels := []string{
+		"2026/11/18/2026111812000000-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.jpg",
+		"2026/11/18/2026111813000000-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.mp4",
+	}
+	var buf bytes.Buffer
+	if err := galWriteZip(&buf, s, rels); err != nil {
+		t.Fatalf("galWriteZip: %v", err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		t.Fatalf("zip read: %v", err)
+	}
+	if len(zr.File) != len(rels) {
+		t.Fatalf("zip entries = %d, want %d", len(zr.File), len(rels))
+	}
+	for i, zf := range zr.File {
+		if zf.Name != rels[i] {
+			t.Errorf("entry %d name = %q, want %q", i, zf.Name, rels[i])
+		}
+		rc, err := zf.Open()
+		if err != nil {
+			t.Fatalf("open entry: %v", err)
+		}
+		got, _ := io.ReadAll(rc)
+		rc.Close()
+		want := files["/Nintendo/Album/"+rels[i]]
+		if !bytes.Equal(got, want) {
+			t.Errorf("entry %d contents differ (%d vs %d bytes)", i, len(got), len(want))
+		}
 	}
 }
 

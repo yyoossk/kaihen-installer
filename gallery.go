@@ -18,6 +18,7 @@ package main
 // album is listed here, and the page says so.
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -533,6 +534,60 @@ func galleryFileHandler(w http.ResponseWriter, r *http.Request) {
 		dst = &limitWriter{w: w, n: end - start + 1}
 	}
 	_ = s.retr(abs, start, dst) // headers are already sent; a mid-stream failure just ends the body
+}
+
+// galWriteZip streams the given album-relative files into a zip
+// archive on w. Entries keep their album-relative paths (folders
+// preserved) and are stored uncompressed: photos and videos are
+// already compressed formats.
+func galWriteZip(w io.Writer, s *galSession, rels []string) error {
+	zw := zip.NewWriter(w)
+	for _, rel := range rels {
+		fw, err := zw.CreateHeader(&zip.FileHeader{Name: rel, Method: zip.Store})
+		if err != nil {
+			return err
+		}
+		if err := s.retr(s.prefix+galAlbumRoot+"/"+rel, 0, fw); err != nil {
+			return err
+		}
+	}
+	return zw.Close()
+}
+
+// galleryZipHandler serves the page's selected files as one zip
+// download (the "download selected" action). Paths arrive as
+// repeated p parameters and are validated like single-file paths.
+func galleryZipHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	ip, src, lang := q.Get("ip"), q.Get("src"), q.Get("lang")
+	if !validIP(ip) {
+		galWriteErr(w, lang, http.StatusBadRequest)
+		return
+	}
+	var rels []string
+	seen := map[string]bool{}
+	for _, p := range q["p"] {
+		rel, ok := galCleanRel(p)
+		if !ok || galMediaType(rel) == "" || seen[rel] {
+			galWriteErr(w, lang, http.StatusBadRequest)
+			return
+		}
+		seen[rel] = true
+		rels = append(rels, rel)
+	}
+	if len(rels) == 0 || len(rels) > 200 {
+		galWriteErr(w, lang, http.StatusBadRequest)
+		return
+	}
+	s, _, err := galResolve(ip, src)
+	if err != nil {
+		galWriteErr(w, lang, http.StatusBadGateway)
+		return
+	}
+	defer s.close()
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"album.zip\"")
+	_ = galWriteZip(w, s, rels) // headers are sent; a failure just truncates the archive
 }
 
 // parseRange parses a single "bytes=a-b" / "bytes=a-" / "bytes=-b"
