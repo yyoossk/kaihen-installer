@@ -114,6 +114,7 @@ func builtinApps() []*appEntry {
 		{ID: "Olmectron/eden-switch2-poc", Kind: "nro", Builtin: true, Name: "Eden for SW2 (POC)", Source: "release"},
 		{ID: "shodowlo/chromium-nx", Kind: "nro", Builtin: true, Name: "Chromium NX", Source: "release", AssetHint: "chromium-nx2.nro", Extras: []extraAsset{{Name: "chromium-full.ext4", Dir: "switch/chromium-nx"}}},
 		{ID: "davidkalil10/Vita3K-nx2", Kind: "nro", Builtin: true, Name: "Vita3K", Source: "release"},
+		{ID: "TheAJLive/Cemu-NX2", Kind: "nro", Builtin: true, Name: "Cemu NX2", Source: "release"},
 	}
 }
 
