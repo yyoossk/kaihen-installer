@@ -11,8 +11,8 @@ func TestWinampNX2Resolves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fetchRelease: %v", err)
 	}
-	if tag != "v0.4.0" {
-		t.Fatalf("tag = %q, want %q", tag, "v0.4.0")
+	if tag != "v0.6.0" {
+		t.Fatalf("tag = %q, want %q", tag, "v0.6.0")
 	}
 	if !pickNroAsset(a, assets) {
 		t.Fatalf("no downloadable asset among: %v", assets)

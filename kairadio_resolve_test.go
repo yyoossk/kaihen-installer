@@ -11,7 +11,7 @@ func TestKaiRadioResolves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tag != "v1.2.0" {
+	if tag != "v1.4.0" {
 		t.Fatalf("tag = %q, want v1.2.0", tag)
 	}
 	found := false

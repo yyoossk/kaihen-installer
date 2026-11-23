@@ -54,12 +54,16 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 		jsonOK(w, map[string]any{"ok": false, "conn": false, "ping": false, "ftp": false, "detail": tr(body.Lang, "ipInvalid")})
 		return
 	}
-	// OunceShell's FTP server (port 1337) is what homebrew installs
-	// talk to; the homebrew page reports whether it is listening.
+	// Homebrew installs talk to OunceShell's FTP server (port 1337),
+	// falling back to the FTPD plugin (port 5000); the homebrew page
+	// reports whether either is listening.
 	ftp := false
-	if c, err := lanDialTimeout("tcp", net.JoinHostPort(body.IP, "1337"), 1500*time.Millisecond); err == nil {
-		c.Close()
-		ftp = true
+	for _, port := range []string{"1337", "5000"} {
+		if c, err := lanDialTimeout("tcp", net.JoinHostPort(body.IP, port), 1500*time.Millisecond); err == nil {
+			c.Close()
+			ftp = true
+			break
+		}
 	}
 	ok, why := probeLoader(body.IP)
 	detail := ""

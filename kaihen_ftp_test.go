@@ -151,3 +151,44 @@ func TestOzDialectFreshCard(t *testing.T) {
 		t.Fatal("client did not create the missing /switch")
 	}
 }
+
+// Install fallback: when the first address (OunceShell, 1337) does
+// not answer, the session falls through to the second address (the
+// FTPD plugin, 5000), with the plain ftpd dialect.
+func TestOzConnectFallbackToPlugin(t *testing.T) {
+	plugin := newFakeOzFTP(t, "/switch")
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dead := ln.Addr().String()
+	ln.Close()
+	s, err := ozConnectAddrs([]string{dead, plugin.ln.Addr().String()}, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	if s.prefix != "" {
+		t.Fatalf("prefix = %q, want \"\" (plugin ftpd)", s.prefix)
+	}
+	if !plugin.saw("USER anonymous") {
+		t.Fatal("plugin server was not contacted")
+	}
+}
+
+// When OunceShell answers, the plugin address is never tried.
+func TestOzConnectPrefersOunceShell(t *testing.T) {
+	oz := newFakeOzFTP(t, "/switch")
+	plugin := newFakeOzFTP(t, "/switch")
+	s, err := ozConnectAddrs([]string{oz.ln.Addr().String(), plugin.ln.Addr().String()}, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	plugin.mu.Lock()
+	contacted := len(plugin.cmds) > 0
+	plugin.mu.Unlock()
+	if contacted {
+		t.Fatal("plugin was contacted even though OunceShell answered")
+	}
+}

@@ -525,8 +525,13 @@ func pushBridge(send logFn, consoleIP, pcIP string, done <-chan struct{}) error 
 // /switch. Each session resolves which dialect answers by CWD at
 // connect time (see ozConnect). .nro files stored there are listed by
 // hbmenu, which scans sdmc:/switch.
+//
+// Installs can also go through the FTPD plugin (port 5000, an ftpd with
+// the SD card at its root), the same pair the gallery offers: ozConnect
+// tries OunceShell first, then the plugin.
 
 const ozFtpPort = 1337
+const ozPluginPort = 5000
 
 // ozSession is one control connection to OunceShell's FTP server with the
 // SD-card path dialect resolved: ftpvita (kaiHEN 20261114c) lists devices at
@@ -539,8 +544,29 @@ type ozSession struct {
 	lang   string
 }
 
+// ozConnect opens an install session to the console: OunceShell's FTP
+// (port 1337) first, then the FTPD plugin (port 5000), mirroring the
+// gallery's auto source. When both fail, the OunceShell error is the
+// one reported.
 func ozConnect(ip, lang string) (*ozSession, error) {
-	return ozConnectAddr(net.JoinHostPort(ip, strconv.Itoa(ozFtpPort)), lang)
+	return ozConnectAddrs([]string{
+		net.JoinHostPort(ip, strconv.Itoa(ozFtpPort)),
+		net.JoinHostPort(ip, strconv.Itoa(ozPluginPort)),
+	}, lang)
+}
+
+func ozConnectAddrs(addrs []string, lang string) (*ozSession, error) {
+	var firstErr error
+	for i, addr := range addrs {
+		s, err := ozConnectAddr(addr, lang)
+		if err == nil {
+			return s, nil
+		}
+		if i == 0 {
+			firstErr = err
+		}
+	}
+	return nil, firstErr
 }
 
 func ozConnectAddr(addr, lang string) (*ozSession, error) {
