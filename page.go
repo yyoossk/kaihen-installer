@@ -579,7 +579,7 @@ function showPage(p, isBack) {
       if (pn) {
         var nkey = (p === "hb" || p === "auto") ? "loader_note" : "khf_note";
         pn.setAttribute("data-i18n", nkey);
-        pn.textContent = t(nkey);
+        pn.textContent = sentBreaks(t(nkey));
       }
       pw.style.display = "";
     }

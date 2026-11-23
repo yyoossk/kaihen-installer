@@ -5,6 +5,13 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261123-2229
+
+- Fixed the explanation at the top of the homebrew install page not breaking lines at sentence ends.
+- The text is re-set every time the page opens, and that re-set skipped the line-break processing.
+- 自作ソフトをインストールのページ上部の説明文が、文ごとに改行されていなかったのを直しました。
+- ページを開くたびに文章を貼り直す作りで、その貼り直しで改行処理が抜けていました。
+
 ## 20261123-2221
 
 - Each item in the gallery grid now has its own download button, like in Vita Gallery.
