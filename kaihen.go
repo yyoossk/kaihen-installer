@@ -542,6 +542,7 @@ type ozSession struct {
 	rd     *ftpReader
 	prefix string // "/sdmc:" or ""
 	lang   string
+	addr   string // the address this session connected to
 }
 
 // ozConnect opens an install session to the console: OunceShell's FTP
@@ -574,7 +575,7 @@ func ozConnectAddr(addr, lang string) (*ozSession, error) {
 	if err != nil {
 		return nil, errors.New(tr(lang, "khFtpConn"))
 	}
-	s := &ozSession{ctrl: ctrl, lang: lang}
+	s := &ozSession{ctrl: ctrl, lang: lang, addr: addr}
 	ctrl.SetDeadline(time.Now().Add(600 * time.Second))
 	s.rd = newFTPReader(ctrl)
 	if code, _ := s.rd.readReply(); code != 220 {
@@ -656,6 +657,9 @@ func (s *ozSession) ensureDir(rel string) error {
 // caller writes the content to the returned connection and finishes
 // with finishStore.
 func (s *ozSession) openStore(rel string) (net.Conn, error) {
+	// A large upload can take far longer than the connect-time
+	// control deadline (600s); give the transfer an hour.
+	s.ctrl.SetDeadline(time.Now().Add(3600 * time.Second))
 	rel = strings.TrimPrefix(filepath.ToSlash(rel), "/")
 	if dir := pathDir(rel); dir != "" {
 		if err := s.ensureDir(dir); err != nil {
@@ -664,16 +668,16 @@ func (s *ozSession) openStore(rel string) (net.Conn, error) {
 	}
 	code, line := s.cmd("PASV")
 	if code != 227 {
-		return nil, errors.New(tr(s.lang, "ftpErr"))
+		return nil, fmt.Errorf("PASV rejected: %d %s", code, line)
 	}
 	start := strings.Index(line, "(")
 	end := strings.Index(line, ")")
 	if start < 0 || end < 0 {
-		return nil, errors.New(tr(s.lang, "ftpErr"))
+		return nil, fmt.Errorf("bad PASV reply: %s", line)
 	}
 	parts := strings.Split(line[start+1:end], ",")
 	if len(parts) != 6 {
-		return nil, errors.New(tr(s.lang, "ftpErr"))
+		return nil, fmt.Errorf("bad PASV reply: %s", line)
 	}
 	nums := make([]int, 6)
 	for i, p := range parts {
@@ -682,19 +686,19 @@ func (s *ozSession) openStore(rel string) (net.Conn, error) {
 	host, _, _ := net.SplitHostPort(s.ctrl.RemoteAddr().String())
 	dc, err := lanDialTimeout("tcp", net.JoinHostPort(host, fmt.Sprint(nums[4]<<8|nums[5])), 10*time.Second)
 	if err != nil {
-		return nil, errors.New(tr(s.lang, "ftpErr"))
+		return nil, err
 	}
-	if code, _ := s.cmd("STOR " + s.prefix + "/" + rel); code != 150 && code != 125 {
+	if code, line := s.cmd("STOR " + s.prefix + "/" + rel); code != 150 && code != 125 {
 		dc.Close()
-		return nil, errors.New(tr(s.lang, "ftpErr"))
+		return nil, fmt.Errorf("STOR rejected: %d %s", code, line)
 	}
 	return dc, nil
 }
 
 func (s *ozSession) finishStore(dc net.Conn) error {
 	dc.Close()
-	if code, _ := s.rd.readReply(); code != 226 && code != 250 {
-		return errors.New(tr(s.lang, "ftpErr"))
+	if code, line := s.rd.readReply(); code != 226 && code != 250 {
+		return fmt.Errorf("transfer not confirmed: %d %s", code, line)
 	}
 	return nil
 }
@@ -703,13 +707,16 @@ func (s *ozSession) finishStore(dc net.Conn) error {
 func (s *ozSession) stor(rel string, data []byte) error {
 	dc, err := s.openStore(rel)
 	if err != nil {
-		return err
+		return errors.New(tr(s.lang, "ftpErr"))
 	}
 	if _, err := dc.Write(data); err != nil {
 		dc.Close()
 		return errors.New(tr(s.lang, "ftpErr"))
 	}
-	return s.finishStore(dc)
+	if err := s.finishStore(dc); err != nil {
+		return errors.New(tr(s.lang, "ftpErr"))
+	}
+	return nil
 }
 
 // storFile uploads a local file to prefix/rel, streaming it in chunks
@@ -736,7 +743,7 @@ func (s *ozSession) storFile(rel, local string, progress func(sent, total int64)
 		if n > 0 {
 			if _, werr := dc.Write(buf[:n]); werr != nil {
 				dc.Close()
-				return errors.New(tr(s.lang, "ftpErr"))
+				return fmt.Errorf("data write at %d/%d bytes: %w", sent, info.Size(), werr)
 			}
 			sent += int64(n)
 			if progress != nil {
@@ -748,7 +755,7 @@ func (s *ozSession) storFile(rel, local string, progress func(sent, total int64)
 		}
 		if rerr != nil {
 			dc.Close()
-			return errors.New(tr(s.lang, "ftpErr"))
+			return fmt.Errorf("local read: %w", rerr)
 		}
 	}
 	return s.finishStore(dc)
@@ -773,15 +780,48 @@ func (s *ozSession) remoteSize(rel string) (int64, bool) {
 	return n, true
 }
 
-// ftpUploadOzFile uploads one local file to an SD-relative path on the
-// console (OunceShell first, then the FTPD plugin, via ozConnect).
+// ftpUploadOzFile uploads one local file to an SD-relative path on
+// the console. It tries OunceShell (1337) first and the FTPD plugin
+// (5000) second — not just at connect time: if an upload fails
+// partway on one server, it retries on the other, because a large
+// file is exactly where one server may drop the transfer. The raw
+// cause of each failure goes to the log; the returned error stays
+// the plain user-facing one.
 func ftpUploadOzFile(ip, rel, local, lang string, log logFn) error {
-	s, err := ozConnect(ip, lang)
-	if err != nil {
-		return err
+	return uploadOzFileAddrs([]string{
+		net.JoinHostPort(ip, strconv.Itoa(ozFtpPort)),
+		net.JoinHostPort(ip, strconv.Itoa(ozPluginPort)),
+	}, rel, local, lang, log)
+}
+
+func uploadOzFileAddrs(addrs []string, rel, local, lang string, log logFn) error {
+	var lastErr error
+	for i, addr := range addrs {
+		s, err := ozConnectAddr(addr, lang)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if log != nil {
+			log("FTP: " + addr)
+		}
+		err = uploadFileSession(s, rel, local, log)
+		s.close()
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if log != nil {
+			log("FTP: " + err.Error())
+			if i+1 < len(addrs) {
+				log(tr(lang, "extraRetry"))
+			}
+		}
 	}
-	defer s.close()
-	return uploadFileSession(s, rel, local, log)
+	if lastErr != nil {
+		return errors.New(tr(lang, "ftpErr"))
+	}
+	return errors.New(tr(lang, "ftpErr"))
 }
 
 // uploadFileSession stores local at rel over an open session. A
@@ -790,7 +830,7 @@ func ftpUploadOzFile(ip, rel, local, lang string, log logFn) error {
 func uploadFileSession(s *ozSession, rel, local string, log logFn) error {
 	info, err := os.Stat(local)
 	if err != nil {
-		return errors.New(tr(s.lang, "ftpErr"))
+		return err
 	}
 	if rs, ok := s.remoteSize(rel); ok && rs == info.Size() {
 		if log != nil {

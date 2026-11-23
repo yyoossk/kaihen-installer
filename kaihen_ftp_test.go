@@ -18,12 +18,14 @@ import (
 // can prove the client never probes with MKD. Every command is
 // recorded.
 type fakeOzFTP struct {
-	ln     net.Listener
-	mu     sync.Mutex
-	dirs   map[string]bool
-	cmds   []string
-	files  map[string][]byte
-	pasvLn net.Listener
+	ln         net.Listener
+	mu         sync.Mutex
+	dirs       map[string]bool
+	cmds       []string
+	files      map[string][]byte
+	pasvLn     net.Listener
+	killOnStor bool // drop the control connection mid-STOR, never confirming
+	lastData   net.Conn
 }
 
 func newFakeOzFTP(t *testing.T, dirs ...string) *fakeOzFTP {
@@ -102,6 +104,13 @@ func (f *fakeOzFTP) handle(c net.Conn) {
 		case "STOR":
 			send("150 ok")
 			dc, err := f.pasvLn.Accept()
+			if err == nil && f.killOnStor {
+				// Keep the data connection open but abandon the
+				// control connection: the transfer is never
+				// confirmed, like a server dropping mid-upload.
+				f.lastData = dc
+				return
+			}
 			if err != nil {
 				send("425 no data")
 				continue
@@ -272,6 +281,40 @@ func TestOzStorFileAndSkip(t *testing.T) {
 	}
 	if n := countStor(); n != 1 {
 		t.Fatalf("second upload re-sent the file: STOR count = %d, want 1", n)
+	}
+}
+
+// When an upload dies on the first server (here: the control
+// connection drops mid-STOR and the transfer is never confirmed),
+// the file upload retries on the second server and lands there.
+func TestOzUploadRetriesOnSecondServer(t *testing.T) {
+	bad := newFakeOzFTP(t, "/switch")
+	bad.killOnStor = true
+	good := newFakeOzFTP(t, "/switch")
+	local := filepath.Join(t.TempDir(), "chromium-full.ext4")
+	content := []byte(strings.Repeat("x", 65536))
+	if err := os.WriteFile(local, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var logs []string
+	log := func(s string) { logs = append(logs, s) }
+	err := uploadOzFileAddrs([]string{bad.ln.Addr().String(), good.ln.Addr().String()},
+		"switch/chromium-nx/chromium-full.ext4", local, "en", log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	good.mu.Lock()
+	got := good.files["/switch/chromium-nx/chromium-full.ext4"]
+	good.mu.Unlock()
+	if len(got) != len(content) {
+		t.Fatalf("second server stored %d bytes, want %d", len(got), len(content))
+	}
+	joined := strings.Join(logs, "\n")
+	if !strings.Contains(joined, "Retrying on another connection") {
+		t.Fatalf("the retry was not logged: %v", logs)
+	}
+	if !strings.Contains(joined, "transfer not confirmed") {
+		t.Fatalf("the raw failure cause was not logged: %v", logs)
 	}
 }
 
