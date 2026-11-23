@@ -973,6 +973,21 @@ function showInstalling(name) {
   document.getElementById("chkok").style.display = "none";
   document.getElementById("chkmodal").style.display = "flex";
 }
+// showDownloading is the gallery counterpart of showInstalling: the
+// same dialog with the download wording, up until galDlDone replaces
+// it with the result.
+function showDownloading(name) {
+  var l1 = document.getElementById("chkline1");
+  var l2 = document.getElementById("chkline2");
+  var l3 = document.getElementById("chkline3");
+  l1.textContent = t("gal_dl_ing");
+  l1.style.color = "";
+  l2.textContent = name;
+  l2.style.display = name ? "" : "none";
+  if (l3) { l3.textContent = ""; l3.style.display = "none"; }
+  document.getElementById("chkok").style.display = "none";
+  document.getElementById("chkmodal").style.display = "flex";
+}
 function hideChk() {
   document.getElementById("chkmodal").style.display = "none";
 }
@@ -1574,8 +1589,7 @@ function galClose() {
 }
 // Download completion report, shared by both paths below and by
 // the Android shell (its DownloadManager receiver calls this).
-// Success closes the viewer and shows the result dialog; failure
-// is written into the viewer's status line.
+// Either way the result dialog replaces the downloading dialog.
 function galDlDone(ok) {
   var it = galSt.items[galSt.cur];
   var name = it ? it.name : "";
@@ -1583,8 +1597,7 @@ function galDlDone(ok) {
     galClose();
     showChk(t("gal_dl_done"), name, true, "");
   } else {
-    var st = document.getElementById("galv-status");
-    if (st) { st.textContent = t("gal_dl_fail"); st.style.color = "#c0392b"; }
+    showChk(t("gal_dl_fail"), name, false, "");
   }
 }
 // Save the open item on this device. Android: a plain link click
@@ -1598,6 +1611,8 @@ async function galDownload() {
   var st = document.getElementById("galv-status");
   st.style.color = "";
   st.textContent = t("gal_dl_ing");
+  galClose();
+  showDownloading(it.name);
   var url = galFileURL(it, true);
   if (IS_ANDROID) {
     var a = document.createElement("a");
