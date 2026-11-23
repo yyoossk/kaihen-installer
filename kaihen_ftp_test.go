@@ -3,7 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -15,10 +18,12 @@ import (
 // can prove the client never probes with MKD. Every command is
 // recorded.
 type fakeOzFTP struct {
-	ln   net.Listener
-	mu   sync.Mutex
-	dirs map[string]bool
-	cmds []string
+	ln     net.Listener
+	mu     sync.Mutex
+	dirs   map[string]bool
+	cmds   []string
+	files  map[string][]byte
+	pasvLn net.Listener
 }
 
 func newFakeOzFTP(t *testing.T, dirs ...string) *fakeOzFTP {
@@ -27,7 +32,7 @@ func newFakeOzFTP(t *testing.T, dirs ...string) *fakeOzFTP {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := &fakeOzFTP{ln: ln, dirs: map[string]bool{}}
+	f := &fakeOzFTP{ln: ln, dirs: map[string]bool{}, files: map[string][]byte{}}
 	for _, d := range dirs {
 		f.dirs[d] = true
 	}
@@ -82,6 +87,42 @@ func (f *fakeOzFTP) handle(c net.Conn) {
 			f.dirs[arg] = true
 			f.mu.Unlock()
 			send("257 created")
+		case "PASV":
+			if f.pasvLn != nil {
+				f.pasvLn.Close()
+			}
+			pl, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				send("425 no data")
+				continue
+			}
+			f.pasvLn = pl
+			port := pl.Addr().(*net.TCPAddr).Port
+			send(fmt.Sprintf("227 Entering Passive Mode (127,0,0,1,%d,%d)", port>>8, port&255))
+		case "STOR":
+			send("150 ok")
+			dc, err := f.pasvLn.Accept()
+			if err != nil {
+				send("425 no data")
+				continue
+			}
+			data, _ := io.ReadAll(dc)
+			dc.Close()
+			f.pasvLn.Close()
+			f.pasvLn = nil
+			f.mu.Lock()
+			f.files[arg] = data
+			f.mu.Unlock()
+			send("226 ok")
+		case "SIZE":
+			f.mu.Lock()
+			data, ok := f.files[arg]
+			f.mu.Unlock()
+			if ok {
+				send(fmt.Sprintf("213 %d", len(data)))
+			} else {
+				send("550 no such file")
+			}
 		case "QUIT":
 			send("221 bye")
 			return
@@ -173,6 +214,64 @@ func TestOzConnectFallbackToPlugin(t *testing.T) {
 	}
 	if !plugin.saw("USER anonymous") {
 		t.Fatal("plugin server was not contacted")
+	}
+}
+
+// storFile streams a local file to the server byte for byte, and a
+// second upload of the same file is skipped by size (the large-extra
+// path used for Chromium NX's image).
+func TestOzStorFileAndSkip(t *testing.T) {
+	f := newFakeOzFTP(t, "/switch")
+	s, err := ozConnectAddr(f.ln.Addr().String(), "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	local := filepath.Join(t.TempDir(), "chromium-full.ext4")
+	content := make([]byte, 3<<20+123)
+	for i := range content {
+		content[i] = byte(i * 7)
+	}
+	if err := os.WriteFile(local, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rel := "switch/chromium-nx/chromium-full.ext4"
+	if err := uploadFileSession(s, rel, local, nil); err != nil {
+		t.Fatal(err)
+	}
+	f.mu.Lock()
+	got := f.files["/switch/chromium-nx/chromium-full.ext4"]
+	f.mu.Unlock()
+	if len(got) != len(content) {
+		t.Fatalf("stored %d bytes, want %d", len(got), len(content))
+	}
+	for i := range content {
+		if got[i] != content[i] {
+			t.Fatalf("stored byte %d differs", i)
+		}
+	}
+	if rs, ok := s.remoteSize(rel); !ok || rs != int64(len(content)) {
+		t.Fatalf("remoteSize = %d, %v; want %d, true", rs, ok, len(content))
+	}
+	countStor := func() int {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		n := 0
+		for _, c := range f.cmds {
+			if strings.HasPrefix(c, "STOR ") {
+				n++
+			}
+		}
+		return n
+	}
+	if n := countStor(); n != 1 {
+		t.Fatalf("STOR count = %d, want 1", n)
+	}
+	if err := uploadFileSession(s, rel, local, nil); err != nil {
+		t.Fatal(err)
+	}
+	if n := countStor(); n != 1 {
+		t.Fatalf("second upload re-sent the file: STOR count = %d, want 1", n)
 	}
 }
 

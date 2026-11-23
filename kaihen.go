@@ -651,26 +651,29 @@ func (s *ozSession) ensureDir(rel string) error {
 	return nil
 }
 
-// stor uploads data to prefix/rel, creating parent folders as needed.
-func (s *ozSession) stor(rel string, data []byte) error {
+// openStore prepares an upload to prefix/rel: it creates the parent
+// folders, negotiates a passive data connection and issues STOR. The
+// caller writes the content to the returned connection and finishes
+// with finishStore.
+func (s *ozSession) openStore(rel string) (net.Conn, error) {
 	rel = strings.TrimPrefix(filepath.ToSlash(rel), "/")
 	if dir := pathDir(rel); dir != "" {
 		if err := s.ensureDir(dir); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	code, line := s.cmd("PASV")
 	if code != 227 {
-		return errors.New(tr(s.lang, "ftpErr"))
+		return nil, errors.New(tr(s.lang, "ftpErr"))
 	}
 	start := strings.Index(line, "(")
 	end := strings.Index(line, ")")
 	if start < 0 || end < 0 {
-		return errors.New(tr(s.lang, "ftpErr"))
+		return nil, errors.New(tr(s.lang, "ftpErr"))
 	}
 	parts := strings.Split(line[start+1:end], ",")
 	if len(parts) != 6 {
-		return errors.New(tr(s.lang, "ftpErr"))
+		return nil, errors.New(tr(s.lang, "ftpErr"))
 	}
 	nums := make([]int, 6)
 	for i, p := range parts {
@@ -679,21 +682,132 @@ func (s *ozSession) stor(rel string, data []byte) error {
 	host, _, _ := net.SplitHostPort(s.ctrl.RemoteAddr().String())
 	dc, err := lanDialTimeout("tcp", net.JoinHostPort(host, fmt.Sprint(nums[4]<<8|nums[5])), 10*time.Second)
 	if err != nil {
-		return errors.New(tr(s.lang, "ftpErr"))
+		return nil, errors.New(tr(s.lang, "ftpErr"))
 	}
 	if code, _ := s.cmd("STOR " + s.prefix + "/" + rel); code != 150 && code != 125 {
 		dc.Close()
-		return errors.New(tr(s.lang, "ftpErr"))
+		return nil, errors.New(tr(s.lang, "ftpErr"))
 	}
-	if _, err := dc.Write(data); err != nil {
-		dc.Close()
-		return errors.New(tr(s.lang, "ftpErr"))
-	}
+	return dc, nil
+}
+
+func (s *ozSession) finishStore(dc net.Conn) error {
 	dc.Close()
 	if code, _ := s.rd.readReply(); code != 226 && code != 250 {
 		return errors.New(tr(s.lang, "ftpErr"))
 	}
 	return nil
+}
+
+// stor uploads data to prefix/rel, creating parent folders as needed.
+func (s *ozSession) stor(rel string, data []byte) error {
+	dc, err := s.openStore(rel)
+	if err != nil {
+		return err
+	}
+	if _, err := dc.Write(data); err != nil {
+		dc.Close()
+		return errors.New(tr(s.lang, "ftpErr"))
+	}
+	return s.finishStore(dc)
+}
+
+// storFile uploads a local file to prefix/rel, streaming it in chunks
+// (release extras can be hundreds of MB), reporting progress as
+// (sent, total) after each chunk.
+func (s *ozSession) storFile(rel, local string, progress func(sent, total int64)) error {
+	f, err := os.Open(local)
+	if err != nil {
+		return errors.New(tr(s.lang, "ftpErr"))
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return errors.New(tr(s.lang, "ftpErr"))
+	}
+	dc, err := s.openStore(rel)
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, 1<<20)
+	var sent int64
+	for {
+		n, rerr := f.Read(buf)
+		if n > 0 {
+			if _, werr := dc.Write(buf[:n]); werr != nil {
+				dc.Close()
+				return errors.New(tr(s.lang, "ftpErr"))
+			}
+			sent += int64(n)
+			if progress != nil {
+				progress(sent, info.Size())
+			}
+		}
+		if rerr == io.EOF {
+			break
+		}
+		if rerr != nil {
+			dc.Close()
+			return errors.New(tr(s.lang, "ftpErr"))
+		}
+	}
+	return s.finishStore(dc)
+}
+
+// remoteSize reports the size of prefix/rel via SIZE, when the server
+// knows the file.
+func (s *ozSession) remoteSize(rel string) (int64, bool) {
+	rel = strings.TrimPrefix(filepath.ToSlash(rel), "/")
+	code, line := s.cmd("SIZE " + s.prefix + "/" + rel)
+	if code != 213 {
+		return 0, false
+	}
+	fields := strings.Fields(line)
+	if len(fields) < 2 {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(fields[len(fields)-1], 10, 64)
+	if err != nil || n < 0 {
+		return 0, false
+	}
+	return n, true
+}
+
+// ftpUploadOzFile uploads one local file to an SD-relative path on the
+// console (OunceShell first, then the FTPD plugin, via ozConnect).
+func ftpUploadOzFile(ip, rel, local, lang string, log logFn) error {
+	s, err := ozConnect(ip, lang)
+	if err != nil {
+		return err
+	}
+	defer s.close()
+	return uploadFileSession(s, rel, local, log)
+}
+
+// uploadFileSession stores local at rel over an open session. A
+// remote file that already has the same size is left as is, so
+// reinstalling an entry with a large extra file stays fast.
+func uploadFileSession(s *ozSession, rel, local string, log logFn) error {
+	info, err := os.Stat(local)
+	if err != nil {
+		return errors.New(tr(s.lang, "ftpErr"))
+	}
+	if rs, ok := s.remoteSize(rel); ok && rs == info.Size() {
+		if log != nil {
+			log(tr(s.lang, "extraSkip", rel))
+		}
+		return nil
+	}
+	lastStep := -1
+	return s.storFile(rel, local, func(sent, total int64) {
+		if log == nil || total <= 0 {
+			return
+		}
+		if step := int(sent * 10 / total); step != lastStep {
+			lastStep = step
+			log(fmt.Sprintf("%s: %d%%", rel, sent*100/total))
+		}
+	})
 }
 
 func pathDir(rel string) string {

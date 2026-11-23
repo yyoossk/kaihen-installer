@@ -276,6 +276,57 @@ func httpGet(url string) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(resp.Body, 512<<20))
 }
 
+// httpGetToFile streams a download straight to a file, for payloads
+// too large to hold in memory (hundreds of MB). It reports progress
+// as (done, total) after each chunk; total is -1 when the server
+// gives no length. Unlike webClient it has no overall timeout: a
+// big file on a slow link may legitimately take many minutes.
+func httpGetToFile(url, dst string, progress func(done, total int64)) error {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "CivInstaller")
+	cl := &http.Client{Transport: webTransport}
+	resp, err := cl.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	f, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, 1<<20)
+	var done int64
+	for {
+		n, rerr := resp.Body.Read(buf)
+		if n > 0 {
+			if _, werr := f.Write(buf[:n]); werr != nil {
+				f.Close()
+				os.Remove(dst)
+				return werr
+			}
+			done += int64(n)
+			if progress != nil {
+				progress(done, resp.ContentLength)
+			}
+		}
+		if rerr == io.EOF {
+			break
+		}
+		if rerr != nil {
+			f.Close()
+			os.Remove(dst)
+			return rerr
+		}
+	}
+	return f.Close()
+}
+
 // httpGetFinal is httpGet plus the final URL after redirects (GitHub
 // release pages encode the tag in the redirect target).
 func httpGetFinal(u string) ([]byte, string, error) {

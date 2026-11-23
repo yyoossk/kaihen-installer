@@ -7,7 +7,8 @@ import "testing"
 // (chromium-nx2.nro) build plus a 411 MB ext4 image; the entry's
 // AssetHint must select the Switch 2 .nro exactly.
 func TestChromiumNxResolves(t *testing.T) {
-	a := &appEntry{ID: "shodowlo/chromium-nx", Kind: "nro", Source: "release", AssetHint: "chromium-nx2.nro"}
+	a := &appEntry{ID: "shodowlo/chromium-nx", Kind: "nro", Source: "release", AssetHint: "chromium-nx2.nro",
+		Extras: []extraAsset{{Name: "chromium-full.ext4", Dir: "switch/chromium-nx"}}}
 	tag, assets, err := fetchRelease(a)
 	if err != nil {
 		t.Fatalf("fetchRelease: %v", err)
@@ -20,6 +21,12 @@ func TestChromiumNxResolves(t *testing.T) {
 	}
 	if a.AssetName != "chromium-nx2.nro" {
 		t.Fatalf("picked asset = %q, want %q", a.AssetName, "chromium-nx2.nro")
+	}
+	if err := resolveExtras(a, assets); err != nil {
+		t.Fatalf("resolveExtras: %v", err)
+	}
+	if a.Extras[0].URL == "" {
+		t.Fatal("the ext4 image extra did not resolve from the latest release")
 	}
 }
 

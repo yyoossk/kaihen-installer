@@ -26,6 +26,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "取得中: %s",
 		"dlErr":          "ダウンロードできません",
+		"extraDl":        "追加ファイルをダウンロードしています: %s",
+		"extraSkip":      "追加ファイルは既に入っています: %s",
 		"updUnsupported": "この環境では自動更新できません",
 		"updRestart":     "更新しました。再起動します",
 		"updNone":        "すでに最新版です",
@@ -115,6 +117,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Downloading: %s",
 		"dlErr":          "Download failed",
+		"extraDl":        "Downloading additional file: %s",
+		"extraSkip":      "Additional file already in place: %s",
 		"updUnsupported": "Automatic update is not available on this platform",
 		"updRestart":     "Updated. Restarting now",
 		"updNone":        "You are already on the latest version",
@@ -205,6 +209,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Téléchargement : %s",
 		"dlErr":          "Échec du téléchargement",
+		"extraDl":        "Téléchargement du fichier supplémentaire : %s",
+		"extraSkip":      "Fichier supplémentaire déjà en place : %s",
 		"updUnsupported": "La mise à jour automatique n'est pas disponible sur cette plateforme",
 		"updRestart":     "Mise à jour effectuée. Redémarrage en cours",
 		"updNone":        "Vous avez déjà la dernière version",
@@ -295,6 +301,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Download: %s",
 		"dlErr":          "Download fehlgeschlagen",
+		"extraDl":        "Zusätzliche Datei wird heruntergeladen: %s",
+		"extraSkip":      "Zusätzliche Datei ist bereits vorhanden: %s",
 		"updUnsupported": "Automatische Updates sind auf dieser Plattform nicht verfügbar",
 		"updRestart":     "Aktualisiert. Neustart läuft",
 		"updNone":        "Sie verwenden bereits die neueste Version",
@@ -385,6 +393,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Download: %s",
 		"dlErr":          "Download non riuscito",
+		"extraDl":        "Download del file aggiuntivo: %s",
+		"extraSkip":      "File aggiuntivo già presente: %s",
 		"updUnsupported": "L'aggiornamento automatico non è disponibile su questa piattaforma",
 		"updRestart":     "Aggiornato. Riavvio in corso",
 		"updNone":        "Hai già la versione più recente",
@@ -475,6 +485,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Descargando: %s",
 		"dlErr":          "La descarga falló",
+		"extraDl":        "Descargando archivo adicional: %s",
+		"extraSkip":      "El archivo adicional ya está en su sitio: %s",
 		"updUnsupported": "La actualización automática no está disponible en esta plataforma",
 		"updRestart":     "Actualizado. Reiniciando ahora",
 		"updNone":        "Ya tienes la versión más reciente",
@@ -565,6 +577,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Загрузка: %s",
 		"dlErr":          "Загрузка не удалась",
+		"extraDl":        "Загрузка дополнительного файла: %s",
+		"extraSkip":      "Дополнительный файл уже на месте: %s",
 		"updUnsupported": "Автоматическое обновление недоступно на этой платформе",
 		"updRestart":     "Обновлено. Выполняется перезапуск",
 		"updNone":        "У вас уже последняя версия",
@@ -655,6 +669,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "A descarregar: %s",
 		"dlErr":          "A transferência falhou",
+		"extraDl":        "Baixando arquivo adicional: %s",
+		"extraSkip":      "Arquivo adicional já está no lugar: %s",
 		"updUnsupported": "A atualização automática não está disponível nesta plataforma",
 		"updRestart":     "Atualizado. Reiniciando agora",
 		"updNone":        "Você já tem a versão mais recente",
@@ -745,6 +761,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Pobieranie: %s",
 		"dlErr":          "Pobieranie nie powiodło się",
+		"extraDl":        "Pobieranie dodatkowego pliku: %s",
+		"extraSkip":      "Dodatkowy plik jest już na miejscu: %s",
 		"updUnsupported": "Aktualizacja automatyczna nie jest dostępna na tej platformie",
 		"updRestart":     "Zaktualizowano. Ponowne uruchamianie",
 		"updNone":        "Masz już najnowszą wersję",
@@ -835,6 +853,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "다운로드 중: %s",
 		"dlErr":          "다운로드에 실패했습니다",
+		"extraDl":        "추가 파일을 다운로드하고 있습니다: %s",
+		"extraSkip":      "추가 파일이 이미 있습니다: %s",
 		"updUnsupported": "이 환경에서는 자동 업데이트를 사용할 수 없습니다",
 		"updRestart":     "업데이트했습니다. 다시 시작합니다",
 		"updNone":        "이미 최신 버전입니다",
@@ -925,6 +945,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "正在下载: %s",
 		"dlErr":          "下载失败",
+		"extraDl":        "正在下载附加文件：%s",
+		"extraSkip":      "附加文件已就位：%s",
 		"updUnsupported": "此平台不支持自动更新",
 		"updRestart":     "已更新。正在重启",
 		"updNone":        "已是最新版本",
@@ -1015,6 +1037,8 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "正在下載: %s",
 		"dlErr":          "下載失敗",
+		"extraDl":        "正在下載附加檔案：%s",
+		"extraSkip":      "附加檔案已就位：%s",
 		"updUnsupported": "此平台不支援自動更新",
 		"updRestart":     "已更新。正在重新啟動",
 		"updNone":        "已是最新版本",

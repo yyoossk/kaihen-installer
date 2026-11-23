@@ -18,23 +18,35 @@ import (
 	"time"
 )
 
+// extraAsset is an additional file from the same release that an app
+// needs next to its .nro (e.g. Chromium NX's 411 MB browser image): it
+// is resolved from the latest release alongside the main asset,
+// downloaded to the app's cache, and uploaded to Dir on the SD card at
+// install time.
+type extraAsset struct {
+	Name string `json:"name"` // exact release asset name
+	Dir  string `json:"dir"`  // SD-relative folder, e.g. "switch/chromium-nx"
+	URL  string `json:"url,omitempty"`
+}
+
 type appEntry struct {
-	ID            string `json:"id"`
-	Kind          string `json:"kind"`           // "nro"
-	Host          string `json:"host,omitempty"` // "" = GitHub, "gitlab" = GitLab
-	Builtin       bool   `json:"builtin"`
-	Name          string `json:"name,omitempty"`
-	Source        string `json:"source,omitempty"` // "release" | "zip"
-	AssetHint     string `json:"assetHint,omitempty"` // exact release asset name to prefer (e.g. a Switch 2 build among several .nro assets)
-	AssetName     string `json:"assetName"`
-	AssetURL      string `json:"assetUrl,omitempty"`
-	ZipInner      string `json:"zipInner,omitempty"`
-	SHA256        string `json:"sha256,omitempty"`
-	Size          int64  `json:"size,omitempty"`
-	LatestTag     string `json:"latestTag"`
-	DownloadedTag string `json:"downloadedTag"`
-	InstalledTag  string `json:"installedTag"`
-	LastCheck     int64  `json:"lastCheck"`
+	ID            string       `json:"id"`
+	Kind          string       `json:"kind"`           // "nro"
+	Host          string       `json:"host,omitempty"` // "" = GitHub, "gitlab" = GitLab
+	Builtin       bool         `json:"builtin"`
+	Name          string       `json:"name,omitempty"`
+	Source        string       `json:"source,omitempty"`    // "release" | "zip"
+	AssetHint     string       `json:"assetHint,omitempty"` // exact release asset name to prefer (e.g. a Switch 2 build among several .nro assets)
+	Extras        []extraAsset `json:"extras,omitempty"`    // extra files from the same release the app needs on the SD card
+	AssetName     string       `json:"assetName"`
+	AssetURL      string       `json:"assetUrl,omitempty"`
+	ZipInner      string       `json:"zipInner,omitempty"`
+	SHA256        string       `json:"sha256,omitempty"`
+	Size          int64        `json:"size,omitempty"`
+	LatestTag     string       `json:"latestTag"`
+	DownloadedTag string       `json:"downloadedTag"`
+	InstalledTag  string       `json:"installedTag"`
+	LastCheck     int64        `json:"lastCheck"`
 }
 
 var (
@@ -100,7 +112,7 @@ func builtinApps() []*appEntry {
 		{ID: "venustrikes/ouncemtp", Kind: "nro", Builtin: true, Name: "OunceMTP", Source: "release"},
 		{ID: "amariscalc/WinampNX2", Kind: "nro", Builtin: true, Name: "WinampNX2", Source: "release"},
 		{ID: "Olmectron/eden-switch2-poc", Kind: "nro", Builtin: true, Name: "Eden for SW2 (POC)", Source: "release"},
-		{ID: "shodowlo/chromium-nx", Kind: "nro", Builtin: true, Name: "Chromium NX", Source: "release", AssetHint: "chromium-nx2.nro"},
+		{ID: "shodowlo/chromium-nx", Kind: "nro", Builtin: true, Name: "Chromium NX", Source: "release", AssetHint: "chromium-nx2.nro", Extras: []extraAsset{{Name: "chromium-full.ext4", Dir: "switch/chromium-nx"}}},
 		{ID: "davidkalil10/Vita3K-nx2", Kind: "nro", Builtin: true, Name: "Vita3K", Source: "release"},
 	}
 }
@@ -144,6 +156,25 @@ func appsInit() {
 		have[a.ID] = true
 	}
 	changed := false
+	// Refresh the definition fields of builtin entries from the code,
+	// so a catalog change to an existing entry (a new asset hint, an
+	// extra file the app needs) reaches installs whose apps.json
+	// predates it. Download/install state stays the user's own.
+	defs := map[string]*appEntry{}
+	for _, b := range builtinApps() {
+		defs[b.ID] = b
+	}
+	for _, a := range appsList {
+		b, ok := defs[a.ID]
+		if !ok {
+			continue
+		}
+		if a.Kind != b.Kind || a.Host != b.Host || a.Source != b.Source || a.AssetHint != b.AssetHint || !extrasEqual(a.Extras, b.Extras) {
+			a.Kind, a.Host, a.Source, a.AssetHint = b.Kind, b.Host, b.Source, b.AssetHint
+			a.Extras = append([]extraAsset(nil), b.Extras...)
+			changed = true
+		}
+	}
 	for _, b := range builtinApps() {
 		if !have[b.ID] && !deleted[b.ID] {
 			appsList = append(appsList, b)
@@ -153,6 +184,21 @@ func appsInit() {
 	if changed {
 		saveAppsLocked()
 	}
+}
+
+// extrasEqual compares two extra-file definitions by name and target
+// folder (the resolved URL is runtime state, not part of the
+// definition).
+func extrasEqual(a, b []extraAsset) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Name != b[i].Name || a[i].Dir != b[i].Dir {
+			return false
+		}
+	}
+	return true
 }
 
 func saveAppsLocked() {
@@ -362,11 +408,53 @@ func refreshAppLocked(a *appEntry, allowDownload bool, log logFn) error {
 		if !pickNroAsset(a, assets) {
 			return errors.New(tr("", "appNoAsset"))
 		}
+		if err := resolveExtras(a, assets); err != nil {
+			return err
+		}
 	}
-	if allowDownload && a.DownloadedTag != a.LatestTag {
+	if allowDownload && (a.DownloadedTag != a.LatestTag || extrasCachedMissing(a)) {
 		return downloadAppLocked(a, log)
 	}
 	return nil
+}
+
+// resolveExtras fills each declared extra file's download URL from
+// the same release's asset list, matching by exact name (the extras
+// always come from the latest release, like the main asset). An
+// extra the release does not carry fails the refresh: the app would
+// not run without it.
+func resolveExtras(a *appEntry, assets []relAsset) error {
+	for i := range a.Extras {
+		a.Extras[i].URL = ""
+		for _, as := range assets {
+			if as.Name == a.Extras[i].Name {
+				a.Extras[i].URL = as.URL
+				break
+			}
+		}
+		if a.Extras[i].URL == "" {
+			return errors.New(tr("", "appNoAsset"))
+		}
+	}
+	return nil
+}
+
+func extrasDir(id string) string { return filepath.Join(appCacheDir(id), "extras") }
+
+func extraCachePath(a *appEntry, name string) string {
+	return filepath.Join(extrasDir(a.ID), name)
+}
+
+// extrasCachedMissing reports whether an entry declares extra files
+// that are not in the local cache (e.g. the entry gained an extra in
+// a newer build after the app was already downloaded).
+func extrasCachedMissing(a *appEntry) bool {
+	for _, ex := range a.Extras {
+		if _, err := os.Stat(extraCachePath(a, ex.Name)); err != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func downloadAppLocked(a *appEntry, log logFn) error {
@@ -381,21 +469,63 @@ func downloadAppLocked(a *appEntry, log logFn) error {
 		return errors.New(tr("", "dlErr"))
 	}
 	if a.Source == "zip" {
-		return downloadNroZipLocked(a, raw)
+		if err := downloadNroZipLocked(a, raw); err != nil {
+			return err
+		}
+	} else {
+		data := raw
+		if a.SHA256 != "" && sha256Hex(data) != a.SHA256 {
+			return errors.New(tr("", "badSum"))
+		}
+		if a.Size > 0 && int64(len(data)) != a.Size {
+			return errors.New(tr("", "badContent"))
+		}
+		dir := appCacheDir(a.ID)
+		os.MkdirAll(dir, 0o755)
+		if err := os.WriteFile(filepath.Join(dir, a.AssetName), data, 0o644); err != nil {
+			return errors.New(tr("", "writeErr"))
+		}
 	}
-	data := raw
-	if a.SHA256 != "" && sha256Hex(data) != a.SHA256 {
-		return errors.New(tr("", "badSum"))
-	}
-	if a.Size > 0 && int64(len(data)) != a.Size {
-		return errors.New(tr("", "badContent"))
-	}
-	dir := appCacheDir(a.ID)
-	os.MkdirAll(dir, 0o755)
-	if err := os.WriteFile(filepath.Join(dir, a.AssetName), data, 0o644); err != nil {
-		return errors.New(tr("", "writeErr"))
+	if err := downloadExtrasLocked(a, log); err != nil {
+		return err
 	}
 	a.DownloadedTag = a.LatestTag
+	return nil
+}
+
+// downloadExtrasLocked fetches the entry's extra files (resolved
+// from the latest release by refreshAppLocked) into the cache. The
+// extras folder is rebuilt from scratch so a tag change never leaves
+// a stale extra behind. Files are streamed to disk: an extra can be
+// hundreds of MB.
+func downloadExtrasLocked(a *appEntry, log logFn) error {
+	if len(a.Extras) == 0 {
+		return nil
+	}
+	dir := extrasDir(a.ID)
+	os.RemoveAll(dir)
+	os.MkdirAll(dir, 0o755)
+	for _, ex := range a.Extras {
+		if ex.URL == "" {
+			return errors.New(tr("", "appNoAsset"))
+		}
+		if log != nil {
+			log(tr("", "extraDl", ex.Name))
+		}
+		lastStep := -1
+		progress := func(done, total int64) {
+			if log == nil || total <= 0 {
+				return
+			}
+			if step := int(done * 10 / total); step != lastStep {
+				lastStep = step
+				log(fmt.Sprintf("%s: %d%%", ex.Name, done*100/total))
+			}
+		}
+		if err := httpGetToFile(ex.URL, filepath.Join(dir, ex.Name), progress); err != nil {
+			return errors.New(tr("", "dlErr"))
+		}
+	}
 	return nil
 }
 
@@ -678,6 +808,22 @@ func appsDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"ok": true})
 }
 
+// installExtras uploads the entry's cached extra files to their
+// folders on the SD card, after the main file is in place.
+func installExtras(a *appEntry, ip, lang string, log logFn) error {
+	for _, ex := range a.Extras {
+		local := extraCachePath(a, ex.Name)
+		if _, err := os.Stat(local); err != nil {
+			return errors.New(tr(lang, "appNoAsset"))
+		}
+		rel := strings.TrimSuffix(ex.Dir, "/") + "/" + ex.Name
+		if err := ftpUploadOzFile(ip, rel, local, lang, log); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 	appsInit()
 	ip := r.URL.Query().Get("ip")
@@ -740,6 +886,10 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				fail(errors.New(tr(lang, "appNoAsset")))
 			}
+			return
+		}
+		if err := installExtras(a, ip, lang, send); err != nil {
+			fail(err)
 			return
 		}
 		appsMu.Lock()
