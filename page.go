@@ -47,8 +47,8 @@ const pageHTML = `<!DOCTYPE html>
  .galtable td:first-child { font-weight: bold; }
  #updline1 { font-size: 1.4em; font-weight: bold; margin-bottom: .4em; }
  #updline2 { font-size: 1.05em; margin-bottom: 1em; white-space: pre-line; }
- #chkline1 { font-size: 1.5em; font-weight: bold; margin-bottom: .4em; }
- #chkline2 { font-size: 1.15em; margin-bottom: 1em; }
+ #chkline1 { font-size: 1.5em; font-weight: bold; margin-bottom: .4em; white-space: pre-line; }
+ #chkline2 { font-size: 1.15em; margin-bottom: 1em; white-space: pre-line; }
  #chkline3 { font-size: 1em; margin-bottom: 1em; color: #555; white-space: pre-line; }
  .approw { display: flex; align-items: center; gap: .4em; margin: .35em 0; }
  .approw .appname { flex: 1 1 auto; }
@@ -951,11 +951,11 @@ function showChk(connText, pingText, ok, hintText) {
   var l1 = document.getElementById("chkline1");
   var l2 = document.getElementById("chkline2");
   var l3 = document.getElementById("chkline3");
-  l1.textContent = connText;
+  l1.textContent = sentBreaks(connText);
   l1.style.color = ok ? "#1a7f37" : "#c0392b";
-  l2.textContent = pingText;
+  l2.textContent = sentBreaks(pingText);
   l2.style.display = pingText ? "" : "none";
-  if (l3) { l3.textContent = hintText || ""; l3.style.display = hintText ? "" : "none"; }
+  if (l3) { l3.textContent = sentBreaks(hintText || ""); l3.style.display = hintText ? "" : "none"; }
   document.getElementById("chkok").style.display = "";
   document.getElementById("chkmodal").style.display = "flex";
 }
