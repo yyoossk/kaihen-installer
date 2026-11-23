@@ -17,6 +17,7 @@ const pageHTML = `<!DOCTYPE html>
         white-space: pre-wrap; font-family: monospace; font-size: .85em; }
  .note { color: #555; font-size: .92em; line-height: 1.6; white-space: pre-line; }
  li[data-i18n] { white-space: pre-line; }
+ p[data-i18n] { white-space: pre-line; }
  h2 { margin-top: 1.6em; border-left: 6px solid #888; padding-left: .4em; }
  .langbar { display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #fff; z-index: 500; padding: 0.4em 0; margin-top: 0; border-bottom: 1px solid #ddd; }
 .tabs button.active { font-weight: bold; border-bottom: 3px solid #2a7; }
@@ -35,6 +36,7 @@ const pageHTML = `<!DOCTYPE html>
  .galgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: .8em; }
  .galcell { position: relative; border-radius: 4px; overflow: hidden; cursor: pointer; background: #000; aspect-ratio: 16/9; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
  .galselbox { position: absolute; top: .35em; left: .35em; width: 1.5em; height: 1.5em; z-index: 2; cursor: pointer; }
+ .galdlbtn { position: absolute; right: .35em; bottom: .35em; z-index: 2; padding: .3em .7em; font-size: .85em; cursor: pointer; }
  .galselon { outline: 3px solid #1a7f37; outline-offset: -3px; }
  .galcell img, .galcell video { width: 100%; height: 100%; object-fit: cover; display: block; }
  .galpages { text-align: center; margin: 1.1em 0 .4em; }
@@ -511,7 +513,7 @@ function applyLang(lang, save) {
   var els = document.querySelectorAll("[data-i18n]");
   for (var i = 0; i < els.length; i++) {
     var txt = t(els[i].getAttribute("data-i18n"));
-    if (els[i].classList.contains("note") || els[i].tagName === "LI") txt = sentBreaks(txt);
+    if (els[i].classList.contains("note") || els[i].tagName === "LI" || els[i].tagName === "P") txt = sentBreaks(txt);
     els[i].textContent = txt;
   }
   var phs = document.querySelectorAll("[data-i18n-ph]");
@@ -1501,6 +1503,14 @@ function galRender() {
       cell.classList.toggle("galselon", cb.checked);
     };
     cell.appendChild(cb);
+    var dlb = document.createElement("button");
+    dlb.className = "galdlbtn";
+    dlb.textContent = t("gal_dl");
+    dlb.onclick = function(e) {
+      e.stopPropagation();
+      galDownloadItem(idx);
+    };
+    cell.appendChild(dlb);
     if (it.type === "video") {
       var v = document.createElement("video");
       v.src = galFileURL(it) + "#t=0.1";
@@ -1653,6 +1663,16 @@ async function galDownload() {
   var st = document.getElementById("galv-status");
   st.style.color = "";
   st.textContent = t("gal_dl_ing");
+  galDownloadFile(it);
+}
+// Per-item download straight from the grid cell (same dialog flow).
+function galDownloadItem(idx) {
+  var it = galSt.items[idx];
+  if (!it) return;
+  galSt.cur = idx;
+  galDownloadFile(it);
+}
+async function galDownloadFile(it) {
   galSt.dlName = it.name;
   galSt.dlZip = false;
   galClose();

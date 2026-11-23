@@ -5,6 +5,17 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261123-2221
+
+- Each item in the gallery grid now has its own download button, like in Vita Gallery.
+- You no longer need to open the viewer to download a single photo or video.
+- Sentence line breaks were re-checked on every page and in all 12 languages.
+- The one hint text that was not breaking (on the SWFence page) now breaks too.
+- ギャラリーの一覧の1件ずつに、Vita Gallery と同じようにダウンロードボタンを付けました。
+- 1枚だけ落とすのに拡大表示を開かなくて済みます。
+- 全ページ・全12言語で、文ごとの改行にもれがないか改めて確認しました。
+- 改行されていなかった1か所 (SWFence ページのヒント) も直しました。
+
 ## 20261123-1949
 
 - The gallery now supports multi-select.
