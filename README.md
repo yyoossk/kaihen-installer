@@ -216,23 +216,14 @@ The current payload is stock-20261125b: the stock upstream payload plus three sm
 
 The autoloader's payload comes from [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS).
 
-The fork's improvements over upstream are:
-- **Timing learning** — the winning timing is recorded in the save and reused from the next boot.
-- **Freeze fix** — IPC sends have a 10-second timeout, so an unresponsive run stops safely with a message instead of hanging.
-- **Retirement precheck** — the candidate cache is read back first, and the retirement waves are skipped when the alias is already gone.
+The current bootstrap is stock-20261125b.
 
-More failures can be retried safely within the same boot.
-- **Cleanup cache invalidate** — the dirty scratch file's cache is invalidated before the scratch tree is deleted and committed.
-- **Retune threshold** — in-run timing adjustments engage unless at least 80% of windows qualify (previously 50%).
-- **OperateRange packet size** — the cache-invalidate commands declare the correct 0x0E words, matching the reference implementation.
+Its fixes over upstream are:
+- **OperateRange packet size** — the cache-invalidate command declares the correct 0x0E words, matching the reference implementation.
 - **Dirty file 7 MiB** — reduced from 8 MiB, leaving 1 MiB of headroom under the save-data cap.
 - **Installer creates the save folders** — if the console's save data has no saves/Single folder, the autoloader-save installer creates it first instead of failing with `create : 0x202`.
 
 See the [CivSwitchFS releases](https://github.com/yyoossk/CivSwitchFS/releases) for details.
-
-The installer installs stock-20261125b.
-
-That is the stock upstream payload plus three fixes: the OperateRange packet size, the dirty file at 7 MiB, and the installer's save-folder creation.
 
 On the test console, every improved payload stopped at the first step of every boot, and this one booted on the first try.
 
@@ -242,23 +233,14 @@ Which of them breaks the first step is still under investigation.
 
 オートローダーのペイロードは [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) のものです。
 
-そのフォークの upstream からの改良点は次のとおりです。
-- **タイミング学習** — 成功したタイミングをセーブに記録し、次回から再利用します。
-- **フリーズ修正** — IPC 送信に10秒のタイムアウトがあり、無応答でも固まらずにメッセージを出して安全に止まります。
-- **リタイア前チェック** — 候補キャッシュを先に読み戻し、エイリアスが既に消えていればリタイア用ウェーブを省略します。
+現在のブートストラップは stock-20261125b です。
 
-同一ブート内で安全に再試行できる幅が広がります。
-- **クリーンアップ時のキャッシュ無効化** — スクラッチを削除してコミットする前に、汚れたスクラッチファイルのキャッシュを無効化します。
-- **再調整のしきい値** — 合格率80%未満でタイミング再調整が働きます (従来は50%未満)。
+upstream からの修正点は次の3点です。
 - **OperateRange のパケットサイズ** — キャッシュ無効化の命令が、参照実装と一致する正しい 0x0E 語を宣言します。
 - **ダーティファイル 7MiB** — 8MiB から縮小し、セーブデータ上限に対して 1MiB の余裕を残します。
 - **インストーラーがセーブフォルダを作成** — 本体のセーブデータに saves/Single フォルダが無い場合も、インストーラーが先に作るため「create : 0x202」で失敗しません。
 
 詳しくは [CivSwitchFS のリリース](https://github.com/yyoossk/CivSwitchFS/releases) を見てください。
-
-インストーラーが入れるのは stock-20261125b です。
-
-純正の upstream ペイロードに、修正を3点 (OperateRange のパケットサイズ、ダーティファイル 7MiB、インストーラーのセーブフォルダ作成) 足したものです。
 
 テスト機では、改良版ペイロードが毎回起動の最初の段階で止まる中、これだけが一発で起動しました。
 

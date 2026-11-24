@@ -5,6 +5,17 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-0147
+
+- Documentation correction: the README now lists only the three fixes that are actually in the current bootstrap (stock-20261125b).
+- The earlier improvement list (timing learning and the others) was removed from the README, because those changes are not in the current release.
+- The fork READMEs (CivSwitchFS, civ-autoloader) were rewritten the same way.
+- Nothing else changes from build 20261125-0111: the bootstrap pin is the same stock-20261125b.
+- 説明文の訂正です。README に載せるのは、現在のブートストラップ (stock-20261125b) に実際に入っている3点の修正だけにしました。
+- 以前の改良一覧 (タイミング学習など) は、現在のリリースに入っていないため README から外しました。
+- フォークの README (CivSwitchFS、civ-autoloader) も同じように書き直しました。
+- それ以外は build 20261125-0111 から変更ありません。ブートストラップのピンは同じ stock-20261125b です。
+
 ## 20261125-0111
 
 - The autoloader bootstrap is now stock-20261125b as the standard configuration (the same pin as build 20261125-0046).
