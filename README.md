@@ -229,13 +229,13 @@ More failures can be retried safely within the same boot.
 
 See the [CivSwitchFS releases](https://github.com/yyoossk/CivSwitchFS/releases) for details.
 
-As of build 20261125-0040, the installer installs the stock upstream payload (stock-20261125) for diagnosis.
+As of build 20261125-0046, the installer installs stock-20261125b for diagnosis.
 
-It has none of the fork's improvements: no timing learning and no freeze fix.
+That is the stock upstream payload plus only the two changes improved-20261124 added: the OperateRange packet size and the 7 MiB dirty file.
 
-On the test console, the improved-20261117 payload failed at the first boot step in exactly the same way as the newer payloads.
+It still has no timing learning and no freeze fix.
 
-This build checks whether the stock payload behaves the same there.
+The fallbacks after this step are the plain stock payload (build 20261125-0040) and then improved-20261117b (build 20261125-0030).
 
 オートローダーは [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) の改良版ペイロードを使います。
 
@@ -253,13 +253,13 @@ upstream からの改良点は次のとおりです。
 
 詳しくは [CivSwitchFS のリリース](https://github.com/yyoossk/CivSwitchFS/releases) を見てください。
 
-build 20261125-0040 では、切り分けのため、インストーラーが入れるのは純正の upstream ペイロード (stock-20261125) です。
+build 20261125-0046 では、切り分けのため、インストーラーが入れるのは stock-20261125b です。
 
-このフォークの改良は一切入っていません (タイミング学習なし、フリーズ修正なし)。
+純正の upstream ペイロードに、improved-20261124 で追加した2点 (OperateRange のパケットサイズとダーティファイル 7MiB) だけを足したものです。
 
-テスト機では improved-20261117 のペイロードも新しいペイロードと全く同じく起動の最初の段階で失敗しました。
+タイミング学習とフリーズ修正は入っていません。
 
-この build は、純正ペイロードでも同じ本体で同じ失敗になるかを確認するためのものです。
+この次にだめな場合の戻し先は、純正ペイロード (build 20261125-0040)、次に improved-20261117b (build 20261125-0030) です。
 
 | 日本語 | English |
 | --- | --- |

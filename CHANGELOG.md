@@ -5,6 +5,19 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-0046
+
+- Diagnostic build: the autoloader now installs the stock-20261125b bootstrap.
+- That is the stock upstream payload plus only the two changes improved-20261124 added: the OperateRange packet size (0x0E words) and the 7 MiB dirty file.
+- Still no timing learning and no freeze fix.
+- This is the next step of the diagnosis ladder: after this, the fallbacks are the plain stock payload (build 20261125-0040) and then improved-20261117b (build 20261125-0030).
+- Nothing else changes from build 20261125-0040.
+- 切り分け用の build です。オートローダーが stock-20261125b のブートストラップを入れるようになりました。
+- 純正ペイロードに、improved-20261124 で追加した2点 (OperateRange のパケットサイズ 0x0E 語と、ダーティファイル 7MiB) だけを足したものです。
+- タイミング学習とフリーズ修正は入っていません。
+- 切り分けの梯子の次の一手です。だめな場合の戻し先は、純正ペイロード (build 20261125-0040)、次に improved-20261117b (build 20261125-0030) です。
+- それ以外は build 20261125-0040 から変更ありません。
+
 ## 20261125-0040
 
 - Diagnostic build: the autoloader now installs the stock-20261125 bootstrap.
