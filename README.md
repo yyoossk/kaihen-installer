@@ -147,6 +147,30 @@ The improved payload **learns the winning timing** and reuses it on the next boo
 画面に出る文言ごとの意味と、失敗したときの対処も書いてあります。
 改良版ペイロードは**成功したタイミングを学習**して次回から再利用し、固まるときはメッセージを出して安全に止まります。
 
+The autoloader runs the improved payload from [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS).
+Its improvements over upstream are:
+- **Timing learning** — the winning timing is recorded in the save and reused from the next boot.
+- **Freeze fix** — IPC sends have a 10-second timeout, so an unresponsive run stops safely with a message instead of hanging.
+- **Retirement precheck** — the candidate cache is read back first, and the retirement waves are skipped when the alias is already gone.
+More failures can be retried safely within the same boot.
+- **Cleanup cache invalidate** — the dirty scratch file's cache is invalidated before the scratch tree is deleted and committed.
+- **Retune threshold** — in-run timing adjustments engage unless at least 80% of windows qualify (previously 50%).
+- **OperateRange packet size** — the cache-invalidate commands declare the correct 0x0E words, matching the reference implementation.
+- **Dirty file 7 MiB** — reduced from 8 MiB, leaving 1 MiB of headroom under the save-data cap.
+See the [CivSwitchFS releases](https://github.com/yyoossk/CivSwitchFS/releases) for details.
+
+オートローダーは [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) の改良版ペイロードを使います。
+upstream からの改良点は次のとおりです。
+- **タイミング学習** — 成功したタイミングをセーブに記録し、次回から再利用します。
+- **フリーズ修正** — IPC 送信に10秒のタイムアウトがあり、無応答でも固まらずにメッセージを出して安全に止まります。
+- **リタイア前チェック** — 候補キャッシュを先に読み戻し、エイリアスが既に消えていればリタイア用ウェーブを省略します。
+同一ブート内で安全に再試行できる幅が広がります。
+- **クリーンアップ時のキャッシュ無効化** — スクラッチを削除してコミットする前に、汚れたスクラッチファイルのキャッシュを無効化します。
+- **再調整のしきい値** — 合格率80%未満でタイミング再調整が働きます (従来は50%未満)。
+- **OperateRange のパケットサイズ** — キャッシュ無効化の命令が、参照実装と一致する正しい 0x0E 語を宣言します。
+- **ダーティファイル 7MiB** — 8MiB から縮小し、セーブデータ上限に対して 1MiB の余裕を残します。
+詳しくは [CivSwitchFS のリリース](https://github.com/yyoossk/CivSwitchFS/releases) を見てください。
+
 | 日本語 | English |
 | --- | --- |
 | ![Autoloader (Japanese)](docs/screenshots/04-autoloader.png) | ![Autoloader (English)](docs/screenshots/04-autoloader-en.svg) |
