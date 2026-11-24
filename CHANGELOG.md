@@ -5,6 +5,21 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-0244
+
+- Three apps were added to the homebrew catalog, for 35 apps in total.
+- melonDS-switch2 (by ac1dburnz) is an experimental Nintendo DS emulator port, a prerelease build that runs on the interpreter, so performance is limited.
+- PKForge (by sh00kapic) is an offline Pokémon save editor; the catalog installs the AIO edition as /switch/PKForge/PKForge.nro, the layout its release asks for.
+- Reset Launch Version (by cainan) resets a title's launch version to 1.0.0, so the lowest version on the cartridge can run again after a newer version was used.
+- It does not install or remove updates, and it does not change save data.
+- The autoloader bootstrap pin is unchanged (stock-20261125b).
+- 自作ソフトのカタログに3本を追加し、全35本になりました。
+- melonDS-switch2 (ac1dburnz 作) はニンテンドーDS エミュレータの実験的な移植で、プレリリース版です。インタプリタ動作のため性能には制限があります。
+- PKForge (sh00kapic 作) はオフラインで使えるポケモンのセーブエディタです。カタログからは AIO 版を、リリースの指定どおり /switch/PKForge/PKForge.nro にインストールします。
+- Reset Launch Version (cainan 作) はタイトルの起動バージョンを 1.0.0 にリセットし、新しいバージョンを使った後でもカードリッジの一番古いバージョンを再び起動できるようにします。
+- アップデートのインストールや削除は行わず、セーブデータも変更しません。
+- オートローダーのブートストラップのピンは変更ありません (stock-20261125b)。
+
 ## 20261125-0147
 
 - Documentation correction: the README now lists only the three fixes that are actually in the current bootstrap (stock-20261125b).

@@ -35,9 +35,10 @@ type appEntry struct {
 	Host          string       `json:"host,omitempty"` // "" = GitHub, "gitlab" = GitLab
 	Builtin       bool         `json:"builtin"`
 	Name          string       `json:"name,omitempty"`
-	Source        string       `json:"source,omitempty"`    // "release" | "zip"
-	AssetHint     string       `json:"assetHint,omitempty"` // exact release asset name to prefer (e.g. a Switch 2 build among several .nro assets)
-	Extras        []extraAsset `json:"extras,omitempty"`    // extra files from the same release the app needs on the SD card
+	Source        string       `json:"source,omitempty"`      // "release" | "zip"
+	AssetHint     string       `json:"assetHint,omitempty"`   // exact release asset name to prefer (e.g. a Switch 2 build among several .nro assets)
+	InstallPath   string       `json:"installPath,omitempty"` // SD path relative to switch/ when a bare .nro must be installed under a fixed folder/name instead of switch/<asset name>
+	Extras        []extraAsset `json:"extras,omitempty"`      // extra files from the same release the app needs on the SD card
 	AssetName     string       `json:"assetName"`
 	AssetURL      string       `json:"assetUrl,omitempty"`
 	ZipInner      string       `json:"zipInner,omitempty"`
@@ -115,6 +116,9 @@ func builtinApps() []*appEntry {
 		{ID: "shodowlo/chromium-nx", Kind: "nro", Builtin: true, Name: "Chromium NX", Source: "release", AssetHint: "chromium-nx2.nro", Extras: []extraAsset{{Name: "chromium-full.ext4", Dir: "switch/chromium-nx"}}},
 		{ID: "davidkalil10/Vita3K-nx2", Kind: "nro", Builtin: true, Name: "Vita3K", Source: "release"},
 		{ID: "TheAJLive/Cemu-NX2", Kind: "nro", Builtin: true, Name: "Cemu NX2", Source: "release"},
+		{ID: "ac1dburnz/melonDS-switch2", Kind: "nro", Builtin: true, Name: "melonDS-switch2", Source: "release"},
+		{ID: "sh00kapic/PKForge-Switch2", Kind: "nro", Builtin: true, Name: "PKForge", Source: "release", AssetHint: "PKForge-AIO.nro", InstallPath: "PKForge/PKForge.nro"},
+		{ID: "cainan-c/reset-launch-version", Kind: "nro", Builtin: true, Name: "Reset Launch Version", Source: "release"},
 	}
 }
 
@@ -170,8 +174,8 @@ func appsInit() {
 		if !ok {
 			continue
 		}
-		if a.Kind != b.Kind || a.Host != b.Host || a.Source != b.Source || a.AssetHint != b.AssetHint || !extrasEqual(a.Extras, b.Extras) {
-			a.Kind, a.Host, a.Source, a.AssetHint = b.Kind, b.Host, b.Source, b.AssetHint
+		if a.Kind != b.Kind || a.Host != b.Host || a.Source != b.Source || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || !extrasEqual(a.Extras, b.Extras) {
+			a.Kind, a.Host, a.Source, a.AssetHint, a.InstallPath = b.Kind, b.Host, b.Source, b.AssetHint, b.InstallPath
 			a.Extras = append([]extraAsset(nil), b.Extras...)
 			changed = true
 		}
@@ -845,6 +849,17 @@ func appsDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"ok": true})
 }
 
+// appInstallRel returns the SD path (relative to switch/) a bare
+// .nro is installed to: the entry's fixed InstallPath when one is
+// set (the app expects its own folder and file name), otherwise the
+// asset name directly in switch/.
+func appInstallRel(a *appEntry) string {
+	if a.InstallPath != "" {
+		return a.InstallPath
+	}
+	return a.AssetName
+}
+
 // installExtras uploads the entry's cached extra files to their
 // folders on the SD card, after the main file is in place.
 func installExtras(a *appEntry, ip, lang string, log logFn) error {
@@ -910,8 +925,14 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 				fail(errors.New(tr(lang, "jsBadFile")))
 				return
 			}
-			if _, err := ftpUploadOz(ip, a.AssetName, data, lang); err != nil {
-				fail(err)
+			var upErr error
+			if a.InstallPath != "" {
+				_, upErr = ftpUploadOzPath(ip, appInstallRel(a), data, lang)
+			} else {
+				_, upErr = ftpUploadOz(ip, a.AssetName, data, lang)
+			}
+			if upErr != nil {
+				fail(upErr)
 				return
 			}
 		} else {
