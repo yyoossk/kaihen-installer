@@ -5,6 +5,19 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-0000
+
+- This build rolls the autoloader bootstrap back to improved-20261117 (timing learning + freeze fix).
+- On a real console, the improved-20261124 payload stopped immediately at the first step of every boot ("Could not open the required file systems."), before the timing race even started.
+- The cause is still under investigation.
+- The retry improvements, the OperateRange packet fix, the 7 MiB dirty file, and the installer's save-folder creation are not in the bootstrap this build installs.
+- Nothing else changes from build 20261124-2314.
+- オートローダーのブートストラップを improved-20261117 (タイミング学習+フリーズ修正) に戻しました。
+- improved-20261124 のペイロードは、実機で毎回起動直後の最初の段階で止まってしまいました (「Could not open the required file systems.」で、タイミングの抽選が始まる前です)。
+- 原因は調査中です。
+- リトライ改良・OperateRange のパケット修正・ダーティファイル 7MiB・インストーラーのセーブフォルダ作成は、この build が入れるブートストラップには含まれません。
+- それ以外は build 20261124-2314 から変更ありません。
+
 ## 20261124-2314
 
 - Fixed the autoloader save install failing with "create : 0x202" when the console's save data has no saves/Single folder.

@@ -229,6 +229,12 @@ More failures can be retried safely within the same boot.
 
 See the [CivSwitchFS releases](https://github.com/yyoossk/CivSwitchFS/releases) for details.
 
+As of build 20261125-0000, the installer installs improved-20261117 (timing learning and the freeze fix).
+
+The later improvements are held back for now, because the newer payload stopped at the first step of every boot on a real console.
+
+The cause is under investigation.
+
 オートローダーは [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) の改良版ペイロードを使います。
 
 upstream からの改良点は次のとおりです。
@@ -244,6 +250,12 @@ upstream からの改良点は次のとおりです。
 - **インストーラーがセーブフォルダを作成** — 本体のセーブデータに saves/Single フォルダが無い場合も、インストーラーが先に作るため「create : 0x202」で失敗しません。
 
 詳しくは [CivSwitchFS のリリース](https://github.com/yyoossk/CivSwitchFS/releases) を見てください。
+
+build 20261125-0000 では、インストーラーが入れるのは improved-20261117 (タイミング学習とフリーズ修正) です。
+
+それ以降の改良は、新しいペイロードが実機で毎回最初の段階で止まってしまうため、いったん見合わせています。
+
+原因は調査中です。
 
 | 日本語 | English |
 | --- | --- |
