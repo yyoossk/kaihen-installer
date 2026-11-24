@@ -44,14 +44,14 @@ import (
 // textInit() 2345-0011 failure does not occur and no patch is needed.
 
 const (
-	autoloaderBootstrapSHA = "246786a36e0d42258f485bdfe28cf85dad448aeb24a8cbc10fe75ef94dbb3d77"
+	autoloaderBootstrapSHA = "9fbc59bef8ba6ca053817fd524a88678b0230fd7b430358cb6a511d578087cbb"
 
 	// The improved persist bundle (persist-bootstrap.js + save template)
 	// as published on the yyoossk/CivSwitchFS fork's release page. The
 	// whole zip is hash-pinned, and the bootstrap extracted from it is
 	// hash-pinned again before use.
-	autoloaderImprovedZipURL = "https://github.com/yyoossk/CivSwitchFS/releases/download/improved-20261121/civswitchfs-persist-improved-20261121.zip"
-	autoloaderImprovedZipSHA = "6f13da525e664d138fd2cb655f39355ec572abec288c57c4f11f20291f0f6c62"
+	autoloaderImprovedZipURL = "https://github.com/yyoossk/CivSwitchFS/releases/download/improved-20261124/civswitchfs-persist-improved-20261124.zip"
+	autoloaderImprovedZipSHA = "da572063a73a8515ee93abc3a8f6d08d946355dd691761e825502a0f622dbcd6"
 
 	autoloaderTplURL  = "https://raw.githubusercontent.com/SeanHeuc/CivSwitchFS/59a1ea6667944583b2305412472ec319deeee009/persist/save_template.bin"
 	autoloaderTplSize = 1159730

@@ -5,6 +5,21 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261124-2144
+
+- The autoloader now installs the improved-20261124 bootstrap.
+- Its cache-invalidate commands (OperateRange) now declare the correct packet size, 0x0E words instead of 0x0C.
+- The old value caused no observed failure, but the new one matches the reference implementation.
+- Its dirty file is now 7 MiB instead of 8 MiB, leaving 1 MiB of headroom under the save-data cap.
+- To use it, reinstall the autoloader save once from the autoloader page.
+- Reinstalling resets the timing learning record.
+- オートローダーが improved-20261124 のブートストラップを入れるようになりました。
+- キャッシュ無効化の命令 (OperateRange) のパケットサイズが、正しい 0x0E 語になりました (従来は 0x0C 語)。
+- 古い値でも失敗した形跡はありませんが、参照実装と一致するようになりました。
+- ダーティファイルが 8MiB から 7MiB になり、セーブデータ上限に対して 1MiB の余裕ができました。
+- 使うには、オートローダーのページからセーブを1回入れ直してください。
+- 入れ直すとタイミング学習の記録は初期化されます。
+
 ## 20261123-2229
 
 - Fixed the explanation at the top of the homebrew install page not breaking lines at sentence ends.
