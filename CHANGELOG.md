@@ -5,6 +5,21 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-0111
+
+- The autoloader bootstrap is now stock-20261125b as the standard configuration (the same pin as build 20261125-0046).
+- On the test console it booted on the first try, where every improved payload stopped at the first step.
+- The fork's improvements 1 to 5 (timing learning, the freeze fix, and the retry changes) are not in the current bootstrap.
+- Which of them breaks the first step is still under investigation.
+- This build only updates the documentation to match the current configuration.
+- Nothing else changes from build 20261125-0046.
+- オートローダーのブートストラップが、正式な構成として stock-20261125b になりました (ピンは build 20261125-0046 と同じです)。
+- テスト機では、改良版ペイロードが全て最初の段階で止まる中、これだけが一発で起動しました。
+- フォークの改良1〜5 (タイミング学習、フリーズ修正、リトライ変更) は現在のブートストラップには入っていません。
+- そのどれが最初の段階を止めているかは調査中です。
+- この build は、現在の構成に合わせて説明文を更新しただけです。
+- それ以外は build 20261125-0046 から変更ありません。
+
 ## 20261125-0046
 
 - Diagnostic build: the autoloader now installs the stock-20261125b bootstrap.

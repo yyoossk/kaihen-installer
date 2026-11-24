@@ -47,13 +47,13 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
   kaiHEN は **20261117.1** に固定し、**公開ファイルに一切手を加えず**そのまま使います (hbmenu には textInit 2345-0011 エラーの公式修正が含まれます)。
 - **Autoloader** — after a one-time setup, kaiHEN starts from **Load Game** alone: no PC, no phone, no Pico, no network.
 
-  Includes the improved CivSwitchFS (timing learning + freeze fix) from the companion fork.
+  Includes the CivSwitchFS payload (stock-20261125b) from the companion fork.
 
   The SD files follow upstream civ-autoloader, whose bundled hbmenu is now also the officially fixed kaiHEN 20261116 build.
 
   **オートローダー** — 初回だけ設定すれば、あとは**ゲームをロード**するだけで kaiHEN が起動します (PC・スマホ・Pico・ネットワーク不要)。
 
-  改良版 CivSwitchFS (タイミング学習+フリーズ修正) を同梱。
+  CivSwitchFS のペイロード (stock-20261125b) を同梱。
 
   SD ファイルは上流 civ-autoloader に追随し、同梱 hbmenu も公式修正済みの kaiHEN20261116 版になりました。
 - **Homebrew catalog** — install compatible homebrew to the console over FTP (OunceShell), or send your own `.nro` files and folders.
@@ -203,7 +203,7 @@ After this one-time setup, starting kaiHEN is just **Load Game** on the console 
 
 The page explains what each on-screen message means and what to do when a run fails.
 
-The improved payload **learns the winning timing** and reuses it on the next boot, and a frozen run now stops safely with a message instead of hanging.
+The current payload is stock-20261125b: the stock upstream payload plus three small fixes.
 
 オートローダーのセーブを入れるページです。
 
@@ -211,11 +211,12 @@ The improved payload **learns the winning timing** and reuses it on the next boo
 
 画面に出る文言ごとの意味と、失敗したときの対処も書いてあります。
 
-改良版ペイロードは**成功したタイミングを学習**して次回から再利用し、固まるときはメッセージを出して安全に止まります。
+現在のペイロードは stock-20261125b です。
+純正ペイロードに小さな修正を3点足したものです。
 
-The autoloader runs the improved payload from [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS).
+The autoloader's payload comes from [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS).
 
-Its improvements over upstream are:
+The fork's improvements over upstream are:
 - **Timing learning** — the winning timing is recorded in the save and reused from the next boot.
 - **Freeze fix** — IPC sends have a 10-second timeout, so an unresponsive run stops safely with a message instead of hanging.
 - **Retirement precheck** — the candidate cache is read back first, and the retirement waves are skipped when the alias is already gone.
@@ -229,17 +230,19 @@ More failures can be retried safely within the same boot.
 
 See the [CivSwitchFS releases](https://github.com/yyoossk/CivSwitchFS/releases) for details.
 
-As of build 20261125-0046, the installer installs stock-20261125b for diagnosis.
+The installer installs stock-20261125b.
 
-That is the stock upstream payload plus only the two changes improved-20261124 added: the OperateRange packet size and the 7 MiB dirty file.
+That is the stock upstream payload plus three fixes: the OperateRange packet size, the dirty file at 7 MiB, and the installer's save-folder creation.
 
-It still has no timing learning and no freeze fix.
+On the test console, every improved payload stopped at the first step of every boot, and this one booted on the first try.
 
-The fallbacks after this step are the plain stock payload (build 20261125-0040) and then improved-20261117b (build 20261125-0030).
+The fork's earlier improvements (timing learning, the freeze fix, and the retry changes) are not in the current bootstrap.
 
-オートローダーは [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) の改良版ペイロードを使います。
+Which of them breaks the first step is still under investigation.
 
-upstream からの改良点は次のとおりです。
+オートローダーのペイロードは [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) のものです。
+
+そのフォークの upstream からの改良点は次のとおりです。
 - **タイミング学習** — 成功したタイミングをセーブに記録し、次回から再利用します。
 - **フリーズ修正** — IPC 送信に10秒のタイムアウトがあり、無応答でも固まらずにメッセージを出して安全に止まります。
 - **リタイア前チェック** — 候補キャッシュを先に読み戻し、エイリアスが既に消えていればリタイア用ウェーブを省略します。
@@ -253,13 +256,15 @@ upstream からの改良点は次のとおりです。
 
 詳しくは [CivSwitchFS のリリース](https://github.com/yyoossk/CivSwitchFS/releases) を見てください。
 
-build 20261125-0046 では、切り分けのため、インストーラーが入れるのは stock-20261125b です。
+インストーラーが入れるのは stock-20261125b です。
 
-純正の upstream ペイロードに、improved-20261124 で追加した2点 (OperateRange のパケットサイズとダーティファイル 7MiB) だけを足したものです。
+純正の upstream ペイロードに、修正を3点 (OperateRange のパケットサイズ、ダーティファイル 7MiB、インストーラーのセーブフォルダ作成) 足したものです。
 
-タイミング学習とフリーズ修正は入っていません。
+テスト機では、改良版ペイロードが毎回起動の最初の段階で止まる中、これだけが一発で起動しました。
 
-この次にだめな場合の戻し先は、純正ペイロード (build 20261125-0040)、次に improved-20261117b (build 20261125-0030) です。
+フォークの従来の改良 (タイミング学習、フリーズ修正、リトライ変更) は現在のブートストラップには入っていません。
+
+そのどれが最初の段階を止めているかは調査中です。
 
 | 日本語 | English |
 | --- | --- |
@@ -391,8 +396,8 @@ See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Related projects / 関連プロジェクト
 
-- [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) — the autoloader payload with timing learning and the freeze fix
-- [yyoossk/civ-autoloader](https://github.com/yyoossk/civ-autoloader) —the autoloader set using the improved payload
+- [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) — the autoloader payload
+- [yyoossk/civ-autoloader](https://github.com/yyoossk/civ-autoloader) —the autoloader set using that payload
 - [yyoossk/CivSwitch](https://github.com/yyoossk/CivSwitch) — Pico UF2 with the ipfix3 loader payload and JIS + per-line IME builds
 - Upstream: [ouncebrew (kaiHEN)](https://github.com/ouncebrew), [Gezine (CivSwitch)](https://github.com/Gezine/CivSwitch), [SeanHeuc (civ-autoloader)](https://github.com/SeanHeuc/civ-autoloader)
 
