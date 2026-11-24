@@ -69,7 +69,7 @@ func appCacheFile(id string) (string, bool) {
 	for _, a := range appsList {
 		if a.ID == id {
 			p := filepath.Join(appCacheDir(id), a.AssetName)
-			if _, err := os.Stat(p); err == nil {
+			if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() {
 				return p, true
 			}
 			return "", false
@@ -165,6 +165,10 @@ func appsInit() {
 	// so a catalog change to an existing entry (a new asset hint, an
 	// extra file the app needs) reaches installs whose apps.json
 	// predates it. Download/install state stays the user's own.
+	// Source is NOT a definition field: it is resolved from the
+	// release at runtime ("zip" for a tree release), and the builtin
+	// seed value must never overwrite a resolved one — doing so made
+	// every zip-tree app fail its first install after an app restart.
 	defs := map[string]*appEntry{}
 	for _, b := range builtinApps() {
 		defs[b.ID] = b
@@ -174,8 +178,8 @@ func appsInit() {
 		if !ok {
 			continue
 		}
-		if a.Kind != b.Kind || a.Host != b.Host || a.Source != b.Source || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || !extrasEqual(a.Extras, b.Extras) {
-			a.Kind, a.Host, a.Source, a.AssetHint, a.InstallPath = b.Kind, b.Host, b.Source, b.AssetHint, b.InstallPath
+		if a.Kind != b.Kind || a.Host != b.Host || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || !extrasEqual(a.Extras, b.Extras) {
+			a.Kind, a.Host, a.AssetHint, a.InstallPath = b.Kind, b.Host, b.AssetHint, b.InstallPath
 			a.Extras = append([]extraAsset(nil), b.Extras...)
 			changed = true
 		}
@@ -678,7 +682,7 @@ func downloadNroZipLocked(a *appEntry, raw []byte) error {
 func appView(a *appEntry) map[string]any {
 	size := a.Size
 	downloaded := false
-	if fi, err := os.Stat(filepath.Join(appCacheDir(a.ID), a.AssetName)); err == nil {
+	if fi, err := os.Stat(filepath.Join(appCacheDir(a.ID), a.AssetName)); err == nil && fi.Mode().IsRegular() {
 		downloaded = true
 		size = fi.Size()
 	}

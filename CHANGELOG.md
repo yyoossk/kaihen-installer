@@ -5,6 +5,17 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-0259
+
+- Fixed a bug that made zip-format catalog apps fail to install after an app restart, ending with "Cannot read the payload file".
+- The startup refresh of catalog definitions overwrote the resolved format (zip) with the seed value, so a downloaded SD zip was mistaken for a bare .nro file.
+- Every zip-format app was affected, including WinampNX2, RetroArch, the FTPD Plugin, melonDS-switch2 and Reset Launch Version.
+- The catalog is unchanged at 35 apps, and the autoloader bootstrap pin is unchanged (stock-20261125b).
+- zip 形式のカタログソフトが、アプリの再起動後にインストールできず「ペイロードファイルが読めません」と失敗する不具合を修正しました。
+- 起動時のカタログ定義の更新が、解決済みの形式 (zip) を初期値で上書きしてしまい、ダウンロードした SD zip を .nro ファイルと誤認していました。
+- WinampNX2、RetroArch、FTPD プラグイン、melonDS-switch2、Reset Launch Version など、zip 形式の全ソフトが対象でした。
+- カタログは全35本のまま変更ありません。オートローダーのブートストラップのピンも変更ありません (stock-20261125b)。
+
 ## 20261125-0244
 
 - Three apps were added to the homebrew catalog, for 35 apps in total.
