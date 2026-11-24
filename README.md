@@ -229,13 +229,13 @@ More failures can be retried safely within the same boot.
 
 See the [CivSwitchFS releases](https://github.com/yyoossk/CivSwitchFS/releases) for details.
 
-As of build 20261125-0030, the installer installs improved-20261117b.
+As of build 20261125-0040, the installer installs the stock upstream payload (stock-20261125) for diagnosis.
 
-That is the improved-20261117 payload, plus the installer's save-folder creation.
+It has none of the fork's improvements: no timing learning and no freeze fix.
 
-The later improvements are held back for now, because the newer payload stopped at the first step of every boot on a real console.
+On the test console, the improved-20261117 payload failed at the first boot step in exactly the same way as the newer payloads.
 
-The cause is under investigation.
+This build checks whether the stock payload behaves the same there.
 
 オートローダーは [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) の改良版ペイロードを使います。
 
@@ -253,13 +253,13 @@ upstream からの改良点は次のとおりです。
 
 詳しくは [CivSwitchFS のリリース](https://github.com/yyoossk/CivSwitchFS/releases) を見てください。
 
-build 20261125-0030 では、インストーラーが入れるのは improved-20261117b です。
+build 20261125-0040 では、切り分けのため、インストーラーが入れるのは純正の upstream ペイロード (stock-20261125) です。
 
-improved-20261117 のペイロードに、インストーラーのセーブフォルダ作成を追加したものです。
+このフォークの改良は一切入っていません (タイミング学習なし、フリーズ修正なし)。
 
-それ以降の改良は、新しいペイロードが実機で毎回最初の段階で止まってしまうため、いったん見合わせています。
+テスト機では improved-20261117 のペイロードも新しいペイロードと全く同じく起動の最初の段階で失敗しました。
 
-原因は調査中です。
+この build は、純正ペイロードでも同じ本体で同じ失敗になるかを確認するためのものです。
 
 | 日本語 | English |
 | --- | --- |

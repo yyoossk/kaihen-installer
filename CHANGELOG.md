@@ -5,6 +5,23 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-0040
+
+- Diagnostic build: the autoloader now installs the stock-20261125 bootstrap.
+- That is the completely stock upstream CivSwitchFS payload, with none of the fork's improvements (no timing learning, no freeze fix).
+- Only its save installer adds the save-folder creation.
+- On the test console, the improved-20261117 payload failed at the first boot step in exactly the same way as improved-20261124, so the cause is not the recent payload changes.
+- This build checks whether the stock payload behaves the same on that console.
+- It is a test build, not a recommended configuration.
+- Nothing else changes from build 20261125-0030.
+- 切り分け用の build です。オートローダーが stock-20261125 のブートストラップを入れるようになりました。
+- 中身は完全に純正の upstream CivSwitchFS ペイロードで、このフォークの改良は一切入っていません (タイミング学習なし、フリーズ修正なし)。
+- セーブのインストーラーだけフォルダ作成を追加しています。
+- テスト機では improved-20261117 のペイロードも improved-20261124 と全く同じく起動の最初の段階で失敗したため、原因は最近のペイロード変更ではありません。
+- この build は、純正ペイロードでも同じ本体で同じ失敗になるかを確認するためのものです。
+- テスト用であり、常用を勧める構成ではありません。
+- それ以外は build 20261125-0030 から変更ありません。
+
 ## 20261125-0030
 
 - The autoloader now installs the improved-20261117b bootstrap.
