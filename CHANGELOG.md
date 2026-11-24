@@ -5,6 +5,22 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261124-2314
+
+- Fixed the autoloader save install failing with "create : 0x202" when the console's save data has no saves/Single folder.
+- The autoloader now installs the improved-20261124b bootstrap, whose installer creates the save folders first when they are missing.
+- The payload that runs at Load Game is unchanged from improved-20261124.
+- While the autoloader save installs, an "Installing…" dialog is now shown until the result appears.
+- To use it, reinstall the autoloader save once from the autoloader page.
+- Reinstalling resets the timing learning record.
+- 本体のセーブデータに saves/Single フォルダが無い場合に、オートローダーセーブのインストールが「create : 0x202」で失敗する問題を直しました。
+- オートローダーが improved-20261124b のブートストラップを入れるようになりました。
+- そのインストーラーは、フォルダが不足している場合に先に作成します。
+- 「ゲームをロード」で動くペイロード自体は improved-20261124 から変更ありません。
+- オートローダーセーブを入れている間、結果が出るまで「インストール中…」のダイアログを表示するようになりました。
+- 使うには、オートローダーのページからセーブを1回入れ直してください。
+- 入れ直すとタイミング学習の記録は初期化されます。
+
 ## 20261124-2144
 
 - The autoloader now installs the improved-20261124 bootstrap.

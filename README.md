@@ -157,6 +157,7 @@ More failures can be retried safely within the same boot.
 - **Retune threshold** — in-run timing adjustments engage unless at least 80% of windows qualify (previously 50%).
 - **OperateRange packet size** — the cache-invalidate commands declare the correct 0x0E words, matching the reference implementation.
 - **Dirty file 7 MiB** — reduced from 8 MiB, leaving 1 MiB of headroom under the save-data cap.
+- **Installer creates the save folders** — if the console's save data has no saves/Single folder, the autoloader-save installer creates it first instead of failing with `create : 0x202`.
 See the [CivSwitchFS releases](https://github.com/yyoossk/CivSwitchFS/releases) for details.
 
 オートローダーは [yyoossk/CivSwitchFS](https://github.com/yyoossk/CivSwitchFS) の改良版ペイロードを使います。
@@ -169,6 +170,7 @@ upstream からの改良点は次のとおりです。
 - **再調整のしきい値** — 合格率80%未満でタイミング再調整が働きます (従来は50%未満)。
 - **OperateRange のパケットサイズ** — キャッシュ無効化の命令が、参照実装と一致する正しい 0x0E 語を宣言します。
 - **ダーティファイル 7MiB** — 8MiB から縮小し、セーブデータ上限に対して 1MiB の余裕を残します。
+- **インストーラーがセーブフォルダを作成** — 本体のセーブデータに saves/Single フォルダが無い場合も、インストーラーが先に作るため「create : 0x202」で失敗しません。
 詳しくは [CivSwitchFS のリリース](https://github.com/yyoossk/CivSwitchFS/releases) を見てください。
 
 | 日本語 | English |

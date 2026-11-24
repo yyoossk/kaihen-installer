@@ -1010,6 +1010,7 @@ function run(which, onDone) {
   if (which !== "autoloaderSd" && !ip()) { addLog(t("enter_ip")); if (onDone) onDone(false); return; }
   window._runBusy = true;
   var names = { stepA: t("nameA"), kaihenStart: t("nameK1"), autoloader: t("nameAL"), autoloaderSd: t("al_open") };
+  if (which === "autoloader") showInstalling(names[which]);
   addLog("--- " + names[which] + t("started") + ip());
   const es = new EventSource("/api/" + which + "?ip=" + encodeURIComponent(ip()) + "&lang=" + encodeURIComponent(LANG));
   var res = null;
