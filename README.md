@@ -229,7 +229,9 @@ More failures can be retried safely within the same boot.
 
 See the [CivSwitchFS releases](https://github.com/yyoossk/CivSwitchFS/releases) for details.
 
-As of build 20261125-0000, the installer installs improved-20261117 (timing learning and the freeze fix).
+As of build 20261125-0030, the installer installs improved-20261117b.
+
+That is the improved-20261117 payload, plus the installer's save-folder creation.
 
 The later improvements are held back for now, because the newer payload stopped at the first step of every boot on a real console.
 
@@ -251,7 +253,9 @@ upstream からの改良点は次のとおりです。
 
 詳しくは [CivSwitchFS のリリース](https://github.com/yyoossk/CivSwitchFS/releases) を見てください。
 
-build 20261125-0000 では、インストーラーが入れるのは improved-20261117 (タイミング学習とフリーズ修正) です。
+build 20261125-0030 では、インストーラーが入れるのは improved-20261117b です。
+
+improved-20261117 のペイロードに、インストーラーのセーブフォルダ作成を追加したものです。
 
 それ以降の改良は、新しいペイロードが実機で毎回最初の段階で止まってしまうため、いったん見合わせています。
 

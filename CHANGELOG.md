@@ -5,6 +5,19 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-0030
+
+- The autoloader now installs the improved-20261117b bootstrap.
+- Its Load Game payload is byte-identical to improved-20261117 (timing learning + freeze fix).
+- Its save installer creates the save:/saves and save:/saves/Single folders first when they are missing, like improved-20261124b.
+- Build 20261125-0000 could not install the plain improved-20261117 bootstrap on consoles whose save data has no saves/Single folder ("create : 0x202").
+- Nothing else changes from build 20261125-0000.
+- オートローダーが improved-20261117b のブートストラップを入れるようになりました。
+- 「ゲームをロード」で動くペイロードは improved-20261117 とバイト単位で同一です (タイミング学習+フリーズ修正)。
+- セーブのインストーラーは、improved-20261124b と同様に、フォルダが無い場合に save:/saves と save:/saves/Single を先に作ります。
+- build 20261125-0000 は、saves/Single フォルダが無い本体では素の improved-20261117 を入れられませんでした (「create : 0x202」)。
+- それ以外は build 20261125-0000 から変更ありません。
+
 ## 20261125-0000
 
 - This build rolls the autoloader bootstrap back to improved-20261117 (timing learning + freeze fix).
