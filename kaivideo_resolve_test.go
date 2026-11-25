@@ -11,7 +11,7 @@ func TestKaiVideoResolves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tag != "v1.16.0" {
+	if tag != "v1.17.0" {
 		t.Fatalf("tag = %q, want v1.12.0", tag)
 	}
 	found := false

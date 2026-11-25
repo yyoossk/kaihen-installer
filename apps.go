@@ -38,6 +38,7 @@ type appEntry struct {
 	Source        string       `json:"source,omitempty"`      // "release" | "zip"
 	AssetHint     string       `json:"assetHint,omitempty"`   // exact release asset name to prefer (e.g. a Switch 2 build among several .nro assets)
 	InstallPath   string       `json:"installPath,omitempty"` // SD path relative to switch/ when a bare .nro must be installed under a fixed folder/name instead of switch/<asset name>
+	PreRelease    bool         `json:"preRelease,omitempty"`  // resolve the newest release overall, prereleases included, instead of the newest stable
 	Extras        []extraAsset `json:"extras,omitempty"`      // extra files from the same release the app needs on the SD card
 	AssetName     string       `json:"assetName"`
 	AssetURL      string       `json:"assetUrl,omitempty"`
@@ -108,7 +109,7 @@ func builtinApps() []*appEntry {
 		{ID: "Rodpad/SW2Transfer", Kind: "nro", Builtin: true, Name: "SW2Transfer", Source: "release"},
 		{ID: "flex36ty/switch2-gamevault", Kind: "nro", Builtin: true, Name: "Game Vault", Source: "release"},
 		{ID: "XITRIX/ppsspp-nx2", Kind: "nro", Builtin: true, Name: "PPSSPP NX2", Source: "release"},
-		{ID: "Rodpad/SW2PS2", Kind: "nro", Builtin: true, Name: "SW2PS2", Source: "release"},
+		{ID: "Rodpad/SW2PS2", Kind: "nro", Builtin: true, Name: "SW2PS2", Source: "release", PreRelease: true},
 		{ID: "BlafKing/KaiDump", Kind: "nro", Builtin: true, Name: "KaiDump", Source: "release"},
 		{ID: "venustrikes/ouncemtp", Kind: "nro", Builtin: true, Name: "OunceMTP", Source: "release"},
 		{ID: "amariscalc/WinampNX2", Kind: "nro", Builtin: true, Name: "WinampNX2", Source: "release"},
@@ -178,8 +179,8 @@ func appsInit() {
 		if !ok {
 			continue
 		}
-		if a.Kind != b.Kind || a.Host != b.Host || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || !extrasEqual(a.Extras, b.Extras) {
-			a.Kind, a.Host, a.AssetHint, a.InstallPath = b.Kind, b.Host, b.AssetHint, b.InstallPath
+		if a.Kind != b.Kind || a.Host != b.Host || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || a.PreRelease != b.PreRelease || !extrasEqual(a.Extras, b.Extras) {
+			a.Kind, a.Host, a.AssetHint, a.InstallPath, a.PreRelease = b.Kind, b.Host, b.AssetHint, b.InstallPath, b.PreRelease
 			a.Extras = append([]extraAsset(nil), b.Extras...)
 			changed = true
 		}
@@ -268,18 +269,25 @@ func fetchRelease(a *appEntry) (string, []relAsset, error) {
 		return rel.TagName, out, nil
 	}
 	tag := ""
-	_, final, err := httpGetFinal("https://github.com/" + a.ID + "/releases/latest")
-	if err == nil {
-		if i := strings.Index(final, "/releases/tag/"); i >= 0 {
-			if t, uerr := url.PathUnescape(strings.TrimSuffix(final[i+len("/releases/tag/"):], "/")); uerr == nil {
-				tag = t
+	if !a.PreRelease {
+		// /releases/latest resolves the newest stable release.
+		// Entries flagged PreRelease skip it on purpose: their
+		// catalog tracks the newest release overall, prereleases
+		// included, which the list-page fallback below yields.
+		_, final, err := httpGetFinal("https://github.com/" + a.ID + "/releases/latest")
+		if err == nil {
+			if i := strings.Index(final, "/releases/tag/"); i >= 0 {
+				if t, uerr := url.PathUnescape(strings.TrimSuffix(final[i+len("/releases/tag/"):], "/")); uerr == nil {
+					tag = t
+				}
 			}
 		}
 	}
 	if tag == "" {
 		// Prerelease-only repositories have no /releases/latest target
-		// (it 404s); take the newest entry from the releases list page
-		// instead, which includes prereleases.
+		// (it 404s), and PreRelease entries skip it by design; take
+		// the newest entry from the releases list page instead, which
+		// includes prereleases.
 		body, lerr := httpGet("https://github.com/" + a.ID + "/releases")
 		if lerr != nil {
 			if strings.Contains(lerr.Error(), "404") {
@@ -917,6 +925,12 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 		appsMu.Lock()
 		rerr := refreshAppLocked(a, true, send)
 		appsMu.Unlock()
+		// kaiHEN 20261123's shared libraries belong on the SD card
+		// at /kaihen/lib; the bundled acquisition engine predates
+		// that layout and never copies them, so sync them here, on
+		// the install path that already talks FTP to the console.
+		// Best effort: a failure never blocks the app install.
+		syncKaihenLib(ip, lang, send)
 		rootDir := filepath.Join(appCacheDir(id), "root")
 		if _, err := os.Stat(rootDir); err == nil {
 			if err := ftpUploadOzTree(ip, rootDir, lang, send); err != nil {

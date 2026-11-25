@@ -11,8 +11,8 @@ func TestPkforgeResolves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fetchRelease: %v", err)
 	}
-	if tag != "v0.7.4" {
-		t.Fatalf("tag = %q, want %q", tag, "v0.7.4")
+	if tag != "v0.7.5" {
+		t.Fatalf("tag = %q, want %q", tag, "v0.7.5")
 	}
 	if !pickNroAsset(a, assets) {
 		t.Fatalf("no downloadable asset among: %v", assets)

@@ -6,14 +6,19 @@ import "testing"
 // SW2SNES, SW2Transfer, SW2PS2): each must resolve its newest
 // release and its single .nro asset.
 func TestRodpadResolves(t *testing.T) {
-	cases := []struct{ id, tag, nro string }{
-		{"Rodpad/SW2NES", "v2.12.2", "sw2nes.nro"},
-		{"Rodpad/SW2SNES", "v1.0.1", "sw2snes.nro"},
-		{"Rodpad/SW2Transfer", "v2.0.0", "sw2transfer.nro"},
-		{"Rodpad/SW2PS2", "v1.1.0", "sw2ps2.nro"},
+	cases := []struct {
+		id, tag, nro string
+		pre          bool
+	}{
+		{"Rodpad/SW2NES", "v2.12.2", "sw2nes.nro", false},
+		{"Rodpad/SW2SNES", "v1.0.1", "sw2snes.nro", false},
+		{"Rodpad/SW2Transfer", "v2.0.0", "sw2transfer.nro", false},
+		// SW2PS2 tracks the newest release overall (the experimental
+		// prerelease line), per the user's 2026-11-25 decision.
+		{"Rodpad/SW2PS2", "v1.1.0-experimental.2", "sw2ps2.nro", true},
 	}
 	for _, c := range cases {
-		a := &appEntry{ID: c.id, Kind: "nro", Source: "release"}
+		a := &appEntry{ID: c.id, Kind: "nro", Source: "release", PreRelease: c.pre}
 		tag, assets, err := fetchRelease(a)
 		if err != nil {
 			t.Fatalf("%s: %v", c.id, err)

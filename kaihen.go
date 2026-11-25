@@ -47,16 +47,26 @@ import (
 // exits, when HEN startup reports failure, or when the page goes away.
 
 const (
-	// Pinned to 20261117.1. Its hbmenu carries the official fix for
-	// the textInit() 2345-0011 failure (since 20261116, hbmenu no
-	// longer looks up the system language at startup), so the dist
-	// is used exactly as published, with no local modification. The
-	// engine validates only that the dist files exist (no version
-	// or hash check); the layout is unchanged from earlier releases.
-	kaihenTag  = "20261117.1"
-	kaihenURL  = "https://github.com/ouncebrew/kaihen/releases/download/20261117.1/kaiHEN-20261117.1.zip"
-	kaihenSize = 12347885
-	kaihenSHA  = "3f7ded0b360b2f0bf97f8e958c3bfe93a8d76dd8d43ce2e8f7d060e647ad0978"
+	// Pinned to 20261123, the first kaiHEN with dynamically linked
+	// homebrew: its nx-hbloader maps a program's shared libraries
+	// from the program's folder and from sdmc:/kaihen/lib. The dist
+	// is used exactly as published, with no local modification. Its
+	// layout changed: the SD tree now sits under sdcard/ (kaihen/bin,
+	// kaihen/lib), so ensureKaihen additionally places byte-identical
+	// copies of the four files the bundled kit engine expects at its
+	// legacy paths (hen/main, game/main, hbmenu.nro,
+	// programs/ounceshell.nro). Upstream asks for ns2jb from
+	// 2026-11-24 or later because that acquisition copies the
+	// sdcard/ folder to the SD card; the bundled engine predates it
+	// and copies only the files above, so the installer syncs
+	// sdcard/kaihen/lib to the SD card itself over FTP during
+	// catalog installs (syncKaihenLib). Statically linked homebrew
+	// does not need the libraries. The engine validates only that
+	// the dist files exist (no version or hash check).
+	kaihenTag  = "20261123"
+	kaihenURL  = "https://github.com/ouncebrew/kaihen/releases/download/20261123/kaiHEN-20261123.zip"
+	kaihenSize = 20761779
+	kaihenSHA  = "24c0e68125817ab751f96985af63347a4e8bec7aced37f713b3fbb3d0eb4680c"
 )
 
 var (
@@ -101,7 +111,7 @@ func ensureKaihen(log logFn, lang string) error {
 	root := kaihenDistDir()
 	// Drop any previous distribution so stale files cannot survive an update.
 	for _, name := range []string{"bootstrap.bin", "hbmenu.nro", "ro", "hen",
-		"game", "programs", "licenses", ".kaihen-tag"} {
+		"game", "programs", "licenses", "sdcard", ".kaihen-tag"} {
 		os.RemoveAll(filepath.Join(root, name))
 	}
 	for _, f := range zr.File {
@@ -129,6 +139,27 @@ func ensureKaihen(log logFn, lang string) error {
 			return err
 		}
 	}
+	// The 20261123 layout keeps the engine-facing files under
+	// sdcard/; the bundled kit engine looks for them at the legacy
+	// root paths, so place byte-identical copies there.
+	for _, cp := range [][2]string{
+		{filepath.Join("sdcard", "kaihen", "bin", "hen", "main"), filepath.Join("hen", "main")},
+		{filepath.Join("sdcard", "kaihen", "bin", "game", "main"), filepath.Join("game", "main")},
+		{filepath.Join("sdcard", "hbmenu.nro"), "hbmenu.nro"},
+		{filepath.Join("sdcard", "switch", "ounceshell.nro"), filepath.Join("programs", "ounceshell.nro")},
+	} {
+		raw, err := os.ReadFile(filepath.Join(root, cp[0]))
+		if err != nil {
+			return errors.New(tr(lang, "missingReq"))
+		}
+		dst := filepath.Join(root, cp[1])
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(dst, raw, 0o644); err != nil {
+			return err
+		}
+	}
 	if err := os.WriteFile(filepath.Join(root, ".kaihen-tag"),
 		[]byte(kaihenTag+"\n"), 0o644); err != nil {
 		return err
@@ -138,6 +169,46 @@ func ensureKaihen(log logFn, lang string) error {
 	}
 	log(tr(lang, "khDlDone"))
 	return nil
+}
+
+// syncKaihenLib copies the kaiHEN shared libraries (sdcard/kaihen/lib
+// of the pinned dist) to the SD card's /kaihen/lib over FTP. kaiHEN
+// 20261123's dynamically linked homebrew needs them there; upstream's
+// newer acquisition copies the sdcard/ folder itself, but the bundled
+// kit engine predates that layout, so the installer does it here, on
+// the catalog-install path that already talks FTP to the console.
+// Best effort: callers ignore failures (a broken FTP path fails the
+// install itself right after anyway). A matching sentinel library on
+// the SD card means the set was synced before, so repeat installs
+// cost one SIZE probe.
+func syncKaihenLib(ip, lang string, log logFn) {
+	libDir := filepath.Join(kaihenDistDir(), "sdcard", "kaihen", "lib")
+	ents, err := os.ReadDir(libDir)
+	if err != nil {
+		return
+	}
+	sess, err := ozConnect(ip, lang)
+	if err != nil {
+		return
+	}
+	defer sess.close()
+	if fi, err := os.Stat(filepath.Join(libDir, "libounce.so.1")); err == nil {
+		if rs, ok := sess.remoteSize("kaihen/lib/libounce.so.1"); ok && rs == fi.Size() {
+			return
+		}
+	}
+	sent := false
+	for _, e := range ents {
+		if e.IsDir() {
+			continue
+		}
+		if err := uploadFileSession(sess, "kaihen/lib/"+e.Name(), filepath.Join(libDir, e.Name()), log); err == nil {
+			sent = true
+		}
+	}
+	if sent {
+		log(tr(lang, "libSync"))
+	}
 }
 
 func killProcessTree(cmd *exec.Cmd) {

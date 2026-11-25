@@ -40,11 +40,23 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
 - **Installs kaiHEN in a few clicks** — install the loader save, then start kaiHEN with the bundled CivSwitch Kit engine (retries are automatic).
 
-  kaiHEN is pinned to **20261117.1** and used **exactly as published** —no file is modified (its hbmenu carries the official fix for the textInit 2345-0011 error).
+  kaiHEN is pinned to **20261123** and used **exactly as published** — no file is modified.
+
+  20261123 is the first kaiHEN with dynamically linked homebrew support.
+
+  Its layout changed (the SD tree now sits under sdcard/), so the installer places the files its launch engine expects, and copies the shared libraries (kaihen/lib) to the SD card over FTP during catalog installs.
+
+  Statically linked homebrew runs as before.
 
   **数クリックで kaiHEN を導入** — ローダーのセーブを入れて、同梱のCivSwitch Kit エンジンで kaiHEN を起動します (リトライは自動)。
 
-  kaiHEN は **20261117.1** に固定し、**公開ファイルに一切手を加えず**そのまま使います (hbmenu には textInit 2345-0011 エラーの公式修正が含まれます)。
+  kaiHEN は **20261123** に固定し、**公開ファイルに一切手を加えず**そのまま使います。
+
+  20261123 は動的リンクの自作ソフトに対応した初の kaiHEN です。
+
+  配布レイアウトが変わり (SD ツリーが sdcard/ 配下になりました)、インストーラーは起動エンジンが必要とするファイルを配置し、共有ライブラリ (kaihen/lib) はカタログのインストール時に FTP で SD カードへコピーします。
+
+  静的リンクの自作ソフトは従来通り動きます。
 - **Autoloader** — after a one-time setup, kaiHEN starts from **Load Game** alone: no PC, no phone, no Pico, no network.
 
   Includes the CivSwitchFS payload (stock-20261125b) from the companion fork.

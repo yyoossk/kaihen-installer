@@ -5,6 +5,21 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261125-1146
+
+- Updated the pinned kaiHEN to 20261123, the first release with dynamically linked homebrew.
+- The distribution layout changed (the SD tree now sits under sdcard/), so the installer places the files its launch engine expects and copies the shared libraries (kaihen/lib) to the SD card over FTP during catalog installs.
+- Statically linked homebrew runs as before.
+- Upstream still marks 20261123 as a work in progress, and launching it through this installer is not yet verified on real hardware; if it does not start, reinstall the previous build (20261125-0259), which downloads kaiHEN 20261117.1 again automatically.
+- SW2PS2 now tracks the newest release overall, including the experimental prereleases (currently v1.1.0-experimental.2), instead of only the newest stable.
+- KaiPlayer v1.6.0, KaiRadio v1.6.0, KaiVideo v1.17.0 and PKForge v0.7.5 are the newest upstream releases; the catalog picks them up automatically at install time.
+- kaiHEN のピンを、動的リンクの自作ソフトに対応した初のリリース 20261123 に更新しました。
+- 配布レイアウトが変わった (SD ツリーが sdcard/ 配下になった) ため、インストーラーが起動エンジン向けのファイルを配置し、共有ライブラリ (kaihen/lib) はカタログのインストール時に FTP で SD カードへコピーします。
+- 静的リンクの自作ソフトは従来通り動きます。
+- 上流では 20261123 はまだ WIP 扱いで、このインストーラー経由での起動は実機未検証です。起動しない場合は前のビルド (20261125-0259) を入れ直してください。kaiHEN 20261117.1 を自動で取り直します。
+- SW2PS2 は安定版だけでなく実験版プレリリースも含めた最新版 (現在 v1.1.0-experimental.2) を取るようになりました。
+- KaiPlayer v1.6.0、KaiRadio v1.6.0、KaiVideo v1.17.0、PKForge v0.7.5 が上流の最新版です。カタログはインストール時に自動で取得します。
+
 ## 20261125-0259
 
 - Fixed a bug that made zip-format catalog apps fail to install after an app restart, ending with "Cannot read the payload file".

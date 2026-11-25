@@ -54,6 +54,8 @@ func TestAppsInitKeepsResolvedSource(t *testing.T) {
 			LatestTag: "v0.6.0"},
 		{ID: "sh00kapic/PKForge-Switch2", Kind: "nro", Builtin: true, Name: "PKForge",
 			Source: "release", AssetHint: "PKForge-AIO.nro", InstallPath: ""},
+		{ID: "Rodpad/SW2PS2", Kind: "nro", Builtin: true, Name: "SW2PS2",
+			Source: "release", PreRelease: false},
 	})
 
 	w := findSeeded(t, "amariscalc/WinampNX2")
@@ -63,6 +65,10 @@ func TestAppsInitKeepsResolvedSource(t *testing.T) {
 	pk := findSeeded(t, "sh00kapic/PKForge-Switch2")
 	if pk.InstallPath != "PKForge/PKForge.nro" {
 		t.Fatalf("definition refresh lost: InstallPath = %q, want %q", pk.InstallPath, "PKForge/PKForge.nro")
+	}
+	sw := findSeeded(t, "Rodpad/SW2PS2")
+	if !sw.PreRelease {
+		t.Fatal("definition refresh lost: SW2PS2 PreRelease is still false")
 	}
 	// An entry with no resolved asset name yet has no cached payload
 	// file; the cache dir itself must not count as one.
