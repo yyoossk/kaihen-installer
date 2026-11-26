@@ -120,6 +120,7 @@ func builtinApps() []*appEntry {
 		{ID: "ac1dburnz/melonDS-switch2", Kind: "nro", Builtin: true, Name: "melonDS-switch2", Source: "release"},
 		{ID: "sh00kapic/PKForge-Switch2", Kind: "nro", Builtin: true, Name: "PKForge", Source: "release", AssetHint: "PKForge-AIO.nro", InstallPath: "PKForge/PKForge.nro"},
 		{ID: "cainan-c/reset-launch-version", Kind: "nro", Builtin: true, Name: "Reset Launch Version", Source: "release"},
+		{ID: "AlexTech01/local-update-tool", Kind: "nro", Builtin: true, Name: "Local Update Tool", Source: "release", InstallPath: "local-update-tool/local-update-tool.nro"},
 	}
 }
 

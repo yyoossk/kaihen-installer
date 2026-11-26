@@ -5,6 +5,19 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261126-1427
+
+- One app was added to the homebrew catalog, for 36 apps in total.
+- Local Update Tool (by AlexTech01) lets a kaiHEN console install game updates sent from another console through "Match Version with Local Users" that would normally be rejected.
+- The catalog installs it as /switch/local-update-tool/local-update-tool.nro, the layout its release asks for.
+- The catalog picks up the newest upstream releases automatically at install time; SW2PS2 has now graduated to the stable v1.2.0.
+- The kaiHEN pin (20261123) and the autoloader bootstrap pin (stock-20261125b) are unchanged.
+- 自作ソフトのカタログに1本を追加し、全36本になりました。
+- Local Update Tool (AlexTech01 作) は、他の本体から「近くのユーザーとバージョンを合わせる」で送られてきたゲーム更新のうち、通常は拒否されるものを kaiHEN 搭載の本体へインストールできるツールです。
+- カタログからは、リリースの指定どおり /switch/local-update-tool/local-update-tool.nro にインストールします。
+- カタログはインストール時に上流の最新版を自動で取得します。SW2PS2 は安定版 v1.2.0 になりました。
+- kaiHEN のピン (20261123) とオートローダーのブートストラップのピン (stock-20261125b) は変更ありません。
+
 ## 20261125-1146
 
 - Updated the pinned kaiHEN to 20261123, the first release with dynamically linked homebrew.

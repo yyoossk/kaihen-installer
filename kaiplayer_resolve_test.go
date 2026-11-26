@@ -10,8 +10,8 @@ func TestKaiPlayerResolves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tag != "v1.6.0" {
-		t.Fatalf("tag = %q, want v1.6.0", tag)
+	if tag != "v1.7.0" {
+		t.Fatalf("tag = %q, want v1.7.0", tag)
 	}
 	found := false
 	for _, as := range assets {

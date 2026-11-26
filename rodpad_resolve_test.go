@@ -12,10 +12,11 @@ func TestRodpadResolves(t *testing.T) {
 	}{
 		{"Rodpad/SW2NES", "v2.12.2", "sw2nes.nro", false},
 		{"Rodpad/SW2SNES", "v1.0.1", "sw2snes.nro", false},
-		{"Rodpad/SW2Transfer", "v2.0.0", "sw2transfer.nro", false},
-		// SW2PS2 tracks the newest release overall (the experimental
-		// prerelease line), per the user's 2026-11-25 decision.
-		{"Rodpad/SW2PS2", "v1.1.0-experimental.2", "sw2ps2.nro", true},
+		{"Rodpad/SW2Transfer", "v2.0.1", "sw2transfer.nro", false},
+		// SW2PS2 tracks the newest release overall (prereleases
+		// included), per the user's 2026-11-25 decision; the newest
+		// overall is now the stable v1.2.0 (2026-11-26).
+		{"Rodpad/SW2PS2", "v1.2.0", "sw2ps2.nro", true},
 	}
 	for _, c := range cases {
 		a := &appEntry{ID: c.id, Kind: "nro", Source: "release", PreRelease: c.pre}
