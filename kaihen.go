@@ -379,6 +379,10 @@ func kaihenStartHandler(w http.ResponseWriter, r *http.Request) {
 		rawSend(tr(lang, "failed") + err.Error())
 	}
 
+	if err := ensureNode(send, lang); err != nil {
+		fail(err)
+		return
+	}
 	if err := ensureKaihen(send, lang, variant); err != nil {
 		fail(err)
 		return

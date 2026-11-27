@@ -2,7 +2,9 @@
 // homebrew on Switch 2 through the CivSwitch loader chain.
 //
 // No Python / Node installation is needed on the user's machine; the
-// bundled Node.js (runtime/node.exe) runs the kaiHEN launcher engine.
+// kaiHEN launcher engine runs on Node.js, which the Windows build
+// downloads once into runtime/ on the first kaiHEN start (the Android
+// build bundles it and passes its path through the environment).
 //
 // Folder layout (everything relative to this executable):
 //
@@ -10,7 +12,7 @@
 //	                          install a future loader version
 //	assets/save_template.bin  save template for the loader save (XSTRIG)
 //	assets/kaihen/            kaiHEN launcher engine (civ7-fs-kaihen)
-//	runtime/                  bundled Node.js
+//	runtime/                  Node.js (downloaded on first use)
 package main
 
 import (

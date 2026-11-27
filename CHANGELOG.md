@@ -5,6 +5,11 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261128-0142
+
+- Smaller downloads. The Windows package no longer bundles Node.js (94 MB): it is downloaded once, with hash verification, the first time you start kaiHEN, so the Windows zip drops from about 44 MB to about 9 MB. The Android app no longer carries the Pico UF2 files. On Android, Node.js stays bundled, because Android does not allow running downloaded program code.
+- 軽量化しました。Windows 版は Node.js (94MB) の同梱をやめ、kaiHEN の初回起動時にハッシュ検証付きでダウンロードする形にしたため、zip が約44MBから約9MBになりました。Android 版は Pico 用 UF2 を外しました。Android の Node.js は同梱のままです (Android では、ダウンロードしたプログラムコードを実行できない決まりのためです)。
+
 ## 20261128-0107
 
 - Correction to the previous build: the homebrew catalog buttons are on the home screen again, too. The catalog now opens from three places: the home screen, the Install kaiHEN page, and the Autoloader page. A catalog page opened from the home screen shows only the Home button, as before.

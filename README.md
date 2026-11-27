@@ -454,7 +454,7 @@ This software is built on the work of the following people.
 - **kurumuz** — ns2jb
 - **byizmysh** — SWFence
 - **TheNxtBigThing8** — Offline WAN Emulator
-- **Node.js** (OpenJS Foundation) — bundled runtime / 同梱ランタイム
+- **Node.js** (OpenJS Foundation) — engine runtime (downloaded on first use on Windows; bundled in the Android app) / エンジン用ランタイム (Windows 版は初回起動時にダウンロード、Android 版は同梱)
 
 The homebrew apps in the catalog are the work of their respective authors; see the in-app credits page and each app's release page.
 
