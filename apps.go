@@ -936,6 +936,12 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 		appsMu.Lock()
 		rerr := refreshAppLocked(a, true, send)
 		appsMu.Unlock()
+		// A dist with shared libraries (dynamically linked kaiHEN)
+		// needs them on the SD card before any app can rely on them.
+		if err := syncKaihenLib(ip, lang, send); err != nil {
+			fail(err)
+			return
+		}
 		rootDir := filepath.Join(appCacheDir(id), "root")
 		if _, err := os.Stat(rootDir); err == nil {
 			if err := ftpUploadOzTree(ip, rootDir, lang, send); err != nil {

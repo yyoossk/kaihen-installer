@@ -6,18 +6,20 @@ import (
 	"testing"
 )
 
-// Live checks of the pinned kaiHEN dist (20261117.1) and its two
-// variants. Stock: ensureKaihen must download the real release zip,
-// verify it against the pin, and unpack the root layout the bundled
-// kit engine expects (hen/main, game/main, hbmenu.nro,
-// programs/ounceshell.nro). Patched: the same dist with
-// switch2-modbridge's prebuilt ro:dmnt binaries (ro/main, hen/main)
-// overlaid and verified against their own pins, tagged
-// "20261117.1+patched". Switching variants re-prepares the dist.
+// Live checks of the pinned kaiHEN dists and their two variants.
+// Stock: ensureKaihen must download the real 20261127.1 release
+// zip, verify it against the pin, and unpack the sdcard/ layout
+// into the root layout the bundled kit engine expects (hen/main,
+// game/main, hbmenu.nro, programs/ounceshell.nro), keeping the
+// kaihen/lib shared-library tree for the SD sync. Patched: the
+// separate 20261117.1 base dist with switch2-modbridge's prebuilt
+// ro:dmnt binaries (ro/main, hen/main) overlaid and verified
+// against their own pins, tagged "20261117.1+patched". Switching
+// variants re-prepares the dist.
 
 const (
-	stockHenSHA = "b4f161e36482d50de006b3caee909eb8413a42b6593a602324cface3d2a5ead9"
-	stockRoSHA  = "2e577a4c680a3ba580bcda2f8d41ada443cb33cad79e06230ce4bcf6700661b7"
+	stockHenSHA = "10bd5c8e702d88c821f6a3af1e0d37668ce9f0649f0005d745a45c05196dffce"
+	stockRoSHA  = "22f7954c015ec144bb3bc5d57fea592685156940b0b4d4f3b9d53cb1588644ea"
 )
 
 func TestEnsureKaihenDist(t *testing.T) {
@@ -40,6 +42,11 @@ func TestEnsureKaihenDist(t *testing.T) {
 	}
 	if got := fileSHA(filepath.Join(root, "ro", "main")); got != stockRoSHA {
 		t.Fatalf("stock ro/main sha = %s, want %s", got, stockRoSHA)
+	}
+	// The shared-library tree must survive preparation: catalog
+	// installs sync it to the SD card for dynamically linked apps.
+	if _, err := os.Stat(filepath.Join(root, "sdcard", "kaihen", "lib", "libounce.so.1")); err != nil {
+		t.Fatalf("stock dist lost its kaihen/lib tree: %v", err)
 	}
 }
 

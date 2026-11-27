@@ -318,6 +318,71 @@ func TestOzUploadRetriesOnSecondServer(t *testing.T) {
 	}
 }
 
+// The kaihen/lib sync uploads every library file of the prepared
+// dist to /kaihen/lib on the card, skips files already there with
+// the same size, and is a no-op for a dist without a library tree.
+func TestSyncKaihenLib(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+
+	f := newFakeOzFTP(t, "/switch")
+	addr := f.ln.Addr().String()
+
+	// No dist at all: no-op, and the server is never contacted.
+	if err := syncKaihenLibAddrs([]string{addr}, "en", func(string) {}); err != nil {
+		t.Fatalf("sync without dist: %v", err)
+	}
+	f.mu.Lock()
+	contacted := len(f.cmds) > 0
+	f.mu.Unlock()
+	if contacted {
+		t.Fatal("server contacted even though the dist has no lib tree")
+	}
+
+	libDir := filepath.Join(kaihenDistDir(), "sdcard", "kaihen", "lib")
+	if err := os.MkdirAll(libDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := []byte("fake libounce bytes")
+	if err := os.WriteFile(filepath.Join(libDir, "libounce.so.1"), content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := syncKaihenLibAddrs([]string{addr}, "en", func(string) {}); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	f.mu.Lock()
+	got := f.files["/kaihen/lib/libounce.so.1"]
+	stors := 0
+	for _, c := range f.cmds {
+		if strings.HasPrefix(c, "STOR ") {
+			stors++
+		}
+	}
+	f.mu.Unlock()
+	if string(got) != string(content) {
+		t.Fatalf("synced file = %q, want %q", got, content)
+	}
+	if stors != 1 {
+		t.Fatalf("STOR count = %d, want 1", stors)
+	}
+	// Second sync: same size on the card, nothing is re-sent.
+	if err := syncKaihenLibAddrs([]string{addr}, "en", func(string) {}); err != nil {
+		t.Fatalf("second sync: %v", err)
+	}
+	f.mu.Lock()
+	stors = 0
+	for _, c := range f.cmds {
+		if strings.HasPrefix(c, "STOR ") {
+			stors++
+		}
+	}
+	f.mu.Unlock()
+	if stors != 1 {
+		t.Fatalf("second sync re-sent the file: STOR count = %d, want 1", stors)
+	}
+}
+
 // When OunceShell answers, the plugin address is never tried.
 func TestOzConnectPrefersOunceShell(t *testing.T) {
 	oz := newFakeOzFTP(t, "/switch")

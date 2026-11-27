@@ -40,9 +40,17 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
 - **Installs kaiHEN in a few clicks** — install the loader save, then start kaiHEN with the bundled CivSwitch Kit engine (retries are automatic).
 
-  kaiHEN is pinned to **20261117.1**, the newest release upstream still publishes (the 20261123 release was deleted upstream).
+  On the kaiHEN page you can choose between the **stock** type, used exactly as published, and a **patched** type.
 
-  On the kaiHEN page you can choose between the **stock** type, used exactly as published, and a **patched** type that overlays switch2-modbridge's ro:dmnt binaries onto the same stock release.
+  The stock type is pinned to **20261127.1**, the newest kaiHEN release.
+
+  To update kaiHEN, just update this app and start kaiHEN with the stock type: the new release is downloaded and prepared automatically.
+
+  20261127.1 brings back support for dynamically linked homebrew, and the shared libraries it needs (kaihen/lib) are copied to the SD card automatically when you install homebrew from the catalog.
+
+  When you start 20261127.1 for the first time, restart the console first if an older kaiHEN has run since the last restart (an upstream requirement for this release).
+
+  The patched type keeps its own base pin: it overlays switch2-modbridge's ro:dmnt binaries onto kaiHEN **20261117.1**, the release those patches are built against, so it does not follow the stock pin.
 
   The patched type is what patched-only homebrew such as KaiVesper needs.
 
@@ -52,9 +60,17 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
   **数クリックで kaiHEN を導入** — ローダーのセーブを入れて、同梱のCivSwitch Kit エンジンで kaiHEN を起動します (リトライは自動)。
 
-  kaiHEN は **20261117.1** に固定しています。上流で現存する最新リリースです (20261123 は上流で削除されました)。
+  「kaiHENを導入」のページで、公開ファイルをそのまま使う**純正版**と、**パッチ版**を選べます。
 
-  「kaiHENを導入」のページで、公開ファイルをそのまま使う**純正版**と、同じ純正リリースに switch2-modbridge の ro:dmnt バイナリを重ねた**パッチ版**を選べます。
+  純正版は、最新の kaiHEN **20261127.1** に固定しています。
+
+  kaiHEN をアップデートするには、このアプリを更新して純正版のまま kaiHEN を起動するだけです。新しいリリースは自動でダウンロードして用意します。
+
+  20261127.1 では動的リンクの自作ソフトへの対応が戻り、必要な共有ライブラリ (kaihen/lib) は、カタログから自作ソフトをインストールするときに SD カードへ自動でコピーします。
+
+  20261127.1 を初めて起動するときは、前回の再起動後に古い kaiHEN を起動したことがある場合、先に本体を再起動してください (この版の上流の要件です)。
+
+  パッチ版の土台は別に固定しています。パッチが対応するリリースである kaiHEN **20261117.1** に switch2-modbridge の ro:dmnt バイナリを重ねたもので、純正版のピンには追従しません。
 
   パッチ版は、KaiVesper などパッチ版専用の自作ソフトに必要です。
 

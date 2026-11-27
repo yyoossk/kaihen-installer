@@ -5,6 +5,17 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261127-2207
+
+- The stock kaiHEN is now 20261127.1, the newest release, and the patched type keeps its own base pin (kaiHEN 20261117.1) instead of following it.
+- To update kaiHEN, just update this app and start kaiHEN with the stock type: the new release is downloaded and prepared automatically.
+- When you start 20261127.1 for the first time, restart the console first if an older kaiHEN has run since the last restart (an upstream requirement for this release).
+- 20261127.1 brings back support for dynamically linked homebrew, and the shared libraries it needs (kaihen/lib) are now copied to the SD card automatically when you install homebrew from the catalog.
+- 純正版の kaiHEN を最新の 20261127.1 にし、パッチ版の土台は追従させず kaiHEN 20261117.1 に別で固定しました。
+- kaiHEN をアップデートするには、このアプリを更新して純正版のまま kaiHEN を起動するだけです。新しいリリースは自動でダウンロードして用意します。
+- 20261127.1 を初めて起動するときは、前回の再起動後に古い kaiHEN を起動したことがある場合、先に本体を再起動してください (この版の上流の要件です)。
+- 20261127.1 で動的リンクの自作ソフトへの対応が戻り、必要な共有ライブラリ (kaihen/lib) を、カタログから自作ソフトをインストールするときに SD カードへ自動でコピーするようにしました。
+
 ## 20261127-2153
 
 - N Launcher (by davidkalil10) was added to the stock kaiHEN catalog page, for 38 catalog apps in total.

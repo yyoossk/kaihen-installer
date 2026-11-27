@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,23 +48,35 @@ import (
 // exits, when HEN startup reports failure, or when the page goes away.
 
 const (
-	// Pinned to 20261117.1, the newest kaiHEN release upstream still
-	// publishes (the 20261123 release was deleted upstream on
-	// 2026-11-26). Two variants are offered, chosen on the kaiHEN
-	// page: the stock distribution, used exactly as published, and a
-	// patched variant that overlays nicholasyoannou/switch2-modbridge's
-	// prebuilt ro:dmnt binaries (kaihen/bin/ro/main and
-	// kaihen/bin/hen/main from its 20261120 SD package) onto the same
-	// stock dist. The patched variant is what KaiVesper and other
-	// modloader software require; everything else runs on stock. The
-	// variant is recorded in the dist tag file ("20261117.1" or
+	// Two variants are offered, chosen on the kaiHEN page, with
+	// independent pins. The stock variant tracks the newest kaiHEN
+	// release (20261127.1, which restored dynamically linked
+	// homebrew support with the sdcard/ layout and the kaihen/lib
+	// shared libraries), used exactly as published. The patched
+	// variant overlays nicholasyoannou/switch2-modbridge's prebuilt
+	// ro:dmnt binaries (kaihen/bin/ro/main and kaihen/bin/hen/main
+	// from its 20261120 SD package) onto kaiHEN 20261117.1 — the
+	// release those patches are built against — so its base pin
+	// (kaihenBase* below) stays on 20261117.1 even as the stock pin
+	// moves on. The patched variant is what KaiVesper and other
+	// modloader software require; everything else runs on stock.
+	// The variant is recorded in the dist tag file ("20261127.1" or
 	// "20261117.1+patched"), and switching variants re-prepares the
 	// dist. The engine validates only that the dist files exist (no
 	// version or hash check).
-	kaihenTag  = "20261117.1"
-	kaihenURL  = "https://github.com/ouncebrew/kaihen/releases/download/20261117.1/kaiHEN-20261117.1.zip"
-	kaihenSize = 12347885
-	kaihenSHA  = "3f7ded0b360b2f0bf97f8e958c3bfe93a8d76dd8d43ce2e8f7d060e647ad0978"
+	kaihenTag  = "20261127.1"
+	kaihenURL  = "https://github.com/ouncebrew/kaihen/releases/download/20261127.1/kaiHEN-20261127.1.zip"
+	kaihenSize = 20839121
+	kaihenSHA  = "0c64111062a85fd9a796ed2e0dda0c20cf279812cd16c43d9c85535752b3a4d1"
+
+	// The patched variant keeps its own base pin, independent of
+	// the stock pin above: switch2-modbridge's patches are built
+	// against 20261117.1, so the patched dist is always prepared
+	// from that release even as the stock pin moves on.
+	kaihenBaseTag  = "20261117.1"
+	kaihenBaseURL  = "https://github.com/ouncebrew/kaihen/releases/download/20261117.1/kaiHEN-20261117.1.zip"
+	kaihenBaseSize = 12347885
+	kaihenBaseSHA  = "3f7ded0b360b2f0bf97f8e958c3bfe93a8d76dd8d43ce2e8f7d060e647ad0978"
 
 	modbridgeTag     = "20261120"
 	modbridgeURL     = "https://github.com/nicholasyoannou/switch2-modbridge/releases/download/20261120/switch2-modbridge-20261120-sd.zip"
@@ -76,10 +89,11 @@ const (
 )
 
 // kaihenDistTag is the tag-file content identifying a prepared dist:
-// the stock pin, or the pin plus "+patched" for the patched variant.
+// the stock pin, or the patched base pin plus "+patched" for the
+// patched variant.
 func kaihenDistTag(variant string) string {
 	if variant == "patched" {
-		return kaihenTag + "+patched"
+		return kaihenBaseTag + "+patched"
 	}
 	return kaihenTag
 }
@@ -133,7 +147,11 @@ func ensureKaihen(log logFn, lang string, variant string) error {
 		return nil
 	}
 	log(tr(lang, "khDl"))
-	raw, err := httpGetPinned(kaihenURL, kaihenSize, kaihenSHA)
+	pinURL, pinSize, pinSHA := kaihenURL, kaihenSize, kaihenSHA
+	if variant == "patched" {
+		pinURL, pinSize, pinSHA = kaihenBaseURL, kaihenBaseSize, kaihenBaseSHA
+	}
+	raw, err := httpGetPinned(pinURL, pinSize, pinSHA)
 	if err == errPinnedContent {
 		return errors.New(tr(lang, "badContent"))
 	}
@@ -176,14 +194,19 @@ func ensureKaihen(log logFn, lang string, variant string) error {
 		}
 	}
 	// A layout that keeps the engine-facing files under sdcard/
-	// (20261123) needs byte-identical copies at the legacy root
-	// paths the bundled kit engine looks for. Layouts that ship the
-	// files at the root already (20261117.1) skip this.
+	// (20261123, 20261127.1) needs byte-identical copies at the
+	// legacy root paths the bundled kit engine looks for. Layouts
+	// that ship the files at the root already (20261117.1) skip
+	// this. OunceShell sits at sdcard/switch/ounceshell.nro in
+	// 20261123 and inside its own folder from 20261127.1 on; both
+	// sources are tried.
 	for _, cp := range [][2]string{
 		{filepath.Join("sdcard", "kaihen", "bin", "hen", "main"), filepath.Join("hen", "main")},
+		{filepath.Join("sdcard", "kaihen", "bin", "ro", "main"), filepath.Join("ro", "main")},
 		{filepath.Join("sdcard", "kaihen", "bin", "game", "main"), filepath.Join("game", "main")},
 		{filepath.Join("sdcard", "hbmenu.nro"), "hbmenu.nro"},
 		{filepath.Join("sdcard", "switch", "ounceshell.nro"), filepath.Join("programs", "ounceshell.nro")},
+		{filepath.Join("sdcard", "switch", "ounceshell", "ounceshell.nro"), filepath.Join("programs", "ounceshell.nro")},
 	} {
 		raw, err := os.ReadFile(filepath.Join(root, cp[0]))
 		if err != nil {
@@ -996,6 +1019,47 @@ func pathDir(rel string) string {
 		return ""
 	}
 	return rel[:i]
+}
+
+// syncKaihenLib copies the prepared dist's shared libraries
+// (sdcard/kaihen/lib in the distribution) onto the console's SD
+// card, where the loader maps them for dynamically linked
+// homebrew. A dist with no library tree (the 20261117.1-based
+// patched dist) skips this entirely. Files already on the card
+// with the same size are left as is, so repeat installs stay fast.
+func syncKaihenLib(ip, lang string, log logFn) error {
+	return syncKaihenLibAddrs([]string{
+		net.JoinHostPort(ip, strconv.Itoa(ozFtpPort)),
+		net.JoinHostPort(ip, strconv.Itoa(ozPluginPort)),
+	}, lang, log)
+}
+
+func syncKaihenLibAddrs(addrs []string, lang string, log logFn) error {
+	libDir := filepath.Join(kaihenDistDir(), "sdcard", "kaihen", "lib")
+	entries, err := os.ReadDir(libDir)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, e := range entries {
+		if e.Type().IsRegular() {
+			names = append(names, e.Name())
+		}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if err := uploadOzFileAddrs(addrs, "kaihen/lib/"+name,
+			filepath.Join(libDir, name), lang, log); err != nil {
+			return err
+		}
+	}
+	if log != nil {
+		log(tr(lang, "libSync"))
+	}
+	return nil
 }
 
 // ftpUploadOz uploads one .nro into the console's switch folder through
