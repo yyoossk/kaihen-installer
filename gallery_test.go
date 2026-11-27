@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // fakeGalFTP is a minimal FTP server for the gallery client: an
@@ -220,7 +222,13 @@ func TestGalWalkMLSD(t *testing.T) {
 	if s.prefix != "" {
 		t.Fatalf("prefix = %q, want plain dialect", s.prefix)
 	}
-	items, err := s.walk()
+	old := galResolveFn
+	galResolveFn = func(ip, src string) (*galSession, string, error) {
+		ns, err := galConnect(ip, f.port())
+		return ns, "oz", err
+	}
+	defer func() { galResolveFn = old }()
+	items, _, err := galWalk("127.0.0.1", "walktest-mlsd")
 	if err != nil {
 		t.Fatalf("walk: %v", err)
 	}
@@ -244,12 +252,13 @@ func TestGalWalkMLSD(t *testing.T) {
 
 func TestGalWalkLISTFallback(t *testing.T) {
 	f := newFakeGalFTP(t, galTestFiles(), true)
-	s, err := galConnect("127.0.0.1", f.port())
-	if err != nil {
-		t.Fatalf("connect: %v", err)
+	old := galResolveFn
+	galResolveFn = func(ip, src string) (*galSession, string, error) {
+		ns, err := galConnect(ip, f.port())
+		return ns, "oz", err
 	}
-	defer s.close()
-	items, err := s.walk()
+	defer func() { galResolveFn = old }()
+	items, _, err := galWalk("127.0.0.1", "walktest-list")
 	if err != nil {
 		t.Fatalf("walk: %v", err)
 	}
@@ -301,17 +310,26 @@ func TestGalRetrRangeAndThumb(t *testing.T) {
 func TestGalWriteZip(t *testing.T) {
 	files := galTestFiles()
 	f := newFakeGalFTP(t, files, false)
-	s, err := galConnect("127.0.0.1", f.port())
-	if err != nil {
-		t.Fatalf("connect: %v", err)
-	}
-	defer s.close()
 	rels := []string{
 		"2026/11/18/2026111812000000-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.jpg",
 		"2026/11/18/2026111813000000-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.mp4",
 	}
+	// Like the handler, each fetch uses its own session: a session
+	// is a single FTP control connection and is not shareable.
+	fetch := func(rel string) ([]byte, error) {
+		fs, err := galConnect("127.0.0.1", f.port())
+		if err != nil {
+			return nil, err
+		}
+		defer fs.close()
+		var b bytes.Buffer
+		if err := fs.retr(fs.prefix+galAlbumRoot+"/"+rel, 0, &b); err != nil {
+			return nil, err
+		}
+		return b.Bytes(), nil
+	}
 	var buf bytes.Buffer
-	if err := galWriteZip(&buf, s, rels); err != nil {
+	if err := galWriteZip(&buf, fetch, rels); err != nil {
 		t.Fatalf("galWriteZip: %v", err)
 	}
 	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
@@ -389,7 +407,7 @@ func TestGalPoolReuse(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := s.walk(); err != nil {
+		if _, err := s.list(s.prefix + galAlbumRoot); err != nil {
 			t.Fatal(err)
 		}
 		release()
@@ -431,5 +449,61 @@ func TestGalPrefetchWarmsCache(t *testing.T) {
 	galThumbMu.Unlock()
 	if !ok {
 		t.Fatal("prefetch did not warm the thumbnail cache")
+	}
+}
+
+func TestGalWalkTreeParallel(t *testing.T) {
+	tree := map[string][]galEntry{
+		"/root": {
+			{Name: "2026", Dir: true},
+			{Name: "2025", Dir: true},
+			{Name: "loose.jpg", Size: 10},
+		},
+		"/root/2026": {
+			{Name: "2026010112000000-a.jpg", Size: 11},
+			{Name: "2026010212000000-b.mp4", Size: 12},
+		},
+		"/root/2025": {
+			{Name: "2025010112000000-c.jpg", Size: 13},
+		},
+	}
+	var mu sync.Mutex
+	cur, maxConc := 0, 0
+	listDir := func(abs string) ([]galEntry, error) {
+		mu.Lock()
+		cur++
+		if cur > maxConc {
+			maxConc = cur
+		}
+		mu.Unlock()
+		time.Sleep(50 * time.Millisecond)
+		mu.Lock()
+		cur--
+		mu.Unlock()
+		ents, ok := tree[abs]
+		if !ok {
+			return nil, errors.New("no such dir")
+		}
+		return ents, nil
+	}
+	items, err := galWalkTree(listDir, "/root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 4 {
+		t.Fatalf("items = %d, want 4", len(items))
+	}
+	// Newest first across the whole tree; the undated loose file
+	// sorts last.
+	if items[0].Taken != "20260102120000" || items[2].Taken != "20250101120000" || items[3].Name != "loose.jpg" {
+		t.Fatalf("order wrong: %+v", items)
+	}
+	if maxConc < 2 || maxConc > 3 {
+		t.Fatalf("max listing concurrency = %d, want 2..3", maxConc)
+	}
+	// A listing error fails the whole walk.
+	bad := func(abs string) ([]galEntry, error) { return nil, errors.New("boom") }
+	if _, err := galWalkTree(bad, "/root"); err == nil {
+		t.Fatal("walk with a failing root listing must fail")
 	}
 }

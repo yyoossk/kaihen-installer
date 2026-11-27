@@ -529,6 +529,7 @@ func downloadAppLocked(a *appEntry, log logFn) error {
 			if err := os.WriteFile(filepath.Join(dir, a.AssetName), data, 0o644); err != nil {
 				return errors.New(tr("", "writeErr"))
 			}
+			pruneStaleAppCacheLocked(a)
 		}
 	}
 	if err := downloadExtrasLocked(a, log); err != nil {
@@ -536,6 +537,29 @@ func downloadAppLocked(a *appEntry, log logFn) error {
 	}
 	a.DownloadedTag = a.LatestTag
 	return nil
+}
+
+// pruneStaleAppCacheLocked removes payload files a previous
+// version of the entry left in its cache folder: when an app's
+// asset name changes between releases, the old file would
+// otherwise sit there forever. The current asset file survives;
+// the root/ tree (zip apps, rebuilt on every download) and the
+// extras/ folder (also rebuilt) are left to their own code.
+func pruneStaleAppCacheLocked(a *appEntry) {
+	if a.AssetName == "" {
+		return
+	}
+	dir := appCacheDir(a.ID)
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range ents {
+		if e.IsDir() || e.Name() == a.AssetName {
+			continue
+		}
+		os.Remove(filepath.Join(dir, e.Name()))
+	}
 }
 
 // downloadExtrasLocked fetches the entry's extra files (resolved

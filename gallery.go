@@ -337,15 +337,59 @@ func takenFromName(name string) string {
 	return t
 }
 
-// walk collects every media file under the album root (the layout is
-// YYYY/MM/DD, but the walk tolerates any nesting up to depth 4).
-func (s *galSession) walk() ([]galItem, error) {
-	var items []galItem
-	var rec func(abs, rel string, depth int) error
-	rec = func(abs, rel string, depth int) error {
-		ents, err := s.list(abs)
+// galWalk collects every media file under the album root (the
+// layout is YYYY/MM/DD, but the walk tolerates any nesting up to
+// depth 4). Directory listings run concurrently — bounded, so the
+// console's FTP servers (the plugin accepts at most 4 clients) are
+// never flooded: listing the date folders one by one over FTP
+// round trips was the slowest part of opening the gallery. Each
+// listing runs on its own pooled session.
+func galWalk(ip, src string) ([]galItem, string, error) {
+	// The first session also establishes the dialect prefix the
+	// album root lives under.
+	s0, used, release0, err := galAcquire(ip, src)
+	if err != nil {
+		return nil, "", err
+	}
+	root := s0.prefix + galAlbumRoot
+	release0()
+	listDir := func(abs string) ([]galEntry, error) {
+		s, _, release, err := galAcquire(ip, src)
 		if err != nil {
-			return err
+			return nil, err
+		}
+		defer release()
+		return s.list(abs)
+	}
+	items, err := galWalkTree(listDir, root)
+	return items, used, err
+}
+
+func galWalkTree(listDir func(abs string) ([]galEntry, error), root string) ([]galItem, error) {
+	var mu sync.Mutex
+	var items []galItem
+	var firstErr error
+	sem := make(chan struct{}, 3)
+	var wg sync.WaitGroup
+	var rec func(abs, rel string, depth int)
+	rec = func(abs, rel string, depth int) {
+		defer wg.Done()
+		mu.Lock()
+		failed := firstErr != nil
+		mu.Unlock()
+		if failed {
+			return
+		}
+		sem <- struct{}{}
+		ents, err := listDir(abs)
+		<-sem
+		if err != nil {
+			mu.Lock()
+			if firstErr == nil {
+				firstErr = err
+			}
+			mu.Unlock()
+			return
 		}
 		for _, e := range ents {
 			childRel := e.Name
@@ -354,13 +398,13 @@ func (s *galSession) walk() ([]galItem, error) {
 			}
 			if e.Dir {
 				if depth < 4 {
-					if err := rec(abs+"/"+e.Name, childRel, depth+1); err != nil {
-						return err
-					}
+					wg.Add(1)
+					go rec(abs+"/"+e.Name, childRel, depth+1)
 				}
 				continue
 			}
 			if mt := galMediaType(e.Name); mt != "" {
+				mu.Lock()
 				items = append(items, galItem{
 					Path:  childRel,
 					Name:  e.Name,
@@ -368,12 +412,15 @@ func (s *galSession) walk() ([]galItem, error) {
 					Size:  e.Size,
 					Taken: takenFromName(e.Name),
 				})
+				mu.Unlock()
 			}
 		}
-		return nil
 	}
-	if err := rec(s.prefix+galAlbumRoot, "", 0); err != nil {
-		return nil, err
+	wg.Add(1)
+	rec(root, "", 0)
+	wg.Wait()
+	if firstErr != nil {
+		return nil, firstErr
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].Taken != items[j].Taken {
@@ -598,13 +645,7 @@ func galleryListHandler(w http.ResponseWriter, r *http.Request) {
 		galWriteErr(w, lang, http.StatusBadRequest)
 		return
 	}
-	s, used, release, err := galAcquire(ip, src)
-	if err != nil {
-		galWriteErr(w, lang, http.StatusBadGateway)
-		return
-	}
-	defer release()
-	items, err := s.walk()
+	items, used, err := galWalk(ip, src)
 	if err == nil {
 		// Warm the thumbnail cache in the background, so scrolling
 		// the grid does not generate each thumbnail on first sight.
@@ -698,16 +739,53 @@ func galleryFileHandler(w http.ResponseWriter, r *http.Request) {
 // archive on w. Entries keep their album-relative paths (folders
 // preserved) and are stored uncompressed: photos and videos are
 // already compressed formats.
-func galWriteZip(w io.Writer, s *galSession, rels []string) error {
+func galWriteZip(w io.Writer, fetch func(rel string) ([]byte, error), rels []string) error {
+	// Fetch a few files at a time in parallel while the archive is
+	// written in selection order: a multi-select download no longer
+	// waits for one file to finish before the next starts moving.
+	type fetched struct {
+		idx  int
+		data []byte
+		err  error
+	}
+	results := make(chan fetched, len(rels))
+	slots := make(chan struct{}, 3)
+	var wg sync.WaitGroup
+	for i, rel := range rels {
+		wg.Add(1)
+		go func(idx int, rel string) {
+			defer wg.Done()
+			slots <- struct{}{}
+			defer func() { <-slots }()
+			data, err := fetch(rel)
+			results <- fetched{idx, data, err}
+		}(i, rel)
+	}
+	go func() { wg.Wait(); close(results) }()
 	zw := zip.NewWriter(w)
-	for _, rel := range rels {
-		fw, err := zw.CreateHeader(&zip.FileHeader{Name: rel, Method: zip.Store})
+	pending := map[int]fetched{}
+	for next := 0; next < len(rels); {
+		f, ok := pending[next]
+		if !ok {
+			r, open := <-results
+			if !open {
+				return errors.New("gallery zip: fetchers stopped early")
+			}
+			pending[r.idx] = r
+			continue
+		}
+		delete(pending, next)
+		if f.err != nil {
+			return f.err
+		}
+		fw, err := zw.CreateHeader(&zip.FileHeader{Name: rels[next], Method: zip.Store})
 		if err != nil {
 			return err
 		}
-		if err := s.retr(s.prefix+galAlbumRoot+"/"+rel, 0, fw); err != nil {
+		if _, err := fw.Write(f.data); err != nil {
 			return err
 		}
+		next++
 	}
 	return zw.Close()
 }
@@ -737,15 +815,27 @@ func galleryZipHandler(w http.ResponseWriter, r *http.Request) {
 		galWriteErr(w, lang, http.StatusBadRequest)
 		return
 	}
-	s, _, release, err := galAcquire(ip, src)
+	_, _, release, err := galAcquire(ip, src)
 	if err != nil {
 		galWriteErr(w, lang, http.StatusBadGateway)
 		return
 	}
-	defer release()
+	release()
+	fetch := func(rel string) ([]byte, error) {
+		fs, _, frelease, err := galAcquire(ip, src)
+		if err != nil {
+			return nil, err
+		}
+		defer frelease()
+		var buf bytes.Buffer
+		if err := fs.retr(fs.prefix+galAlbumRoot+"/"+rel, 0, &buf); err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), nil
+	}
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", "attachment; filename=\"album.zip\"")
-	_ = galWriteZip(w, s, rels) // headers are sent; a failure just truncates the archive
+	_ = galWriteZip(w, fetch, rels) // headers are sent; a failure just truncates the archive
 }
 
 // parseRange parses a single "bytes=a-b" / "bytes=a-" / "bytes=-b"

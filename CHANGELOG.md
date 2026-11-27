@@ -5,6 +5,32 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261128-0254
+
+- Five more speed and storage improvements.
+
+- The gallery now lists the album's date folders in parallel (up to three at a time), so the album opens sooner.
+
+- kaiHEN itself (about 20 MB) now downloads in parallel parts too, with the same size and hash verification as before.
+
+- The gallery's multi-select ZIP download fetches several files at once instead of one by one.
+
+- When a homebrew app's file name changes between releases, the old cached file is now removed when the new one downloads.
+
+- The launcher engine's bundled developer reports no longer ship with the app (they were never used at runtime).
+
+- 処理とストレージの改良をさらに5件入れました。
+
+- ギャラリーは、アルバムの日付フォルダを最大3つまで並列に読むようになり、一覧が早く出ます。
+
+- kaiHEN 本体 (約20MB) も分割して並列にダウンロードするようになりました。サイズとハッシュの検証は今までどおり行います。
+
+- ギャラリーの複数選択 ZIP ダウンロードは、ファイルを複数同時に取るようになりました。
+
+- 自作ソフトのファイル名が版によって変わったとき、古いキャッシュファイルが残らないよう、新しいものを取るときに消すようにしました。
+
+- 起動エンジンに同梱されていた開発者向けレポート文書は、実行に使われないため配布物から外しました。
+
 ## 20261128-0235
 
 - Six speed and storage improvements.

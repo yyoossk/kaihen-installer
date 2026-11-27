@@ -106,7 +106,7 @@ var errPinnedContent = errors.New("pinned content mismatch")
 func httpGetPinned(url string, size int, sha string) ([]byte, error) {
 	var lastErr error
 	for attempt := 0; attempt < 2; attempt++ {
-		raw, err := httpGet(url)
+		raw, err := httpGetBig(url)
 		if err != nil {
 			lastErr = err
 			continue

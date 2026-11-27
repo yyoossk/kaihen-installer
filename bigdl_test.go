@@ -108,3 +108,23 @@ func TestHttpGetToFileFastNoRanges(t *testing.T) {
 		t.Fatal("no-range file fallback content mismatch")
 	}
 }
+
+func TestHttpGetPinnedBig(t *testing.T) {
+	withLowThreshold(t)
+	srv, blob, rangeReqs := bigDlFixture(t, true)
+	sha := sha256Hex(blob)
+	got, err := httpGetPinned(srv.URL, len(blob), sha)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, blob) {
+		t.Fatal("pinned download content mismatch")
+	}
+	if n := atomic.LoadInt64(rangeReqs); n < 2 {
+		t.Fatalf("only %d range requests; the parallel path did not run", n)
+	}
+	// A wrong pin is still rejected after the parallel download.
+	if _, err := httpGetPinned(srv.URL, len(blob), sha256Hex([]byte("other"))); err != errPinnedContent {
+		t.Fatalf("wrong pin: err = %v, want errPinnedContent", err)
+	}
+}
