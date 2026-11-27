@@ -5,6 +5,11 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261128-0006
+
+- The update history page now also shows the update history of the catalog software and apps: pick kaiHEN itself or any catalog app to see its release history (versions, dates, and notes) from the publisher.
+- 更新履歴のページで、カタログのソフトとアプリの更新履歴も見られるようにしました。kaiHEN 本体やカタログのアプリを選ぶと、公開元のリリース履歴 (バージョン・日付・説明) が表示されます。
+
 ## 20261127-2349
 
 - An update history page was added to the app: the full changelog can be checked in the app, newest first, in the display language (English or Japanese).

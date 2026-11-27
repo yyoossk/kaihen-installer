@@ -120,9 +120,9 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
   削除機能はあえて付けていません。
 
   FTP でファイルを消すと本体のアルバムに項目だけが残り、その項目は本体側でも消せなくなるためです (ファイルが無いと本体の画面写真サービスがエラー 2206-0023 を出します)。
-- **Update history** — a page in the app shows the full update history, newest first, in the display language (English or Japanese).
+- **Update history** — a page in the app shows the update history of kaiHEN itself and of the catalog software and apps (their release history from the publisher), plus this app's own full changelog, newest first, in the display language (English or Japanese).
 
-  **更新履歴** — アプリ内のページで、全ての更新履歴を表示中の言語 (英語または日本語) で新しい順に確認できます。
+  **更新履歴** — アプリ内のページで、kaiHEN 本体とカタログのソフト・アプリの更新履歴 (公開元のリリース履歴) と、このアプリ自身の全ての更新履歴を、表示中の言語 (英語または日本語) で新しい順に確認できます。
 - **Self-update** — the app checks this repository's releases at startup.
 
   On Windows it replaces itself and restarts (your settings and downloaded files are kept).

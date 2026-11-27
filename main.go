@@ -128,6 +128,7 @@ func main() {
 	mux.HandleFunc("/api/gallery/thumb", galleryThumbHandler)
 	mux.HandleFunc("/api/gallery/zip", galleryZipHandler)
 	mux.HandleFunc("/api/apps", appsListHandler)
+	mux.HandleFunc("/api/apps/history", appsHistoryHandler)
 	mux.HandleFunc("/api/apps/add", appsAddHandler)
 	mux.HandleFunc("/api/apps/delete", appsDeleteHandler)
 	mux.HandleFunc("/api/apps/install", appsInstallHandler)
