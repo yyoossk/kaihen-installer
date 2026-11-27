@@ -204,17 +204,17 @@ Android 版は build 20261117-2112 のものです。
 
 The top page.
 
-Pick what you want to do: install kaiHEN or set up the autoloader.
+Pick what you want to do: install kaiHEN, set up the autoloader, or install homebrew.
 
-The homebrew catalog (stock and patched) opens from either of those pages.
+The homebrew catalog (stock and patched) also opens from the Install kaiHEN page and the Autoloader page.
 
 The build stamp at the top identifies the version (hidden in the Android app).
 
 トップページです。
 
-「kaiHEN を導入」「オートローダー」から選びます。
+「kaiHEN を導入」「オートローダー」「自作ソフトをインストール」から選びます。
 
-自作ソフトをインストール (純正用・パッチ版用) は、どちらのページからも開けます。
+自作ソフトをインストール (純正用・パッチ版用) は、「kaiHENを導入」と「オートローダー」のページからも開けます。
 
 上部の表示がバージョン (build) です(Android 版では非表示)。
 

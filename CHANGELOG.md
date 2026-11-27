@@ -5,6 +5,11 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261128-0107
+
+- Correction to the previous build: the homebrew catalog buttons are on the home screen again, too. The catalog now opens from three places: the home screen, the Install kaiHEN page, and the Autoloader page. A catalog page opened from the home screen shows only the Home button, as before.
+- 前のビルドの訂正です。カタログのボタンを、ホームにも戻しました。カタログは、ホーム・「kaiHENを導入」・「オートローダー」の3か所から開けます。ホームから開いた場合は、これまで通りホームボタンだけが表示されます。
+
 ## 20261128-0057
 
 - The homebrew catalog pages (stock and patched) moved: they are no longer on the home screen, and now open from the Install kaiHEN page and the Autoloader page.

@@ -168,6 +168,12 @@ const pageHTML = `<!DOCTYPE html>
 <h2 data-i18n="al_home_h">オートローダー (PC なしで起動)</h2>
 <p><button class="widebtn" onclick="showPage('auto')" data-i18n="al_home_h">オートローダー (PC なしで起動)</button></p>
 
+<h2 data-i18n="app_open_stock">自作ソフトをインストール（純正用）</h2>
+<p><button class="widebtn" onclick="showPage('backup')" data-i18n="app_open_stock">自作ソフトをインストール（純正用）</button></p>
+
+<h2 data-i18n="app_open_patched">自作ソフトをインストール（パッチ版用）</h2>
+<p><button class="widebtn" onclick="showPage('backup2')" data-i18n="app_open_patched">自作ソフトをインストール（パッチ版用）</button></p>
+
 <h2 data-i18n="gal_title">ギャラリー</h2>
 <p><button class="widebtn" onclick="showPage('gallery')" data-i18n="gal_title">ギャラリー</button></p>
 
