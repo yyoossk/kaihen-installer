@@ -110,6 +110,7 @@ func main() {
 	})
 	mux.HandleFunc("/api/check", checkHandler)
 	mux.HandleFunc("/api/update/check", updateCheckHandler)
+	mux.HandleFunc("/api/changelog", changelogHandler)
 	mux.HandleFunc("/api/update/apply", sseHandlerNoIP(updateApply))
 	mux.HandleFunc("/api/quit", quitHandler)
 	mux.HandleFunc("/api/consentState", consentStateHandler)

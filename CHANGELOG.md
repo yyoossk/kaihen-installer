@@ -5,6 +5,11 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261127-2349
+
+- An update history page was added to the app: the full changelog can be checked in the app, newest first, in the display language (English or Japanese).
+- アプリに更新履歴のページを追加しました。全ての更新履歴を、表示中の言語 (英語または日本語) で新しい順にアプリ内で確認できます。
+
 ## 20261127-2207
 
 - The stock kaiHEN is now 20261127.1, the newest release, and the patched type keeps its own base pin (kaiHEN 20261117.1) instead of following it.
