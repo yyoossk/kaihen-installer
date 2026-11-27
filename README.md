@@ -40,23 +40,27 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
 - **Installs kaiHEN in a few clicks** — install the loader save, then start kaiHEN with the bundled CivSwitch Kit engine (retries are automatic).
 
-  kaiHEN is pinned to **20261123** and used **exactly as published** — no file is modified.
+  kaiHEN is pinned to **20261117.1**, the newest release upstream still publishes (the 20261123 release was deleted upstream).
 
-  20261123 is the first kaiHEN with dynamically linked homebrew support.
+  On the kaiHEN page you can choose between the **stock** type, used exactly as published, and a **patched** type that overlays switch2-modbridge's ro:dmnt binaries onto the same stock release.
 
-  Its layout changed (the SD tree now sits under sdcard/), so the installer places the files its launch engine expects, and copies the shared libraries (kaihen/lib) to the SD card over FTP during catalog installs.
+  The patched type is what patched-only homebrew such as KaiVesper needs.
 
-  Statically linked homebrew runs as before.
+  Switching types re-prepares kaiHEN the next time it starts.
+
+  Starting through the autoloader is unchanged and does not use this choice.
 
   **数クリックで kaiHEN を導入** — ローダーのセーブを入れて、同梱のCivSwitch Kit エンジンで kaiHEN を起動します (リトライは自動)。
 
-  kaiHEN は **20261123** に固定し、**公開ファイルに一切手を加えず**そのまま使います。
+  kaiHEN は **20261117.1** に固定しています。上流で現存する最新リリースです (20261123 は上流で削除されました)。
 
-  20261123 は動的リンクの自作ソフトに対応した初の kaiHEN です。
+  「kaiHENを導入」のページで、公開ファイルをそのまま使う**純正版**と、同じ純正リリースに switch2-modbridge の ro:dmnt バイナリを重ねた**パッチ版**を選べます。
 
-  配布レイアウトが変わり (SD ツリーが sdcard/ 配下になりました)、インストーラーは起動エンジンが必要とするファイルを配置し、共有ライブラリ (kaihen/lib) はカタログのインストール時に FTP で SD カードへコピーします。
+  パッチ版は、KaiVesper などパッチ版専用の自作ソフトに必要です。
 
-  静的リンクの自作ソフトは従来通り動きます。
+  種類を変えると、次に kaiHEN を起動するときに用意し直します。
+
+  オートローダーで起動する場合は従来どおりで、この選択は使いません。
 - **Autoloader** — after a one-time setup, kaiHEN starts from **Load Game** alone: no PC, no phone, no Pico, no network.
 
   Includes the CivSwitchFS payload (stock-20261125b) from the companion fork.
@@ -123,11 +127,19 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
 ## Homebrew catalog / 自作ソフトカタログ
 
-36 apps, installed over FTP into `/switch` (or their own folders where the release requires it):
+The catalog is split into two pages by kaiHEN type.
+
+36 apps for stock kaiHEN, installed over FTP into `/switch` (or their own folders where the release requires it):
 
 90DNS Tester / Blacklist Tool / BrewStore / Cemu NX2 / Checkpoint / Chiaki-ng/Akira / Chromium NX / Dekopon for SW2 / Dolphin NX2 / Eden for SW2 (POC) / Force Internal Speaker / FTPD Plugin / Game Vault / KaiDump / KaiPlayer / KaiRadio / KaiVideo / Kaizhar / Local Update Tool / melonDS-switch2 / mGBA / Moonlight / Moonlight-Switch / NXGallery / OunceMTP / PKForge / PKSM / PPSSPP NX2 / Reset Launch Version / RetroArch / SW2NES / SW2PS2 / SW2SNES / SW2Transfer / Vita3K / WinampNX2
 
-36本のソフトを、FTP で `/switch` (リリースの指定するフォルダ) にインストールできます。
+A separate page lists the apps for patched kaiHEN: KaiVesper.
+
+カタログは kaiHEN の種類ごとに2ページに分かれています。
+
+純正 kaiHEN 用の36本を、FTP で `/switch` (リリースの指定するフォルダ) にインストールできます。
+
+パッチ版 kaiHEN 用のページには KaiVesper があります。
 
 ## Download / ダウンロード
 

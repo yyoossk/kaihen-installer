@@ -39,6 +39,7 @@ type appEntry struct {
 	AssetHint     string       `json:"assetHint,omitempty"`   // exact release asset name to prefer (e.g. a Switch 2 build among several .nro assets)
 	InstallPath   string       `json:"installPath,omitempty"` // SD path relative to switch/ when a bare .nro must be installed under a fixed folder/name instead of switch/<asset name>
 	PreRelease    bool         `json:"preRelease,omitempty"`  // resolve the newest release overall, prereleases included, instead of the newest stable
+	Patched       bool         `json:"patched,omitempty"`     // needs the patched kaiHEN variant; shown on the patched catalog page instead of the stock one
 	Extras        []extraAsset `json:"extras,omitempty"`      // extra files from the same release the app needs on the SD card
 	AssetName     string       `json:"assetName"`
 	AssetURL      string       `json:"assetUrl,omitempty"`
@@ -121,6 +122,7 @@ func builtinApps() []*appEntry {
 		{ID: "sh00kapic/PKForge-Switch2", Kind: "nro", Builtin: true, Name: "PKForge", Source: "release", AssetHint: "PKForge-AIO.nro", InstallPath: "PKForge/PKForge.nro"},
 		{ID: "cainan-c/reset-launch-version", Kind: "nro", Builtin: true, Name: "Reset Launch Version", Source: "release"},
 		{ID: "AlexTech01/local-update-tool", Kind: "nro", Builtin: true, Name: "Local Update Tool", Source: "release", InstallPath: "local-update-tool/local-update-tool.nro"},
+		{ID: "Sank-kab/KaiVesper", Kind: "nro", Builtin: true, Name: "KaiVesper", Source: "release", PreRelease: true, Patched: true},
 	}
 }
 
@@ -180,8 +182,8 @@ func appsInit() {
 		if !ok {
 			continue
 		}
-		if a.Kind != b.Kind || a.Host != b.Host || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || a.PreRelease != b.PreRelease || !extrasEqual(a.Extras, b.Extras) {
-			a.Kind, a.Host, a.AssetHint, a.InstallPath, a.PreRelease = b.Kind, b.Host, b.AssetHint, b.InstallPath, b.PreRelease
+		if a.Kind != b.Kind || a.Host != b.Host || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || a.PreRelease != b.PreRelease || a.Patched != b.Patched || !extrasEqual(a.Extras, b.Extras) {
+			a.Kind, a.Host, a.AssetHint, a.InstallPath, a.PreRelease, a.Patched = b.Kind, b.Host, b.AssetHint, b.InstallPath, b.PreRelease, b.Patched
 			a.Extras = append([]extraAsset(nil), b.Extras...)
 			changed = true
 		}
@@ -722,12 +724,19 @@ func appView(a *appEntry) map[string]any {
 func appsListHandler(w http.ResponseWriter, r *http.Request) {
 	appsInit()
 	kind := r.URL.Query().Get("kind")
+	cat := r.URL.Query().Get("cat")
 	force := r.URL.Query().Get("force") == "1"
 	appsMu.Lock()
 	defer appsMu.Unlock()
 	out := []map[string]any{}
 	for _, a := range appsList {
 		if kind != "" && a.Kind != kind {
+			continue
+		}
+		// The catalog is split by kaiHEN variant: the patched page
+		// (cat=patched) lists only patched-only homebrew, and every
+		// other listing shows the stock catalog.
+		if (cat == "patched") != a.Patched {
 			continue
 		}
 		_, statErr := os.Stat(filepath.Join(appCacheDir(a.ID), a.AssetName))
@@ -926,12 +935,6 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 		appsMu.Lock()
 		rerr := refreshAppLocked(a, true, send)
 		appsMu.Unlock()
-		// kaiHEN 20261123's shared libraries belong on the SD card
-		// at /kaihen/lib; the bundled acquisition engine predates
-		// that layout and never copies them, so sync them here, on
-		// the install path that already talks FTP to the console.
-		// Best effort: a failure never blocks the app install.
-		syncKaihenLib(ip, lang, send)
 		rootDir := filepath.Join(appCacheDir(id), "root")
 		if _, err := os.Stat(rootDir); err == nil {
 			if err := ftpUploadOzTree(ip, rootDir, lang, send); err != nil {

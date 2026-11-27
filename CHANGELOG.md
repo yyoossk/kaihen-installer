@@ -5,6 +5,23 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261127-1715
+
+- The kaiHEN page now lets you choose the kaiHEN type: stock or patched.
+- The patched type is the stock kaiHEN 20261117.1 with switch2-modbridge's ro:dmnt binaries overlaid, each file verified against a pinned hash.
+- The kaiHEN pin moved from 20261123 to 20261117.1, because upstream deleted the 20261123 release and 20261117.1 is the newest release that still exists.
+- Switching types re-prepares kaiHEN the next time it starts; starting through the autoloader is unchanged.
+- The homebrew catalog is split into two pages: 36 apps for stock kaiHEN, and a new page for patched kaiHEN.
+- KaiVesper (by Sank-kab) was added to the patched page, for 37 catalog apps in total.
+- KaiVesper loads unencrypted ExeFS/RomFS game dumps through a host title on the console, with hot-swapping between games and per-game save isolation; it needs the patched kaiHEN.
+- 「kaiHENを導入」のページで、kaiHEN の種類 (純正版 / パッチ版) を選べるようにしました。
+- パッチ版は、純正の kaiHEN 20261117.1 に switch2-modbridge の ro:dmnt バイナリを重ねたもので、各ファイルは固定したハッシュで検証します。
+- kaiHEN のピンを 20261123 から 20261117.1 に移しました。20261123 は上流で削除され、現存する最新は 20261117.1 のためです。
+- 種類を変えると、次に kaiHEN を起動するときに用意し直します。オートローダーで起動する場合は従来どおりです。
+- 自作ソフトのカタログを2ページに分けました。純正 kaiHEN 用の36本と、パッチ版 kaiHEN 用の新しいページです。
+- パッチ版のページに KaiVesper (Sank-kab 作) を追加し、カタログは全37本になりました。
+- KaiVesper は、暗号化されていない ExeFS/RomFS のゲームダンプを本体上のホストタイトル経由で起動するソフトで、ゲームのホットスワップとゲームごとのセーブ分離に対応します。パッチ版 kaiHEN が必要です。
+
 ## 20261126-1427
 
 - One app was added to the homebrew catalog, for 36 apps in total.

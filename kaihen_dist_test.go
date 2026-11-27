@@ -1,54 +1,81 @@
 package main
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-// Live check of the pinned kaiHEN dist (20261123): ensureKaihen must
-// download the real release zip, verify it against the pin, unpack
-// the new sdcard/ layout, and place the byte-identical legacy-layout
-// copies the bundled kit engine looks for (hen/main, game/main,
-// hbmenu.nro, programs/ounceshell.nro). The shared libraries for
-// dynamically linked homebrew must be present under
-// sdcard/kaihen/lib, ready for syncKaihenLib.
+// Live checks of the pinned kaiHEN dist (20261117.1) and its two
+// variants. Stock: ensureKaihen must download the real release zip,
+// verify it against the pin, and unpack the root layout the bundled
+// kit engine expects (hen/main, game/main, hbmenu.nro,
+// programs/ounceshell.nro). Patched: the same dist with
+// switch2-modbridge's prebuilt ro:dmnt binaries (ro/main, hen/main)
+// overlaid and verified against their own pins, tagged
+// "20261117.1+patched". Switching variants re-prepares the dist.
+
+const (
+	stockHenSHA = "b4f161e36482d50de006b3caee909eb8413a42b6593a602324cface3d2a5ead9"
+	stockRoSHA  = "2e577a4c680a3ba580bcda2f8d41ada443cb33cad79e06230ce4bcf6700661b7"
+)
+
 func TestEnsureKaihenDist(t *testing.T) {
 	old := exeDir
 	exeDir = t.TempDir()
 	defer func() { exeDir = old }()
 
-	if err := ensureKaihen(func(string) {}, "en"); err != nil {
-		t.Fatalf("ensureKaihen: %v", err)
+	if err := ensureKaihen(func(string) {}, "en", "stock"); err != nil {
+		t.Fatalf("ensureKaihen stock: %v", err)
 	}
-	if !kaihenReady() {
-		t.Fatal("kaihenReady is false after ensureKaihen")
+	if !kaihenReady("stock") {
+		t.Fatal("kaihenReady(stock) is false after ensureKaihen")
+	}
+	if kaihenReady("patched") {
+		t.Fatal("kaihenReady(patched) is true for a stock dist")
 	}
 	root := kaihenDistDir()
-	for _, cp := range [][2]string{
-		{filepath.Join("sdcard", "kaihen", "bin", "hen", "main"), filepath.Join("hen", "main")},
-		{filepath.Join("sdcard", "kaihen", "bin", "game", "main"), filepath.Join("game", "main")},
-		{filepath.Join("sdcard", "hbmenu.nro"), "hbmenu.nro"},
-		{filepath.Join("sdcard", "switch", "ounceshell.nro"), filepath.Join("programs", "ounceshell.nro")},
-	} {
-		src, err := os.ReadFile(filepath.Join(root, cp[0]))
-		if err != nil {
-			t.Fatalf("read %s: %v", cp[0], err)
-		}
-		dst, err := os.ReadFile(filepath.Join(root, cp[1]))
-		if err != nil {
-			t.Fatalf("read %s: %v", cp[1], err)
-		}
-		if !bytes.Equal(src, dst) {
-			t.Fatalf("%s is not a byte-identical copy of %s", cp[1], cp[0])
-		}
+	if got := fileSHA(filepath.Join(root, "hen", "main")); got != stockHenSHA {
+		t.Fatalf("stock hen/main sha = %s, want %s", got, stockHenSHA)
 	}
-	libs, err := os.ReadDir(filepath.Join(root, "sdcard", "kaihen", "lib"))
-	if err != nil {
-		t.Fatalf("lib dir: %v", err)
+	if got := fileSHA(filepath.Join(root, "ro", "main")); got != stockRoSHA {
+		t.Fatalf("stock ro/main sha = %s, want %s", got, stockRoSHA)
 	}
-	if len(libs) != 8 {
-		t.Fatalf("lib dir holds %d files, want 8", len(libs))
+}
+
+func TestEnsureKaihenDistPatched(t *testing.T) {
+	old := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = old }()
+
+	if err := ensureKaihen(func(string) {}, "en", "patched"); err != nil {
+		t.Fatalf("ensureKaihen patched: %v", err)
+	}
+	if !kaihenReady("patched") {
+		t.Fatal("kaihenReady(patched) is false after ensureKaihen")
+	}
+	if kaihenReady("stock") {
+		t.Fatal("kaihenReady(stock) is true for a patched dist")
+	}
+	root := kaihenDistDir()
+	if got := fileSHA(filepath.Join(root, "hen", "main")); got != modbridgeHenSHA {
+		t.Fatalf("patched hen/main sha = %s, want %s", got, modbridgeHenSHA)
+	}
+	if got := fileSHA(filepath.Join(root, "ro", "main")); got != modbridgeRoSHA {
+		t.Fatalf("patched ro/main sha = %s, want %s", got, modbridgeRoSHA)
+	}
+	// Switching back to stock re-prepares the dist with the stock
+	// binaries.
+	if err := ensureKaihen(func(string) {}, "en", "stock"); err != nil {
+		t.Fatalf("ensureKaihen back to stock: %v", err)
+	}
+	if !kaihenReady("stock") {
+		t.Fatal("kaihenReady(stock) is false after switching back")
+	}
+	if got := fileSHA(filepath.Join(root, "hen", "main")); got != stockHenSHA {
+		t.Fatalf("switched-back hen/main sha = %s, want %s", got, stockHenSHA)
+	}
+	if _, err := os.Stat(filepath.Join(root, "hbmenu.nro")); err != nil {
+		t.Fatalf("hbmenu.nro missing after switch back: %v", err)
 	}
 }
