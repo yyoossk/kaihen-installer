@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -343,6 +344,203 @@ func httpGetToFile(url, dst string, progress func(done, total int64)) error {
 		}
 	}
 	return f.Close()
+}
+
+// ---------- parallel range downloads ----------
+
+// Big catalog payloads (a 90 MB emulator, the 411 MB browser image)
+// arrive over a single connection today. When the server honors
+// range requests and the body is large, fetching it in a few
+// parallel parts is noticeably faster on a fast connection. Every
+// failure of the parallel path falls back to the plain download.
+var (
+	bigDlThreshold int64 = 16 << 20
+	bigDlParts           = 4
+)
+
+// contentRangeTotal parses the total out of a Content-Range header
+// ("bytes 0-0/12345"); -1 when it is not there.
+func contentRangeTotal(h string) int64 {
+	i := strings.LastIndex(h, "/")
+	if i < 0 {
+		return -1
+	}
+	n, err := strconv.ParseInt(strings.TrimSpace(h[i+1:]), 10, 64)
+	if err != nil {
+		return -1
+	}
+	return n
+}
+
+// probeRange sends a one-byte range GET. On a 206 it returns the
+// total size with the response already closed; on a 200 the open
+// response IS the whole body (the server ignores ranges) and the
+// caller reads it; any other status is an error.
+func probeRange(url string) (total int64, body io.ReadCloser, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return -1, nil, err
+	}
+	req.Header.Set("User-Agent", "CivInstaller")
+	req.Header.Set("Range", "bytes=0-0")
+	resp, err := (&http.Client{Transport: webTransport}).Do(req)
+	if err != nil {
+		return -1, nil, err
+	}
+	switch resp.StatusCode {
+	case 206:
+		t := contentRangeTotal(resp.Header.Get("Content-Range"))
+		resp.Body.Close()
+		return t, nil, nil
+	case 200:
+		return -1, resp.Body, nil
+	default:
+		resp.Body.Close()
+		return -1, nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+}
+
+// fetchRanges downloads [0, total) of url in bigDlParts parallel
+// range requests. write is called once per part with the part's
+// offset and exact length; it must be safe for concurrent use.
+func fetchRanges(url string, total int64, write func(off int64, part io.Reader, n int64) error) error {
+	parts := bigDlParts
+	chunk := (total + int64(parts) - 1) / int64(parts)
+	var wg sync.WaitGroup
+	errCh := make(chan error, parts)
+	for p := 0; p < parts; p++ {
+		off := int64(p) * chunk
+		if off >= total {
+			break
+		}
+		end := off + chunk - 1
+		if end >= total {
+			end = total - 1
+		}
+		wg.Add(1)
+		go func(off, end int64) {
+			defer wg.Done()
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			req.Header.Set("User-Agent", "CivInstaller")
+			req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", off, end))
+			resp, err := (&http.Client{Transport: webTransport}).Do(req)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != 206 {
+				errCh <- fmt.Errorf("HTTP %d", resp.StatusCode)
+				return
+			}
+			if err := write(off, resp.Body, end-off+1); err != nil {
+				errCh <- err
+			}
+		}(off, end)
+	}
+	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// httpGetBig is httpGet for large payloads, using parallel ranges
+// when the server supports them.
+func httpGetBig(url string) ([]byte, error) {
+	total, body, err := probeRange(url)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil { // 200: the probe response is the download
+		defer body.Close()
+		return io.ReadAll(io.LimitReader(body, 512<<20))
+	}
+	if total < bigDlThreshold || total > 512<<20 {
+		return httpGet(url)
+	}
+	buf := make([]byte, total)
+	err = fetchRanges(url, total, func(off int64, part io.Reader, n int64) error {
+		_, err := io.ReadFull(part, buf[off:off+n])
+		return err
+	})
+	if err != nil {
+		return httpGet(url) // the plain path is the fallback
+	}
+	return buf, nil
+}
+
+// httpGetToFileFast is httpGetToFile with parallel range parts for
+// large, range-capable downloads.
+func httpGetToFileFast(url, dst string, progress func(done, total int64)) error {
+	total, body, err := probeRange(url)
+	if err != nil {
+		return err
+	}
+	if body != nil || total < bigDlThreshold {
+		if body != nil {
+			body.Close()
+		}
+		return httpGetToFile(url, dst, progress)
+	}
+	f, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	if err := f.Truncate(total); err != nil {
+		f.Close()
+		os.Remove(dst)
+		return err
+	}
+	var done int64
+	var progMu sync.Mutex
+	err = fetchRanges(url, total, func(off int64, part io.Reader, n int64) error {
+		buf := make([]byte, 1<<20)
+		w := int64(0)
+		for w < n {
+			nr, rerr := part.Read(buf)
+			if nr > 0 {
+				if _, werr := f.WriteAt(buf[:nr], off+w); werr != nil {
+					return werr
+				}
+				w += int64(nr)
+				if progress != nil {
+					d := atomic.AddInt64(&done, int64(nr))
+					progMu.Lock()
+					progress(d, total)
+					progMu.Unlock()
+				}
+			}
+			if rerr == io.EOF {
+				break
+			}
+			if rerr != nil {
+				return rerr
+			}
+		}
+		if w != n {
+			return io.ErrUnexpectedEOF
+		}
+		return nil
+	})
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		os.Remove(dst)
+		return err
+	}
+	if progress != nil {
+		progress(total, total)
+	}
+	return nil
 }
 
 // httpGetFinal is httpGet plus the final URL after redirects (GitHub

@@ -508,7 +508,7 @@ func downloadAppLocked(a *appEntry, log logFn) error {
 		if log != nil {
 			log(tr("", "fetching", a.AssetURL))
 		}
-		raw, err := httpGet(a.AssetURL)
+		raw, err := httpGetBig(a.AssetURL)
 		if err != nil {
 			return errors.New(tr("", "dlErr"))
 		}
@@ -567,7 +567,7 @@ func downloadExtrasLocked(a *appEntry, log logFn) error {
 				log(fmt.Sprintf("%s: %d%%", ex.Name, done*100/total))
 			}
 		}
-		if err := httpGetToFile(ex.URL, filepath.Join(dir, ex.Name), progress); err != nil {
+		if err := httpGetToFileFast(ex.URL, filepath.Join(dir, ex.Name), progress); err != nil {
 			return errors.New(tr("", "dlErr"))
 		}
 	}

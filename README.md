@@ -106,6 +106,9 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
   Captures in internal storage are not reachable over FTP, so only the SD card album is shown.
 
   There is intentionally no delete: removing an album file over FTP leaves an entry in the console's album that cannot be deleted even on the console itself (its screenshot service fails with error 2206-0023 when the file is missing).
+- **Cache** — the home screen shows the total size of the downloaded files kept next to the app (kaiHEN and the homebrew caches) and can clear them.
+
+  Anything cleared is downloaded again when it is next needed.
 
   **ギャラリー** — FTP (OunceShell または FTPD プラグイン) 経由でNXGallery 風にアルバムを表示します。
 
@@ -120,6 +123,9 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
   削除機能はあえて付けていません。
 
   FTP でファイルを消すと本体のアルバムに項目だけが残り、その項目は本体側でも消せなくなるためです (ファイルが無いと本体の画面写真サービスがエラー 2206-0023 を出します)。
+- **キャッシュ** — ホーム画面で、アプリの横に保存されたダウンロード済みファイル (kaiHEN・自作ソフトのキャッシュ) の合計サイズの表示と消去ができます。
+
+  消したものは、必要になったときに自動で取り直します。
 - **Update history** — a page in the app shows the update history of kaiHEN itself and of the catalog software and apps (their release history from the publisher), plus this app's own full changelog, newest first, in the display language (English or Japanese).
 
   **更新履歴** — アプリ内のページで、kaiHEN 本体とカタログのソフト・アプリの更新履歴 (公開元のリリース履歴) と、このアプリ自身の全ての更新履歴を、表示中の言語 (英語または日本語) で新しい順に確認できます。

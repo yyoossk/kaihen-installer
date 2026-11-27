@@ -5,6 +5,54 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261128-0235
+
+- Six speed and storage improvements.
+
+- Large catalog downloads now fetch in parallel parts when the server supports it, with the plain download as the fallback.
+
+- The big emulators and the browser image arrive sooner on a fast connection.
+
+- Installing now probes the OunceShell and plugin FTP servers in parallel, so installs start sooner when only one of them is running.
+
+- The gallery warms its thumbnail cache in the background right after the album list loads.
+
+- Scrolling the grid no longer waits for each thumbnail to be made.
+
+- The home screen gains a cache section.
+
+- It shows how much the downloaded kaiHEN and homebrew files take up, and clears them with one button.
+
+- Anything cleared is downloaded again when it is next needed.
+
+- The launcher engine's per-run log folders are trimmed automatically to the newest five.
+
+- The gallery list already showed 30 photos per page, so it needed no change.
+
+- 処理とストレージの改良を6件入れました。
+
+- カタログの大きなダウンロードは、サーバーが対応している場合に分割して並列に取得するようになりました。
+
+- 対応していない場合は従来どおりのダウンロードに切り替わります。
+
+- 大きなエミュレータやブラウザのイメージが、速い回線で早く届きます。
+
+- インストール時の FTP 接続先 (OunceShell とプラグイン) の判定を並列化し、片方しか動いていないときでもインストールが早く始まります。
+
+- ギャラリーは、一覧を読み込んだ直後にサムネイルを裏側で先に作るようになりました。
+
+- スクロールしたときに、その場でサムネイルを作る待ちがなくなります。
+
+- ホーム画面にキャッシュの項目を追加しました。
+
+- ダウンロードした kaiHEN や自作ソフトがどれだけ場所を取っているかを表示し、ボタン1つで消せます。
+
+- 消したものは、次に使うときに自動で取り直します。
+
+- 起動エンジンの実行ログは、最新5件だけ残して自動で整理するようになりました。
+
+- ギャラリーの一覧はもともと1ページ30枚の分割表示だったため、変更は不要でした。
+
 ## 20261128-0212
 
 - Faster catalog, gallery and connection check. The catalog's latest-version checks now run in parallel instead of one by one, so opening the catalog is much quicker. The gallery reuses its FTP connection instead of reconnecting for every thumbnail and file. The connection check now probes the FTP ports, the loader and ping at the same time, so a console that is off is reported sooner.

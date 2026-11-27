@@ -387,6 +387,7 @@ func kaihenStartHandler(w http.ResponseWriter, r *http.Request) {
 		fail(err)
 		return
 	}
+	pruneEngineRuns()
 	script := pathOf("assets", "kaihen", "hen.cjs")
 	if _, err := os.Stat(script); err != nil {
 		fail(errors.New(tr(lang, "missingReq")))
@@ -723,18 +724,121 @@ func ozConnect(ip, lang string) (*ozSession, error) {
 	}, lang)
 }
 
+// ozConnectAddrs connects to the first working address. With two
+// addresses (OunceShell, then the FTPD plugin) they are probed in
+// parallel: waiting out the preferred address's full dial timeout
+// before even trying the other made every install start slowly
+// whenever OunceShell was not running. The preferred address keeps
+// priority — the other is used at once when the preferred one has
+// failed, or when it has not answered within a short grace period
+// after the other connected (a live server on a LAN finishes its
+// login well within that).
 func ozConnectAddrs(addrs []string, lang string) (*ozSession, error) {
-	var firstErr error
-	for i, addr := range addrs {
-		s, err := ozConnectAddr(addr, lang)
-		if err == nil {
-			return s, nil
+	if len(addrs) != 2 {
+		var firstErr error
+		for i, addr := range addrs {
+			s, err := ozConnectAddr(addr, lang)
+			if err == nil {
+				return s, nil
+			}
+			if i == 0 {
+				firstErr = err
+			}
 		}
-		if i == 0 {
-			firstErr = err
+		return nil, firstErr
+	}
+	type ozRes struct {
+		idx int
+		s   *ozSession
+		err error
+	}
+	ch := make(chan ozRes, 2)
+	for i, addr := range addrs {
+		go func(idx int, addr string) {
+			s, err := ozConnectAddr(addr, lang)
+			ch <- ozRes{idx, s, err}
+		}(i, addr)
+	}
+	var firstErr error
+	firstDone := false
+	var second *ozSession
+	var graceC <-chan time.Time
+	for got := 0; got < 2; {
+		select {
+		case r := <-ch:
+			got++
+			switch {
+			case r.err == nil && r.idx == 0:
+				if second != nil {
+					second.close()
+				}
+				return r.s, nil
+			case r.err == nil: // the fallback answered first
+				second = r.s
+				if firstDone {
+					return second, nil // preferred already failed
+				}
+				t := time.NewTimer(2 * time.Second)
+				defer t.Stop()
+				graceC = t.C
+			default: // an attempt failed
+				if r.idx == 0 {
+					firstDone = true
+					firstErr = r.err
+					if second != nil {
+						return second, nil
+					}
+				}
+			}
+		case <-graceC:
+			// The preferred address is still pending; take the
+			// fallback and close the preferred session if it ever
+			// lands.
+			go func() {
+				if r := <-ch; r.s != nil {
+					r.s.close()
+				}
+			}()
+			return second, nil
 		}
 	}
+	if second != nil {
+		return second, nil
+	}
 	return nil, firstErr
+}
+
+// pruneEngineRuns trims the launcher engine's per-run folders
+// (assets/kaihen/engine/runs): every kaiHEN start adds one, so only
+// the newest few are kept.
+const engineRunsKeep = 5
+
+func pruneEngineRuns() {
+	dir := pathOf("assets", "kaihen", "engine", "runs")
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	type runDir struct {
+		path string
+		mod  time.Time
+	}
+	var runs []runDir
+	for _, e := range ents {
+		if !e.IsDir() {
+			continue
+		}
+		if fi, err := e.Info(); err == nil {
+			runs = append(runs, runDir{filepath.Join(dir, e.Name()), fi.ModTime()})
+		}
+	}
+	sort.Slice(runs, func(i, j int) bool { return runs[i].mod.After(runs[j].mod) })
+	if len(runs) <= engineRunsKeep {
+		return
+	}
+	for _, r := range runs[engineRunsKeep:] {
+		os.RemoveAll(r.path)
+	}
 }
 
 func ozConnectAddr(addr, lang string) (*ozSession, error) {

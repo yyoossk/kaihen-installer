@@ -413,3 +413,23 @@ func TestGalPoolReuse(t *testing.T) {
 		t.Fatalf("connects = %d, want 2 after the broken drop", connects)
 	}
 }
+
+func TestGalPrefetchWarmsCache(t *testing.T) {
+	f := newFakeGalFTP(t, map[string][]byte{
+		"/Nintendo/Album/2026/shot.jpg": makeJPEG(64, 48),
+	}, false)
+	old := galResolveFn
+	galResolveFn = func(ip, src string) (*galSession, string, error) {
+		s, err := galConnect(ip, f.port())
+		return s, "oz", err
+	}
+	defer func() { galResolveFn = old }()
+	items := []galItem{{Path: "2026/shot.jpg", Name: "shot.jpg", Type: "photo"}}
+	galPrefetch("127.0.0.1", "pooltest2", items)
+	galThumbMu.Lock()
+	_, ok := galThumbCache["127.0.0.1|pooltest2|2026/shot.jpg"]
+	galThumbMu.Unlock()
+	if !ok {
+		t.Fatal("prefetch did not warm the thumbnail cache")
+	}
+}

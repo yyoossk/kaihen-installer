@@ -495,6 +495,47 @@ func galAcquire(ip, src string) (*galSession, string, func(), error) {
 	return sess, used, func() { sess.close() }, nil
 }
 
+var galPrefetching sync.Map // "ip|src" while a prefetch is running
+
+// galPrefetch warms the thumbnail cache for a freshly listed album
+// (photos only, capped), so scrolling the grid does not generate
+// each thumbnail on first sight. It goes through the session pool
+// like any other request: a thumbnail the user asks for meanwhile
+// takes its own session and never waits for the prefetch.
+func galPrefetch(ip, src string, items []galItem) {
+	key := ip + "|" + src
+	if _, busy := galPrefetching.LoadOrStore(key, true); busy {
+		return
+	}
+	defer galPrefetching.Delete(key)
+	n := 0
+	for _, it := range items {
+		if it.Type != "photo" {
+			continue
+		}
+		if n >= 60 {
+			break
+		}
+		n++
+		thumbKey := ip + "|" + src + "|" + it.Path
+		galThumbMu.Lock()
+		_, cached := galThumbCache[thumbKey]
+		galThumbMu.Unlock()
+		if cached {
+			continue
+		}
+		s, _, release, err := galAcquire(ip, src)
+		if err != nil {
+			return
+		}
+		_, err = galThumb(s, s.prefix+galAlbumRoot+"/"+it.Path, thumbKey)
+		release()
+		if err != nil {
+			return // the console went away; stop warming
+		}
+	}
+}
+
 // galCleanRel validates a client-supplied album-relative path: no
 // traversal segments, and the result stays under the album root.
 func galCleanRel(rel string) (string, bool) {
@@ -564,6 +605,11 @@ func galleryListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer release()
 	items, err := s.walk()
+	if err == nil {
+		// Warm the thumbnail cache in the background, so scrolling
+		// the grid does not generate each thumbnail on first sight.
+		go galPrefetch(ip, src, items)
+	}
 	if err != nil {
 		galWriteErr(w, lang, http.StatusBadGateway)
 		return

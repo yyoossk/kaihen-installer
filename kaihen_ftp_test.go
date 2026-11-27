@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // fakeOzFTP is a minimal FTP server speaking just enough of the
@@ -392,10 +393,72 @@ func TestOzConnectPrefersOunceShell(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer s.close()
-	plugin.mu.Lock()
-	contacted := len(plugin.cmds) > 0
-	plugin.mu.Unlock()
-	if contacted {
-		t.Fatal("plugin was contacted even though OunceShell answered")
+	// Since the parallel-probe change (build 20261128-0235) both
+	// servers may be logged into briefly; the contract that matters
+	// is that the preferred OunceShell session is the one returned.
+	if s.addr != oz.ln.Addr().String() {
+		t.Fatalf("picked %s, want OunceShell %s", s.addr, oz.ln.Addr().String())
+	}
+}
+
+func TestOzConnectAddrsParallel(t *testing.T) {
+	live := newFakeOzFTP(t, "/switch")
+	liveAddr := live.ln.Addr().String()
+	// The preferred address never answers (an unroutable IP: the
+	// dial hangs until its timeout). The fallback must be picked
+	// after the grace period, not after the full dial timeout.
+	start := time.Now()
+	s, err := ozConnectAddrs([]string{"10.255.255.1:1337", liveAddr}, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.addr != liveAddr {
+		t.Fatalf("picked %s, want the live fallback %s", s.addr, liveAddr)
+	}
+	s.close()
+	if el := time.Since(start); el > 8*time.Second {
+		t.Fatalf("fallback took %v; the parallel probe did not help", el)
+	}
+	// When both answer, the preferred address wins.
+	live2 := newFakeOzFTP(t, "/switch")
+	s2, err := ozConnectAddrs([]string{liveAddr, live2.ln.Addr().String()}, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s2.addr != liveAddr {
+		t.Fatalf("picked %s, want the preferred %s", s2.addr, liveAddr)
+	}
+	s2.close()
+}
+
+func TestPruneEngineRuns(t *testing.T) {
+	oldDir := exeDir
+	exeDir = t.TempDir()
+	defer func() { exeDir = oldDir }()
+	runs := filepath.Join(exeDir, "assets", "kaihen", "engine", "runs")
+	base := time.Now().Add(-time.Hour)
+	for i := 0; i < 8; i++ {
+		d := filepath.Join(runs, "run"+string(rune('a'+i)))
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		mt := base.Add(time.Duration(i) * time.Minute)
+		if err := os.Chtimes(d, mt, mt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pruneEngineRuns()
+	ents, err := os.ReadDir(runs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ents) != engineRunsKeep {
+		t.Fatalf("%d run folders left, want %d", len(ents), engineRunsKeep)
+	}
+	// The survivors are the newest five (d..h of a..h).
+	for _, e := range ents {
+		if e.Name() < "rund" {
+			t.Fatalf("old run folder %s survived", e.Name())
+		}
 	}
 }
