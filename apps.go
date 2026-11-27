@@ -122,6 +122,7 @@ func builtinApps() []*appEntry {
 		{ID: "sh00kapic/PKForge-Switch2", Kind: "nro", Builtin: true, Name: "PKForge", Source: "release", AssetHint: "PKForge-AIO.nro", InstallPath: "PKForge/PKForge.nro"},
 		{ID: "cainan-c/reset-launch-version", Kind: "nro", Builtin: true, Name: "Reset Launch Version", Source: "release"},
 		{ID: "AlexTech01/local-update-tool", Kind: "nro", Builtin: true, Name: "Local Update Tool", Source: "release", InstallPath: "local-update-tool/local-update-tool.nro"},
+		{ID: "davidkalil10/n-launcher", Kind: "nro", Builtin: true, Name: "N Launcher", Source: "release", InstallPath: "n-launcher/n-launcher.nro"},
 		{ID: "Sank-kab/KaiVesper", Kind: "nro", Builtin: true, Name: "KaiVesper", Source: "release", PreRelease: true, Patched: true},
 	}
 }

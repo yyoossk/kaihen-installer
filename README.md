@@ -129,15 +129,15 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
 The catalog is split into two pages by kaiHEN type.
 
-36 apps for stock kaiHEN, installed over FTP into `/switch` (or their own folders where the release requires it):
+37 apps for stock kaiHEN, installed over FTP into `/switch` (or their own folders where the release requires it):
 
-90DNS Tester / Blacklist Tool / BrewStore / Cemu NX2 / Checkpoint / Chiaki-ng/Akira / Chromium NX / Dekopon for SW2 / Dolphin NX2 / Eden for SW2 (POC) / Force Internal Speaker / FTPD Plugin / Game Vault / KaiDump / KaiPlayer / KaiRadio / KaiVideo / Kaizhar / Local Update Tool / melonDS-switch2 / mGBA / Moonlight / Moonlight-Switch / NXGallery / OunceMTP / PKForge / PKSM / PPSSPP NX2 / Reset Launch Version / RetroArch / SW2NES / SW2PS2 / SW2SNES / SW2Transfer / Vita3K / WinampNX2
+90DNS Tester / Blacklist Tool / BrewStore / Cemu NX2 / Checkpoint / Chiaki-ng/Akira / Chromium NX / Dekopon for SW2 / Dolphin NX2 / Eden for SW2 (POC) / Force Internal Speaker / FTPD Plugin / Game Vault / KaiDump / KaiPlayer / KaiRadio / KaiVideo / Kaizhar / Local Update Tool / melonDS-switch2 / mGBA / Moonlight / Moonlight-Switch / N Launcher / NXGallery / OunceMTP / PKForge / PKSM / PPSSPP NX2 / Reset Launch Version / RetroArch / SW2NES / SW2PS2 / SW2SNES / SW2Transfer / Vita3K / WinampNX2
 
 A separate page lists the apps for patched kaiHEN: KaiVesper.
 
 カタログは kaiHEN の種類ごとに2ページに分かれています。
 
-純正 kaiHEN 用の36本を、FTP で `/switch` (リリースの指定するフォルダ) にインストールできます。
+純正 kaiHEN 用の37本を、FTP で `/switch` (リリースの指定するフォルダ) にインストールできます。
 
 パッチ版 kaiHEN 用のページには KaiVesper があります。
 

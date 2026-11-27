@@ -5,6 +5,15 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261127-2153
+
+- N Launcher (by davidkalil10) was added to the stock kaiHEN catalog page, for 38 catalog apps in total.
+- N Launcher prepares and launches NUP game backups directly on the console, with no PC conversion step.
+- It runs on stock kaiHEN and keeps its saves separate from the console's own saves.
+- N Launcher (davidkalil10 作) を純正 kaiHEN 用のカタログページに追加し、カタログは全38本になりました。
+- N Launcher は、NUP 形式のゲームバックアップを PC での変換なしに本体だけで準備・起動するローダーです。
+- 純正 kaiHEN で動き、セーブは本体のセーブとは別に保持されます。
+
 ## 20261127-1744
 
 - On Android, the app now asks for the install permission its self-update needs the first time it starts, instead of when an update is found.
