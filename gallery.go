@@ -544,9 +544,11 @@ func galAcquire(ip, src string) (*galSession, string, func(), error) {
 
 var galPrefetching sync.Map // "ip|src" while a prefetch is running
 
-// galPrefetch warms the thumbnail cache for a freshly listed album
-// (photos only, capped), so scrolling the grid does not generate
-// each thumbnail on first sight. It goes through the session pool
+// galPrefetch warms the thumbnail cache for the first page of a
+// freshly listed album (photos only; one page is 30 items, the
+// page's own page size), so opening the gallery shows its first
+// screen without waiting for each thumbnail. Later pages load
+// their thumbnails when shown. It goes through the session pool
 // like any other request: a thumbnail the user asks for meanwhile
 // takes its own session and never waits for the prefetch.
 func galPrefetch(ip, src string, items []galItem) {
@@ -560,7 +562,7 @@ func galPrefetch(ip, src string, items []galItem) {
 		if it.Type != "photo" {
 			continue
 		}
-		if n >= 60 {
+		if n >= 30 {
 			break
 		}
 		n++

@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -278,7 +279,7 @@ func webClient() *http.Client {
 }
 
 func httpGet(url string) ([]byte, error) {
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(transferCtx(), "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -295,13 +296,197 @@ func httpGet(url string) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(resp.Body, 512<<20))
 }
 
-// httpGetToFile streams a download straight to a file, for payloads
-// too large to hold in memory (hundreds of MB). It reports progress
-// as (done, total) after each chunk; total is -1 when the server
-// gives no length. Unlike webClient it has no overall timeout: a
-// big file on a slow link may legitimately take many minutes.
-func httpGetToFile(url, dst string, progress func(done, total int64)) error {
-	req, err := http.NewRequest("GET", url, nil)
+// ---------- transfer cancellation ----------
+
+// One catalog install (download + upload) runs at a time. It
+// registers a cancellable context here; the page's cancel button
+// reaches it through /api/cancel. Downloads thread the context into
+// their requests, and the upload loops poll transferCancelled().
+var opState struct {
+	sync.Mutex
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+var errTransferCancelled = errors.New("transfer cancelled")
+
+func beginTransfer() context.Context {
+	opState.Lock()
+	defer opState.Unlock()
+	if opState.cancel != nil {
+		opState.cancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	opState.ctx, opState.cancel = ctx, cancel
+	return ctx
+}
+
+func endTransfer() {
+	opState.Lock()
+	defer opState.Unlock()
+	if opState.cancel != nil {
+		opState.cancel()
+	}
+	opState.ctx, opState.cancel = nil, nil
+}
+
+func cancelTransfer() {
+	opState.Lock()
+	defer opState.Unlock()
+	if opState.cancel != nil {
+		opState.cancel()
+	}
+}
+
+func transferCtx() context.Context {
+	opState.Lock()
+	defer opState.Unlock()
+	if opState.ctx != nil {
+		return opState.ctx
+	}
+	return context.Background()
+}
+
+func transferCancelled() bool {
+	return transferCtx().Err() != nil
+}
+
+// ---------- resumable file downloads ----------
+
+// A file download writes dst+".part" first and renames it into
+// place only when complete, remembering the URL and total in
+// dst+".part.meta". An interrupted download therefore leaves a
+// valid prefix behind, and the next attempt resumes from it with a
+// Range request instead of starting over.
+type partMeta struct {
+	URL   string `json:"url"`
+	Total int64  `json:"total"`
+}
+
+func writePartMeta(part, url string, total int64) {
+	b, _ := json.Marshal(partMeta{URL: url, Total: total})
+	os.WriteFile(part+".meta", b, 0o644)
+}
+
+func readPartMeta(part string) (partMeta, bool) {
+	b, err := os.ReadFile(part + ".meta")
+	if err != nil {
+		return partMeta{}, false
+	}
+	var m partMeta
+	if json.Unmarshal(b, &m) != nil || m.URL == "" {
+		return partMeta{}, false
+	}
+	return m, true
+}
+
+func dropPart(part string) {
+	os.Remove(part)
+	os.Remove(part + ".meta")
+}
+
+func finishPart(part, dst string) error {
+	if err := os.Rename(part, dst); err != nil {
+		return err
+	}
+	os.Remove(part + ".meta")
+	return nil
+}
+
+// tryResume continues an interrupted download of url into dst from
+// its leftover .part file. engaged is false when there is nothing
+// usable to resume (the caller then downloads from the start); a
+// stale .part (different URL, or the server's total changed) is
+// discarded in that case.
+func tryResume(url, dst string, progress func(done, total int64)) (bool, error) {
+	part := dst + ".part"
+	info, err := os.Stat(part)
+	if err != nil || info.Size() == 0 {
+		return false, nil
+	}
+	meta, ok := readPartMeta(part)
+	if !ok || meta.URL != url {
+		dropPart(part)
+		return false, nil
+	}
+	have := info.Size()
+	req, err := http.NewRequestWithContext(transferCtx(), "GET", url, nil)
+	if err != nil {
+		return true, err
+	}
+	req.Header.Set("User-Agent", "CivInstaller")
+	req.Header.Set("Range", fmt.Sprintf("bytes=%d-", have))
+	resp, err := (&http.Client{Transport: webTransport}).Do(req)
+	if err != nil {
+		return true, err
+	}
+	defer resp.Body.Close()
+	var total int64
+	switch resp.StatusCode {
+	case 206:
+		total = contentRangeTotal(resp.Header.Get("Content-Range"))
+		if meta.Total > 0 && total > 0 && meta.Total != total {
+			dropPart(part)
+			return false, nil
+		}
+		if total <= 0 {
+			total = meta.Total
+		}
+	case 416: // the .part cannot be continued (e.g. already whole)
+		dropPart(part)
+		return false, nil
+	case 200: // the server ignores ranges: start over
+		dropPart(part)
+		return false, nil
+	default:
+		return true, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	f, err := os.OpenFile(part, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return true, err
+	}
+	done := have
+	buf := make([]byte, 1<<20)
+	for {
+		n, rerr := resp.Body.Read(buf)
+		if n > 0 {
+			if _, werr := f.Write(buf[:n]); werr != nil {
+				f.Close()
+				return true, werr
+			}
+			done += int64(n)
+			if progress != nil {
+				progress(done, total)
+			}
+		}
+		if rerr == io.EOF {
+			break
+		}
+		if rerr != nil {
+			f.Close()
+			if transferCancelled() {
+				return true, errTransferCancelled
+			}
+			return true, rerr
+		}
+	}
+	if err := f.Close(); err != nil {
+		return true, err
+	}
+	if total > 0 && done != total {
+		return true, io.ErrUnexpectedEOF
+	}
+	if progress != nil {
+		progress(done, done)
+	}
+	return true, finishPart(part, dst)
+}
+
+// downloadSequential streams url to dst in one request, through the
+// .part file, keeping a partial .part when the transfer breaks so
+// the next attempt can resume it.
+func downloadSequential(url, dst string, progress func(done, total int64)) error {
+	req, err := http.NewRequestWithContext(transferCtx(), "GET", url, nil)
 	if err != nil {
 		return err
 	}
@@ -309,16 +494,21 @@ func httpGetToFile(url, dst string, progress func(done, total int64)) error {
 	cl := &http.Client{Transport: webTransport}
 	resp, err := cl.Do(req)
 	if err != nil {
+		if transferCancelled() {
+			return errTransferCancelled
+		}
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
-	f, err := os.Create(dst)
+	part := dst + ".part"
+	f, err := os.Create(part)
 	if err != nil {
 		return err
 	}
+	writePartMeta(part, url, resp.ContentLength)
 	buf := make([]byte, 1<<20)
 	var done int64
 	for {
@@ -326,7 +516,6 @@ func httpGetToFile(url, dst string, progress func(done, total int64)) error {
 		if n > 0 {
 			if _, werr := f.Write(buf[:n]); werr != nil {
 				f.Close()
-				os.Remove(dst)
 				return werr
 			}
 			done += int64(n)
@@ -339,11 +528,29 @@ func httpGetToFile(url, dst string, progress func(done, total int64)) error {
 		}
 		if rerr != nil {
 			f.Close()
-			os.Remove(dst)
+			if transferCancelled() {
+				return errTransferCancelled
+			}
 			return rerr
 		}
 	}
-	return f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return finishPart(part, dst)
+}
+
+// httpGetToFile streams a download straight to a file, for payloads
+// too large to hold in memory (hundreds of MB). It reports progress
+// as (done, total) after each chunk; total is -1 when the server
+// gives no length. Unlike webClient it has no overall timeout: a
+// big file on a slow link may legitimately take many minutes. An
+// interrupted download resumes from its leftover partial file.
+func httpGetToFile(url, dst string, progress func(done, total int64)) error {
+	if engaged, err := tryResume(url, dst, progress); engaged {
+		return err
+	}
+	return downloadSequential(url, dst, progress)
 }
 
 // ---------- parallel range downloads ----------
@@ -377,7 +584,7 @@ func contentRangeTotal(h string) int64 {
 // response IS the whole body (the server ignores ranges) and the
 // caller reads it; any other status is an error.
 func probeRange(url string) (total int64, body io.ReadCloser, err error) {
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(transferCtx(), "GET", url, nil)
 	if err != nil {
 		return -1, nil, err
 	}
@@ -420,7 +627,7 @@ func fetchRanges(url string, total int64, write func(off int64, part io.Reader, 
 		wg.Add(1)
 		go func(off, end int64) {
 			defer wg.Done()
-			req, err := http.NewRequest("GET", url, nil)
+			req, err := http.NewRequestWithContext(transferCtx(), "GET", url, nil)
 			if err != nil {
 				errCh <- err
 				return
@@ -478,8 +685,13 @@ func httpGetBig(url string) ([]byte, error) {
 }
 
 // httpGetToFileFast is httpGetToFile with parallel range parts for
-// large, range-capable downloads.
+// large, range-capable downloads. A leftover partial file resumes
+// first; when the parallel path fails, the plain sequential
+// download (which keeps a resumable partial file) is the fallback.
 func httpGetToFileFast(url, dst string, progress func(done, total int64)) error {
+	if engaged, err := tryResume(url, dst, progress); engaged {
+		return err
+	}
 	total, body, err := probeRange(url)
 	if err != nil {
 		return err
@@ -488,7 +700,7 @@ func httpGetToFileFast(url, dst string, progress func(done, total int64)) error 
 		if body != nil {
 			body.Close()
 		}
-		return httpGetToFile(url, dst, progress)
+		return downloadSequential(url, dst, progress)
 	}
 	f, err := os.Create(dst)
 	if err != nil {
@@ -535,7 +747,10 @@ func httpGetToFileFast(url, dst string, progress func(done, total int64)) error 
 	}
 	if err != nil {
 		os.Remove(dst)
-		return err
+		if transferCancelled() {
+			return errTransferCancelled
+		}
+		return downloadSequential(url, dst, progress)
 	}
 	if progress != nil {
 		progress(total, total)
@@ -543,10 +758,126 @@ func httpGetToFileFast(url, dst string, progress func(done, total int64)) error 
 	return nil
 }
 
+// ---------- console IP discovery ----------
+
+// scanSubnets returns the /24 networks this machine sits on: one per
+// IPv4 interface address, plus the Android shell's reported LAN
+// address (KAIHEN_LAN_IP) when set.
+func scanSubnets() []string {
+	seen := map[string]bool{}
+	var nets []string
+	add := func(ip net.IP) {
+		if ip == nil {
+			return
+		}
+		ip4 := ip.To4()
+		if ip4 == nil || ip4.IsLoopback() {
+			return
+		}
+		base := fmt.Sprintf("%d.%d.%d.0", ip4[0], ip4[1], ip4[2])
+		if !seen[base] {
+			seen[base] = true
+			nets = append(nets, base)
+		}
+	}
+	if v := os.Getenv("KAIHEN_LAN_IP"); v != "" {
+		add(net.ParseIP(v))
+	}
+	if ifs, err := net.Interfaces(); err == nil {
+		for _, ifc := range ifs {
+			if ifc.Flags&net.FlagLoopback != 0 || ifc.Flags&net.FlagUp == 0 {
+				continue
+			}
+			addrs, err := ifc.Addrs()
+			if err != nil {
+				continue
+			}
+			for _, a := range addrs {
+				if ipn, ok := a.(*net.IPNet); ok {
+					add(ipn.IP)
+				}
+			}
+		}
+	}
+	return nets
+}
+
+// probeConsolePorts reports how strongly host looks like the
+// console: 2 = an FTP server on 1337/5000 answered with an FTP
+// greeting (a bare connect is not proof — some networks accept
+// every connection), 1 = the loader port (9026) accepted a
+// connection, 0 = neither.
+func probeConsolePorts(host string) int {
+	for _, port := range []int{ozFtpPort, ozPluginPort} {
+		c, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), 300*time.Millisecond)
+		if err != nil {
+			continue
+		}
+		c.SetReadDeadline(time.Now().Add(400 * time.Millisecond))
+		buf := make([]byte, 4)
+		n, rerr := c.Read(buf)
+		c.Close()
+		if rerr == nil && n >= 3 && string(buf[:3]) == "220" {
+			return 2
+		}
+	}
+	if c, err := net.DialTimeout("tcp", net.JoinHostPort(host, "9026"), 300*time.Millisecond); err == nil {
+		c.Close()
+		return 1
+	}
+	return 0
+}
+
+// findIpHandler scans the local /24 networks for candidate console
+// addresses, so the user can pick theirs instead of typing it.
+// FTP-verified addresses come first.
+func findIpHandler(w http.ResponseWriter, r *http.Request) {
+	var hosts []string
+	for _, base := range scanSubnets() {
+		parts := strings.Split(base, ".")
+		for i := 1; i < 255; i++ {
+			hosts = append(hosts, parts[0]+"."+parts[1]+"."+parts[2]+"."+strconv.Itoa(i))
+		}
+	}
+	type hit struct {
+		ip  string
+		lvl int
+	}
+	var hits []hit
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 48)
+	for _, h := range hosts {
+		wg.Add(1)
+		go func(h string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			if lvl := probeConsolePorts(h); lvl > 0 {
+				mu.Lock()
+				hits = append(hits, hit{h, lvl})
+				mu.Unlock()
+			}
+		}(h)
+	}
+	wg.Wait()
+	sort.Slice(hits, func(i, j int) bool {
+		if hits[i].lvl != hits[j].lvl {
+			return hits[i].lvl > hits[j].lvl
+		}
+		return hits[i].ip < hits[j].ip
+	})
+	found := []string{}
+	for _, h := range hits {
+		found = append(found, h.ip)
+	}
+	jsonOK(w, map[string]any{"ok": true, "ips": found})
+}
+
 // httpGetFinal is httpGet plus the final URL after redirects (GitHub
 // release pages encode the tag in the redirect target).
 func httpGetFinal(u string) ([]byte, string, error) {
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequestWithContext(transferCtx(), "GET", u, nil)
 	if err != nil {
 		return nil, "", err
 	}

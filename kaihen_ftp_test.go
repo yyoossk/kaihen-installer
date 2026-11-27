@@ -133,6 +133,23 @@ func (f *fakeOzFTP) handle(c net.Conn) {
 			} else {
 				send("550 no such file")
 			}
+		case "DELE":
+			f.mu.Lock()
+			_, ok := f.files[arg]
+			if ok {
+				delete(f.files, arg)
+			}
+			f.mu.Unlock()
+			if ok {
+				send("250 deleted")
+			} else {
+				send("550 no such file")
+			}
+		case "RMD":
+			f.mu.Lock()
+			delete(f.dirs, arg)
+			f.mu.Unlock()
+			send("250 removed")
 		case "QUIT":
 			send("221 bye")
 			return
@@ -460,5 +477,100 @@ func TestPruneEngineRuns(t *testing.T) {
 		if e.Name() < "rund" {
 			t.Fatalf("old run folder %s survived", e.Name())
 		}
+	}
+}
+
+// Reinstalling a file that is already on the SD card with the same
+// size must not upload it again; a different size must.
+func TestStorSkipSameSize(t *testing.T) {
+	f := newFakeOzFTP(t, "/switch")
+	s, err := ozConnectAddr(f.ln.Addr().String(), "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	data := []byte("hello nro")
+	if err := storSkip(s, "switch/test.nro", data, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !f.saw("STOR") {
+		t.Fatal("first upload did not STOR")
+	}
+	f.mu.Lock()
+	f.cmds = nil
+	f.mu.Unlock()
+	if err := storSkip(s, "switch/test.nro", data, nil); err != nil {
+		t.Fatal(err)
+	}
+	if f.saw("STOR") {
+		t.Fatal("same-size reinstall uploaded again")
+	}
+	if err := storSkip(s, "switch/test.nro", []byte("different size!"), nil); err != nil {
+		t.Fatal(err)
+	}
+	if !f.saw("STOR") {
+		t.Fatal("changed file was not uploaded")
+	}
+}
+
+// Deleting a zip-tree entry from the console removes every file of
+// the tree (and only those).
+func TestDeleteAppFilesTree(t *testing.T) {
+	f := newFakeOzFTP(t, "/switch", "/switch/app", "/kaihen", "/kaihen/plugins")
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, "switch", "app"), 0o755)
+	os.WriteFile(filepath.Join(root, "switch", "app", "app.nro"), []byte("nro"), 0o644)
+	os.WriteFile(filepath.Join(root, "switch", "app", "data.bin"), []byte("data"), 0o644)
+	f.mu.Lock()
+	f.files["/switch/app/app.nro"] = []byte("nro")
+	f.files["/switch/app/data.bin"] = []byte("data")
+	f.files["/switch/other.nro"] = []byte("keep")
+	f.mu.Unlock()
+	s, err := ozConnectAddr(f.ln.Addr().String(), "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	a := &appEntry{ID: "x/y", Source: "zip"}
+	deleted, err := deleteAppFilesSession(s, a, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !deleted {
+		t.Fatal("nothing reported deleted")
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, ok := f.files["/switch/app/app.nro"]; ok {
+		t.Fatal("tree file still present")
+	}
+	if _, ok := f.files["/switch/other.nro"]; !ok {
+		t.Fatal("unrelated file was deleted")
+	}
+}
+
+// Deleting an entry with a fixed install path removes that path.
+func TestDeleteAppFilesInstallPath(t *testing.T) {
+	f := newFakeOzFTP(t, "/switch", "/switch/PKForge")
+	f.mu.Lock()
+	f.files["/switch/PKForge/PKForge.nro"] = []byte("nro")
+	f.mu.Unlock()
+	s, err := ozConnectAddr(f.ln.Addr().String(), "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.close()
+	a := &appEntry{ID: "x/y", AssetName: "PKForge-AIO.nro", InstallPath: "PKForge/PKForge.nro"}
+	deleted, err := deleteAppFilesSession(s, a, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !deleted {
+		t.Fatal("nothing reported deleted")
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, ok := f.files["/switch/PKForge/PKForge.nro"]; ok {
+		t.Fatal("install-path file still present")
 	}
 }

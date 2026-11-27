@@ -3,6 +3,8 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,6 +42,7 @@ type appEntry struct {
 	InstallPath   string       `json:"installPath,omitempty"` // SD path relative to switch/ when a bare .nro must be installed under a fixed folder/name instead of switch/<asset name>
 	PreRelease    bool         `json:"preRelease,omitempty"`  // resolve the newest release overall, prereleases included, instead of the newest stable
 	Patched       bool         `json:"patched,omitempty"`     // needs the patched kaiHEN variant; shown on the patched catalog page instead of the stock one
+	Added         string       `json:"added,omitempty"`       // date (YYYYMMDD) the entry joined the catalog; drives the NEW badge
 	Extras        []extraAsset `json:"extras,omitempty"`      // extra files from the same release the app needs on the SD card
 	AssetName     string       `json:"assetName"`
 	AssetURL      string       `json:"assetUrl,omitempty"`
@@ -118,11 +121,11 @@ func builtinApps() []*appEntry {
 		{ID: "shodowlo/chromium-nx", Kind: "nro", Builtin: true, Name: "Chromium NX", Source: "release", AssetHint: "chromium-nx2.nro", Extras: []extraAsset{{Name: "chromium-full.ext4", Dir: "switch/chromium-nx"}}},
 		{ID: "davidkalil10/Vita3K-nx2", Kind: "nro", Builtin: true, Name: "Vita3K", Source: "release"},
 		{ID: "TheAJLive/Cemu-NX2", Kind: "nro", Builtin: true, Name: "Cemu NX2", Source: "release"},
-		{ID: "ac1dburnz/melonDS-switch2", Kind: "nro", Builtin: true, Name: "melonDS-switch2", Source: "release"},
-		{ID: "sh00kapic/PKForge-Switch2", Kind: "nro", Builtin: true, Name: "PKForge", Source: "release", AssetHint: "PKForge-AIO.nro", InstallPath: "PKForge/PKForge.nro"},
-		{ID: "cainan-c/reset-launch-version", Kind: "nro", Builtin: true, Name: "Reset Launch Version", Source: "release"},
-		{ID: "AlexTech01/local-update-tool", Kind: "nro", Builtin: true, Name: "Local Update Tool", Source: "release", InstallPath: "local-update-tool/local-update-tool.nro"},
-		{ID: "davidkalil10/n-launcher", Kind: "nro", Builtin: true, Name: "N Launcher", Source: "release", InstallPath: "n-launcher/n-launcher.nro"},
+		{ID: "ac1dburnz/melonDS-switch2", Kind: "nro", Builtin: true, Name: "melonDS-switch2", Source: "release", Added: "20261125"},
+		{ID: "sh00kapic/PKForge-Switch2", Kind: "nro", Builtin: true, Name: "PKForge", Source: "release", AssetHint: "PKForge-AIO.nro", InstallPath: "PKForge/PKForge.nro", Added: "20261125"},
+		{ID: "cainan-c/reset-launch-version", Kind: "nro", Builtin: true, Name: "Reset Launch Version", Source: "release", Added: "20261125"},
+		{ID: "AlexTech01/local-update-tool", Kind: "nro", Builtin: true, Name: "Local Update Tool", Source: "release", InstallPath: "local-update-tool/local-update-tool.nro", Added: "20261126"},
+		{ID: "davidkalil10/n-launcher", Kind: "nro", Builtin: true, Name: "N Launcher", Source: "release", InstallPath: "n-launcher/n-launcher.nro", Added: "20261127"},
 		{ID: "Sank-kab/KaiVesper", Kind: "nro", Builtin: true, Name: "KaiVesper", Source: "release", PreRelease: true, Patched: true},
 	}
 }
@@ -183,8 +186,8 @@ func appsInit() {
 		if !ok {
 			continue
 		}
-		if a.Kind != b.Kind || a.Host != b.Host || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || a.PreRelease != b.PreRelease || a.Patched != b.Patched || !extrasEqual(a.Extras, b.Extras) {
-			a.Kind, a.Host, a.AssetHint, a.InstallPath, a.PreRelease, a.Patched = b.Kind, b.Host, b.AssetHint, b.InstallPath, b.PreRelease, b.Patched
+		if a.Kind != b.Kind || a.Host != b.Host || a.AssetHint != b.AssetHint || a.InstallPath != b.InstallPath || a.PreRelease != b.PreRelease || a.Patched != b.Patched || a.Added != b.Added || !extrasEqual(a.Extras, b.Extras) {
+			a.Kind, a.Host, a.AssetHint, a.InstallPath, a.PreRelease, a.Patched, a.Added = b.Kind, b.Host, b.AssetHint, b.InstallPath, b.PreRelease, b.Patched, b.Added
 			a.Extras = append([]extraAsset(nil), b.Extras...)
 			changed = true
 		}
@@ -508,28 +511,68 @@ func downloadAppLocked(a *appEntry, log logFn) error {
 		if log != nil {
 			log(tr("", "fetching", a.AssetURL))
 		}
-		raw, err := httpGetBig(a.AssetURL)
-		if err != nil {
-			return errors.New(tr("", "dlErr"))
-		}
-		if a.Source == "zip" {
-			if err := downloadNroZipLocked(a, raw); err != nil {
-				return err
-			}
-		} else {
-			data := raw
-			if a.SHA256 != "" && sha256Hex(data) != a.SHA256 {
-				return errors.New(tr("", "badSum"))
-			}
-			if a.Size > 0 && int64(len(data)) != a.Size {
-				return errors.New(tr("", "badContent"))
-			}
+		if a.Source != "zip" && a.Size >= bigDlThreshold {
+			// A large bare file streams straight to its cache
+			// file, so an interrupted download resumes instead
+			// of restarting (and memory stays flat).
 			dir := appCacheDir(a.ID)
 			os.MkdirAll(dir, 0o755)
-			if err := os.WriteFile(filepath.Join(dir, a.AssetName), data, 0o644); err != nil {
+			dst := filepath.Join(dir, a.AssetName)
+			if err := httpGetToFileFast(a.AssetURL, dst, nil); err != nil {
+				if errors.Is(err, errTransferCancelled) {
+					return err
+				}
+				return errors.New(tr("", "dlErr"))
+			}
+			info, err := os.Stat(dst)
+			if err != nil {
 				return errors.New(tr("", "writeErr"))
 			}
+			if a.Size > 0 && info.Size() != a.Size {
+				os.Remove(dst)
+				return errors.New(tr("", "badContent"))
+			}
+			if a.SHA256 != "" {
+				f, err := os.Open(dst)
+				if err != nil {
+					return errors.New(tr("", "writeErr"))
+				}
+				h := sha256.New()
+				_, copyErr := io.Copy(h, f)
+				f.Close()
+				if copyErr != nil || hex.EncodeToString(h.Sum(nil)) != a.SHA256 {
+					os.Remove(dst)
+					return errors.New(tr("", "badSum"))
+				}
+			}
 			pruneStaleAppCacheLocked(a)
+		} else {
+			raw, err := httpGetBig(a.AssetURL)
+			if err != nil {
+				if errors.Is(err, errTransferCancelled) {
+					return err
+				}
+				return errors.New(tr("", "dlErr"))
+			}
+			if a.Source == "zip" {
+				if err := downloadNroZipLocked(a, raw); err != nil {
+					return err
+				}
+			} else {
+				data := raw
+				if a.SHA256 != "" && sha256Hex(data) != a.SHA256 {
+					return errors.New(tr("", "badSum"))
+				}
+				if a.Size > 0 && int64(len(data)) != a.Size {
+					return errors.New(tr("", "badContent"))
+				}
+				dir := appCacheDir(a.ID)
+				os.MkdirAll(dir, 0o755)
+				if err := os.WriteFile(filepath.Join(dir, a.AssetName), data, 0o644); err != nil {
+					return errors.New(tr("", "writeErr"))
+				}
+				pruneStaleAppCacheLocked(a)
+			}
 		}
 	}
 	if err := downloadExtrasLocked(a, log); err != nil {
@@ -563,17 +606,31 @@ func pruneStaleAppCacheLocked(a *appEntry) {
 }
 
 // downloadExtrasLocked fetches the entry's extra files (resolved
-// from the latest release by refreshAppLocked) into the cache. The
-// extras folder is rebuilt from scratch so a tag change never leaves
-// a stale extra behind. Files are streamed to disk: an extra can be
-// hundreds of MB.
+// from the latest release by refreshAppLocked) into the cache.
+// Files that no longer belong to the entry are pruned, but partial
+// downloads (.part/.meta) of current extras survive, so an
+// interrupted download resumes on the next attempt instead of
+// restarting. Files are streamed to disk: an extra can be hundreds
+// of MB.
 func downloadExtrasLocked(a *appEntry, log logFn) error {
 	if len(a.Extras) == 0 {
 		return nil
 	}
 	dir := extrasDir(a.ID)
-	os.RemoveAll(dir)
 	os.MkdirAll(dir, 0o755)
+	keep := map[string]bool{}
+	for _, ex := range a.Extras {
+		keep[ex.Name] = true
+		keep[ex.Name+".part"] = true
+		keep[ex.Name+".part.meta"] = true
+	}
+	if ents, err := os.ReadDir(dir); err == nil {
+		for _, e := range ents {
+			if !e.IsDir() && !keep[e.Name()] {
+				os.Remove(filepath.Join(dir, e.Name()))
+			}
+		}
+	}
 	for _, ex := range a.Extras {
 		if ex.URL == "" {
 			return errors.New(tr("", "appNoAsset"))
@@ -592,6 +649,9 @@ func downloadExtrasLocked(a *appEntry, log logFn) error {
 			}
 		}
 		if err := httpGetToFileFast(ex.URL, filepath.Join(dir, ex.Name), progress); err != nil {
+			if errors.Is(err, errTransferCancelled) {
+				return err
+			}
 			return errors.New(tr("", "dlErr"))
 		}
 	}
@@ -738,11 +798,22 @@ func appView(a *appEntry) map[string]any {
 		parts := strings.Split(a.ID, "/")
 		name = parts[len(parts)-1]
 	}
+	repo := "https://github.com/" + a.ID
+	if a.Host == "gitlab" {
+		repo = "https://gitlab.com/" + a.ID
+	}
+	isNew := false
+	if a.Added != "" {
+		if d, err := time.Parse("20060102", a.Added); err == nil {
+			isNew = time.Since(d) < 45*24*time.Hour
+		}
+	}
 	return map[string]any{
 		"id": a.ID, "kind": a.Kind, "builtin": a.Builtin, "name": name,
 		"latestTag": a.LatestTag, "downloadedTag": a.DownloadedTag, "installedTag": a.InstalledTag,
 		"size": size, "downloaded": downloaded,
 		"updateAvailable": hasUpdate, "hasUpdate": hasUpdate,
+		"repo": repo, "patched": a.Patched, "isNew": isNew,
 	}
 }
 
@@ -970,6 +1041,11 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fail := func(err error) {
+		if errors.Is(err, errTransferCancelled) || transferCancelled() {
+			send("APPRESULT|cancelled")
+			send(tr(lang, "cancelled"))
+			return
+		}
 		send("APPRESULT|ng")
 		send(tr(lang, "failed") + err.Error())
 	}
@@ -977,6 +1053,8 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 		fail(errors.New(tr(lang, "ipInvalid")))
 		return
 	}
+	beginTransfer()
+	defer endTransfer()
 	appsMu.Lock()
 	a := findAppLocked(id)
 	appsMu.Unlock()
@@ -1010,9 +1088,9 @@ func appsInstallHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			var upErr error
 			if a.InstallPath != "" {
-				_, upErr = ftpUploadOzPath(ip, appInstallRel(a), data, lang)
+				_, upErr = ftpUploadOzPath(ip, appInstallRel(a), data, lang, send)
 			} else {
-				_, upErr = ftpUploadOz(ip, a.AssetName, data, lang)
+				_, upErr = ftpUploadOz(ip, a.AssetName, data, lang, send)
 			}
 			if upErr != nil {
 				fail(upErr)
@@ -1062,16 +1140,17 @@ func hbDeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	appsMu.Lock()
 	a := findAppLocked(body.ID)
-	var name string
+	var entry appEntry
 	if a != nil {
-		name = a.AssetName
+		entry = *a
 	}
 	appsMu.Unlock()
-	if a == nil || name == "" {
+	if a == nil {
 		jsonOK(w, map[string]any{"ok": false, "error": tr(body.Lang, "appNotFound")})
 		return
 	}
-	deleted, err := ftpDeleteOz(body.IP, name, body.Lang)
+	rootDir := filepath.Join(appCacheDir(body.ID), "root")
+	deleted, err := ftpDeleteAppFiles(body.IP, &entry, rootDir, body.Lang)
 	if err != nil {
 		jsonOK(w, map[string]any{"ok": false, "error": err.Error()})
 		return

@@ -26,6 +26,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "取得中: %s",
 		"dlErr":          "ダウンロードできません",
+		"cancelled":      "中止しました",
 		"extraDl":        "追加ファイルをダウンロードしています: %s",
 		"extraSkip":      "追加ファイルは既に入っています: %s",
 		"extraRetry":     "転送に失敗しました。別の接続で再試行します",
@@ -123,6 +124,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Downloading: %s",
 		"dlErr":          "Download failed",
+		"cancelled":      "Cancelled",
 		"extraDl":        "Downloading additional file: %s",
 		"extraSkip":      "Additional file already in place: %s",
 		"extraRetry":     "Transfer failed. Retrying on another connection",
@@ -221,6 +223,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Téléchargement : %s",
 		"dlErr":          "Échec du téléchargement",
+		"cancelled":      "Annulé",
 		"extraDl":        "Téléchargement du fichier supplémentaire : %s",
 		"extraSkip":      "Fichier supplémentaire déjà en place : %s",
 		"extraRetry":     "Échec du transfert. Nouvel essai sur une autre connexion",
@@ -319,6 +322,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Download: %s",
 		"dlErr":          "Download fehlgeschlagen",
+		"cancelled":      "Abgebrochen",
 		"extraDl":        "Zusätzliche Datei wird heruntergeladen: %s",
 		"extraSkip":      "Zusätzliche Datei ist bereits vorhanden: %s",
 		"extraRetry":     "Übertragung fehlgeschlagen. Neuer Versuch über eine andere Verbindung",
@@ -417,6 +421,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Download: %s",
 		"dlErr":          "Download non riuscito",
+		"cancelled":      "Annullato",
 		"extraDl":        "Download del file aggiuntivo: %s",
 		"extraSkip":      "File aggiuntivo già presente: %s",
 		"extraRetry":     "Trasferimento non riuscito. Nuovo tentativo su un'altra connessione",
@@ -515,6 +520,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Descargando: %s",
 		"dlErr":          "La descarga falló",
+		"cancelled":      "Cancelado",
 		"extraDl":        "Descargando archivo adicional: %s",
 		"extraSkip":      "El archivo adicional ya está en su sitio: %s",
 		"extraRetry":     "La transferencia falló. Reintentando con otra conexión",
@@ -613,6 +619,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Загрузка: %s",
 		"dlErr":          "Загрузка не удалась",
+		"cancelled":      "Отменено",
 		"extraDl":        "Загрузка дополнительного файла: %s",
 		"extraSkip":      "Дополнительный файл уже на месте: %s",
 		"extraRetry":     "Передача не удалась. Повтор через другое подключение",
@@ -711,6 +718,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "A descarregar: %s",
 		"dlErr":          "A transferência falhou",
+		"cancelled":      "Cancelado",
 		"extraDl":        "Baixando arquivo adicional: %s",
 		"extraSkip":      "Arquivo adicional já está no lugar: %s",
 		"extraRetry":     "A transferência falhou. Tentando novamente em outra conexão",
@@ -809,6 +817,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "Pobieranie: %s",
 		"dlErr":          "Pobieranie nie powiodło się",
+		"cancelled":      "Anulowano",
 		"extraDl":        "Pobieranie dodatkowego pliku: %s",
 		"extraSkip":      "Dodatkowy plik jest już na miejscu: %s",
 		"extraRetry":     "Przesyłanie nie powiodło się. Ponowna próba przez inne połączenie",
@@ -907,6 +916,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "다운로드 중: %s",
 		"dlErr":          "다운로드에 실패했습니다",
+		"cancelled":      "취소했습니다",
 		"extraDl":        "추가 파일을 다운로드하고 있습니다: %s",
 		"extraSkip":      "추가 파일이 이미 있습니다: %s",
 		"extraRetry":     "전송에 실패했습니다. 다른 연결로 다시 시도합니다",
@@ -1005,6 +1015,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "正在下载: %s",
 		"dlErr":          "下载失败",
+		"cancelled":      "已取消",
 		"extraDl":        "正在下载附加文件：%s",
 		"extraSkip":      "附加文件已就位：%s",
 		"extraRetry":     "传输失败。正在通过其他连接重试",
@@ -1103,6 +1114,7 @@ var msgs = map[string]map[string]string{
 
 		"fetching":       "正在下載: %s",
 		"dlErr":          "下載失敗",
+		"cancelled":      "已取消",
 		"extraDl":        "正在下載附加檔案：%s",
 		"extraSkip":      "附加檔案已就位：%s",
 		"extraRetry":     "傳輸失敗。正在透過其他連線重試",

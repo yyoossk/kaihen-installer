@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -69,13 +70,40 @@ func latestRelease() (string, map[string]string, error) {
 	return tag, assets, nil
 }
 
+// releaseNotes fetches a release's notes text from the GitHub API
+// (best effort: "" when the API is unreachable or rate-limited).
+// The in-app history cannot serve this: the running build's bundled
+// notes end at its own version, so the new release's notes have to
+// come from the release itself.
+func releaseNotes(tag string) string {
+	raw, err := httpGet("https://api.github.com/repos/" + updateRepo + "/releases/tags/" + url.PathEscape(tag))
+	if err != nil {
+		return ""
+	}
+	var rec struct {
+		Body string `json:"body"`
+	}
+	if json.Unmarshal(raw, &rec) != nil {
+		return ""
+	}
+	body := strings.TrimSpace(rec.Body)
+	if len(body) > 3000 {
+		body = body[:3000]
+	}
+	return body
+}
+
 func updateCheckHandler(w http.ResponseWriter, r *http.Request) {
 	tag, _, err := latestRelease()
 	if err != nil {
 		jsonOK(w, map[string]any{"available": false, "current": buildStamp})
 		return
 	}
-	jsonOK(w, map[string]any{"available": tag > buildStamp, "current": buildStamp, "latest": tag})
+	out := map[string]any{"available": tag > buildStamp, "current": buildStamp, "latest": tag}
+	if tag > buildStamp {
+		out["notes"] = releaseNotes(tag)
+	}
+	jsonOK(w, out)
 }
 
 func updateApply(ip, lang string, log logFn) error {
@@ -99,7 +127,7 @@ func updateApply(ip, lang string, log logFn) error {
 // rejecting absolute or parent-escaping entry names.
 func stageZip(zipURL, dir string, log logFn, lang string) error {
 	log(tr(lang, "fetching", zipURL))
-	raw, err := httpGet(zipURL)
+	raw, err := httpGetBig(zipURL)
 	if err != nil {
 		return errors.New(tr(lang, "dlErr"))
 	}
@@ -196,7 +224,7 @@ func applyUpdateAndroid(tag, apkURL string, log logFn, lang string) error {
 		return errors.New(tr(lang, "updUnsupported"))
 	}
 	log(tr(lang, "fetching", apkURL))
-	raw, err := httpGet(apkURL)
+	raw, err := httpGetBig(apkURL)
 	if err != nil {
 		return errors.New(tr(lang, "dlErr"))
 	}

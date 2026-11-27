@@ -374,6 +374,31 @@ func kaihenStartHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		rawSend(s)
 	}
+	// The last engine output lines, kept so a failed run can show
+	// the end of the engine's log next to the classified reason
+	// (the page's failure dialog displays them).
+	var tailMu sync.Mutex
+	var tailLines []string
+	tailAdd := func(s string) {
+		tailMu.Lock()
+		defer tailMu.Unlock()
+		for _, ln := range strings.Split(s, "\n") {
+			if strings.TrimSpace(ln) == "" {
+				continue
+			}
+			tailLines = append(tailLines, ln)
+			if len(tailLines) > 12 {
+				tailLines = tailLines[len(tailLines)-12:]
+			}
+		}
+	}
+	sendTail := func() {
+		tailMu.Lock()
+		defer tailMu.Unlock()
+		for _, ln := range tailLines {
+			rawSend("LOGTAIL|" + ln)
+		}
+	}
 	fail := func(err error) {
 		rawSend("RESULT|ng")
 		rawSend(tr(lang, "failed") + err.Error())
@@ -460,6 +485,7 @@ func kaihenStartHandler(w http.ResponseWriter, r *http.Request) {
 					killProcessTree(cmd)
 				}()
 			}
+			tailAdd(line)
 			send(line)
 		})
 	}()
@@ -495,6 +521,7 @@ func kaihenStartHandler(w http.ResponseWriter, r *http.Request) {
 	if pushFailed.Load() {
 		// The bridge never reached the loader on the console.
 		rawSend("FAILREASON|noloader")
+		sendTail()
 		fail(errors.New(tr(lang, "connErr")))
 		return
 	}
@@ -514,6 +541,7 @@ func kaihenStartHandler(w http.ResponseWriter, r *http.Request) {
 			reason = classifyRunError(e)
 		}
 		rawSend("FAILREASON|" + reason)
+		sendTail()
 		rawSend("RESULT|ng")
 		rawSend(tr(lang, "failed") + waitErr.Error())
 	}
@@ -1010,6 +1038,10 @@ func (s *ozSession) storFile(rel, local string, progress func(sent, total int64)
 	buf := make([]byte, 1<<20)
 	var sent int64
 	for {
+		if transferCancelled() {
+			dc.Close()
+			return errTransferCancelled
+		}
 		n, rerr := f.Read(buf)
 		if n > 0 {
 			if _, werr := dc.Write(buf[:n]); werr != nil {
@@ -1099,6 +1131,9 @@ func uploadOzFileAddrs(addrs []string, rel, local, lang string, log logFn) error
 // remote file that already has the same size is left as is, so
 // reinstalling an entry with a large extra file stays fast.
 func uploadFileSession(s *ozSession, rel, local string, log logFn) error {
+	if transferCancelled() {
+		return errTransferCancelled
+	}
 	info, err := os.Stat(local)
 	if err != nil {
 		return err
@@ -1170,15 +1205,30 @@ func syncKaihenLibAddrs(addrs []string, lang string, log logFn) error {
 	return nil
 }
 
+// storSkip stores data at rel over an open session, unless the
+// remote file already has the same size, in which case it logs the
+// skip and stores nothing.
+func storSkip(s *ozSession, rel string, data []byte, log logFn) error {
+	if rs, ok := s.remoteSize(rel); ok && rs == int64(len(data)) {
+		if log != nil {
+			log(tr(s.lang, "extraSkip", rel))
+		}
+		return nil
+	}
+	return s.stor(rel, data)
+}
+
 // ftpUploadOz uploads one .nro into the console's switch folder through
-// OunceShell's FTP server and returns the remote folder used.
-func ftpUploadOz(ip, name string, data []byte, lang string) (string, error) {
+// OunceShell's FTP server and returns the remote folder used. A remote
+// file that already has the same size is left as is (the same skip the
+// extra files have always had), so reinstalling stays fast.
+func ftpUploadOz(ip, name string, data []byte, lang string, log logFn) (string, error) {
 	s, err := ozConnect(ip, lang)
 	if err != nil {
 		return "", err
 	}
 	defer s.close()
-	if err := s.stor("switch/"+name, data); err != nil {
+	if err := storSkip(s, "switch/"+name, data, log); err != nil {
 		return "", err
 	}
 	return s.prefix + "/switch", nil
@@ -1197,6 +1247,9 @@ func ftpUploadOzTree(ip, rootDir string, lang string, log logFn) error {
 		if err != nil {
 			return err
 		}
+		if transferCancelled() {
+			return errTransferCancelled
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -1205,6 +1258,12 @@ func ftpUploadOzTree(ip, rootDir string, lang string, log logFn) error {
 			return err
 		}
 		rel = filepath.ToSlash(rel)
+		if rs, ok := s.remoteSize(rel); ok && rs == info.Size() {
+			if log != nil {
+				log(tr(lang, "extraSkip", rel))
+			}
+			return nil
+		}
 		data, err := os.ReadFile(p)
 		if err != nil {
 			return err
@@ -1225,23 +1284,103 @@ func ftpDeleteOz(ip, name string, lang string) (bool, error) {
 	}
 	defer s.close()
 	for _, rel := range []string{"switch/" + name, "kaihen/plugins/" + name} {
-		if code, _ := s.cmd("DELE " + s.prefix + "/" + rel); code == 250 {
+		if code, _ := s.cmd("DELE " + s.prefix + "/" + rel); code >= 200 && code < 300 {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
+// delePath deletes one SD-relative file over an open session; any 2xx
+// reply counts as deleted (FTP servers disagree on the exact code).
+func delePath(s *ozSession, rel string) bool {
+	code, _ := s.cmd("DELE " + s.prefix + "/" + rel)
+	return code >= 200 && code < 300
+}
+
+// ftpDeleteAppFiles removes everything an install put on the SD card
+// for one catalog entry: the bare file (switch folder or the kaiHEN
+// plugins folder), the file at its fixed InstallPath, or every file
+// of its extracted zip tree (plus the tree's own folders, deepest
+// first; the shared top-level folders stay). rootDir is the entry's
+// local extracted tree, used only for zip entries. It reports
+// whether anything was deleted.
+func ftpDeleteAppFiles(ip string, a *appEntry, rootDir, lang string) (bool, error) {
+	s, err := ozConnect(ip, lang)
+	if err != nil {
+		return false, err
+	}
+	defer s.close()
+	return deleteAppFilesSession(s, a, rootDir)
+}
+
+// deleteAppFilesSession is ftpDeleteAppFiles over an open session.
+func deleteAppFilesSession(s *ozSession, a *appEntry, rootDir string) (bool, error) {
+	deleted := false
+	switch {
+	case a.InstallPath != "":
+		if delePath(s, "switch/"+a.InstallPath) {
+			deleted = true
+			if d := pathDir(a.InstallPath); d != "" {
+				s.cmd("RMD " + s.prefix + "/switch/" + d)
+			}
+		}
+	case a.AssetName != "":
+		for _, rel := range []string{"switch/" + a.AssetName, "kaihen/plugins/" + a.AssetName} {
+			if delePath(s, rel) {
+				deleted = true
+				break
+			}
+		}
+	default:
+		if _, err := os.Stat(rootDir); err != nil {
+			// No local tree to learn the file list from (the cache
+			// was cleared): nothing more can be removed by name.
+			return false, nil
+		}
+		var dirs []string
+		werr := filepath.Walk(rootDir, func(p string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(rootDir, p)
+			if err != nil {
+				return err
+			}
+			rel = filepath.ToSlash(rel)
+			if info.IsDir() {
+				if strings.Contains(rel, "/") {
+					dirs = append(dirs, rel)
+				}
+				return nil
+			}
+			if delePath(s, rel) {
+				deleted = true
+			}
+			return nil
+		})
+		if werr != nil {
+			return deleted, werr
+		}
+		sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
+		for _, d := range dirs {
+			s.cmd("RMD " + s.prefix + "/" + d)
+		}
+	}
+	return deleted, nil
+}
+
 // ftpUploadOzPath uploads one file to a path relative to the console's
 // switch folder, creating folders as needed, and returns the remote
-// folder used.
-func ftpUploadOzPath(ip, rel string, data []byte, lang string) (string, error) {
+// folder used. A remote file that already has the same size is left
+// as is.
+func ftpUploadOzPath(ip, rel string, data []byte, lang string, log logFn) (string, error) {
 	s, err := ozConnect(ip, lang)
 	if err != nil {
 		return "", err
 	}
 	defer s.close()
-	if err := s.stor("switch/"+rel, data); err != nil {
+	if err := storSkip(s, "switch/"+rel, data, log); err != nil {
 		return "", err
 	}
 	return s.prefix + "/switch", nil
@@ -1269,10 +1408,120 @@ func nroFtpHandler(w http.ResponseWriter, r *http.Request) {
 		jsonOK(w, map[string]any{"ok": false, "error": tr(lang, "khBadNro")})
 		return
 	}
-	dir, err := ftpUploadOzPath(ip, rel, data, lang)
+	dir, err := ftpUploadOzPath(ip, rel, data, lang, nil)
 	if err != nil {
 		jsonOK(w, map[string]any{"ok": false, "error": err.Error()})
 		return
 	}
 	jsonOK(w, map[string]any{"ok": true, "dir": dir})
+}
+
+// installZipBytes installs a user-supplied homebrew zip (picked or
+// dropped on the catalog page) straight to the console. The shapes
+// match a release zip: entries under a switch/ or kaihen/ segment
+// (or a top-level retroarch/ folder) form a tree uploaded at the SD
+// root; every other file goes under switch/ keeping its relative
+// path, like a dropped folder.
+func installZipBytes(ip string, raw []byte, lang string, log logFn) error {
+	return installZipAddrs([]string{
+		fmt.Sprintf("%s:%d", ip, ozFtpPort),
+		fmt.Sprintf("%s:%d", ip, ozPluginPort),
+	}, raw, lang, log)
+}
+
+func installZipAddrs(addrs []string, raw []byte, lang string, log logFn) error {
+	zr, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
+	if err != nil {
+		return errors.New(tr(lang, "zipErr"))
+	}
+	type zent struct {
+		f   *zip.File
+		rel string
+	}
+	var tree, loose []zent
+	for _, f := range zr.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		name := strings.TrimPrefix(filepath.ToSlash(f.Name), "./")
+		if name == "" || strings.HasPrefix(name, "../") || name == ".." {
+			continue
+		}
+		parts := strings.Split(name, "/")
+		segAt := -1
+		if parts[0] == "retroarch" {
+			segAt = 0
+		}
+		for i, p := range parts {
+			if segAt >= 0 {
+				break
+			}
+			if p == "switch" || p == "kaihen" {
+				segAt = i
+				break
+			}
+		}
+		if segAt >= 0 {
+			tree = append(tree, zent{f, strings.Join(parts[segAt:], "/")})
+		} else {
+			loose = append(loose, zent{f, name})
+		}
+	}
+	if len(tree) == 0 && len(loose) == 0 {
+		return errors.New(tr(lang, "appNoAsset"))
+	}
+	s, err := ozConnectAddrs(addrs, lang)
+	if err != nil {
+		return err
+	}
+	defer s.close()
+	put := func(z zent, rel string) error {
+		rc, err := z.f.Open()
+		if err != nil {
+			return errors.New(tr(lang, "zipErr"))
+		}
+		data, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			return errors.New(tr(lang, "zipErr"))
+		}
+		if log != nil {
+			log(rel)
+		}
+		return storSkip(s, rel, data, log)
+	}
+	for _, z := range tree {
+		if err := put(z, z.rel); err != nil {
+			return err
+		}
+	}
+	for _, z := range loose {
+		if err := put(z, "switch/"+z.rel); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// nroFtpZipHandler receives one zip file as the raw request body,
+// extracts it and installs its contents on the console (see
+// installZipBytes). It is the zip counterpart of nroFtpHandler for
+// the catalog page's pick/drop install.
+func nroFtpZipHandler(w http.ResponseWriter, r *http.Request) {
+	ip := r.URL.Query().Get("ip")
+	lang := r.URL.Query().Get("lang")
+	if !validIP(ip) {
+		jsonOK(w, map[string]any{"ok": false, "error": tr(lang, "ipInvalid")})
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(r.Body, (512<<20)+1))
+	if err != nil || len(data) == 0 || len(data) > 512<<20 {
+		jsonOK(w, map[string]any{"ok": false, "error": tr(lang, "khBadNro")})
+		return
+	}
+	if err := installZipBytes(ip, data, lang, nil); err != nil {
+		jsonOK(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	jsonOK(w, map[string]any{"ok": true, "dir": "/switch"})
 }

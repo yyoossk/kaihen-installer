@@ -5,6 +5,72 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261128-0420
+
+- All the improvements that were held in reserve are now in.
+
+- Installing homebrew now skips the upload for any file the SD card already has at the same size.
+
+- A large download that is interrupted now resumes from where it stopped, and the self-update download is split into parallel parts as well.
+
+- The installing dialog has a cancel button that stops the download or install.
+
+- A new Installed page lists the homebrew on the console with its version and update state, and can reinstall everything that has an update in one go.
+
+- The catalog marks recently added apps with NEW, links each card to its GitHub or GitLab page, and the home screen's catalog buttons show how many updates are available.
+
+- The prep block's new Find the console button scans the local network and offers the addresses that answer like a console.
+
+- The gallery can filter by type (photos or videos) and by year and month, and can switch to a list view with name, date and size.
+
+- Gallery thumbnail prefetch now covers the first page shown.
+
+- A new Settings page gathers the language, theme and auto-start settings.
+
+- The autoloader page's step headings have checkboxes that remember how far you got.
+
+- When starting kaiHEN fails, the failure dialog now also shows the end of the engine's log.
+
+- A zip file can now be picked or dropped on the catalog page and installs extracted, like a release zip.
+
+- The update dialog now shows the new version's release notes.
+
+- Deleting homebrew from the console now also covers apps installed as a folder tree or to a fixed path.
+
+- The credits now show the component versions (CivSwitch Kit v1.1.0, Node.js v24.22.3), and Python, which is no longer bundled, is not listed anymore.
+
+- 予約していた改良を、すべて入れました。
+
+- 自作ソフトのインストールで、SD カードに同じサイズのファイルがすでにある場合は、そのファイルのアップロードを省略するようになりました。
+
+- 大きなダウンロードが途中で切れた場合は、取れたところから再開するようになりました。自己更新のダウンロードも分割して並列に取るようになりました。
+
+- インストール中のダイアログに、ダウンロードやインストールを途中で止める中止ボタンを付けました。
+
+- 新しい「インストール済み」ページで、本体に入っている自作ソフトと版、更新の有無を1か所で確認でき、更新があるものをまとめて入れ直すこともできます。
+
+- カタログで、最近追加したソフトに NEW の印が付くようになりました。各カードから GitHub や GitLab のページへも飛べます。ホーム画面のカタログボタンには、更新がある件数が出ます。
+
+- 準備ブロックの「本体を探す」ボタンで、ネットワーク内を調べて、本体らしいアドレスを候補として出すようになりました。
+
+- ギャラリーで、写真だけ・動画だけの表示と、年月での絞り込みができるようになりました。名前・日時・サイズの行で見る一覧表示にも切り替えられます。
+
+- ギャラリーのサムネイルの先読みは、最初に表示されるページの分だけになりました。
+
+- 言語・テーマ・自動起動の設定をまとめた「設定」ページを追加しました。
+
+- オートローダーの手順の見出しにチェックボックスが付き、どこまで終わったかを覚えるようになりました。
+
+- kaiHEN の起動に失敗したとき、失敗のダイアログにエンジンのログの最後も表示するようになりました。
+
+- カタログのページで zip ファイルを選んだり落としたりすると、展開して自動でインストールするようになりました。
+
+- 更新の案内のダイアログに、新しい版のリリースノートも表示するようになりました。
+
+- 本体からの削除が、フォルダ構成で入るソフトや、決まった場所に入るソフトにも対応しました。
+
+- クレジットに部品の版 (CivSwitch Kit v1.1.0、Node.js v24.22.3) を表示するようになりました。同梱していない Python の表記は消しました。
+
 ## 20261128-0254
 
 - Five more speed and storage improvements.

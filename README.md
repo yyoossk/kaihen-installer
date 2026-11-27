@@ -92,16 +92,34 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
   The newest release of each app is fetched automatically; if a release ships no files, the newest release that does is used.
 
+  Recently added apps carry a NEW mark, each card links to its GitHub or GitLab page, and the home screen's catalog buttons show how many updates are available.
+
+  A `.zip` file can also be picked or dropped and installs extracted, like a release zip.
+
+  Installs skip any file the SD card already has at the same size, a large download that is interrupted resumes from where it stopped, and the installing dialog has a cancel button.
+
   **自作ソフトのカタログ** — 対応ソフトを FTP (OunceShell) で本体にインストールできます。
 
   自分の `.nro` ファイルやフォルダを送ることもできます。
 
   各ソフトは最新リリースを自動で取得します (ファイルの無いリリースしか無い場合は、ファイルのある一番新しいリリースを使います)。
+
+  最近追加したソフトには NEW の印が付き、各カードから GitHub や GitLab のページへ飛べます。
+
+  ホーム画面のカタログボタンには、更新がある件数が出ます。
+
+  zip ファイルを選んだり落としたりすると、展開して自動でインストールします。
+
+  SD カードに同じサイズのファイルがある場合はアップロードを省略し、大きなダウンロードが途中で切れた場合は取れたところから再開します。
+
+  インストール中のダイアログには中止ボタンがあります。
 - **Gallery** — an NXGallery-style album view over FTP (OunceShell or the FTPD plugin): the SD card album as a thumbnail grid; tap an item to view it full-size or play the video, see its details, and download it.
 
   You can also check multiple items and download them together as one zip file.
 
   Each item in the grid also has its own download button.
+
+  The view can be filtered to photos only or videos only, and by year and month, and can switch to a list view with name, date and size.
 
   Captures in internal storage are not reachable over FTP, so only the SD card album is shown.
 
@@ -118,6 +136,10 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 
   一覧の1件ずつにもダウンロードボタンがあります。
 
+  写真だけ・動画だけの表示と、年月での絞り込みができます。
+
+  名前・日時・サイズの行で見る一覧表示にも切り替えられます。
+
   内部ストレージのキャプチャは FTP では見られないため、SD カードのアルバムだけが対象です。
 
   削除機能はあえて付けていません。
@@ -129,13 +151,35 @@ Switch 2 (ファームウェア **23.0.1 ちょうど**) で、シヴィライ�
 - **Update history** — a page in the app shows the update history of kaiHEN itself and of the catalog software and apps (their release history from the publisher), plus this app's own full changelog, newest first, in the display language (English or Japanese).
 
   **更新履歴** — アプリ内のページで、kaiHEN 本体とカタログのソフト・アプリの更新履歴 (公開元のリリース履歴) と、このアプリ自身の全ての更新履歴を、表示中の言語 (英語または日本語) で新しい順に確認できます。
+- **Installed apps and settings** — an Installed page lists the homebrew on the console with its version and update state, and can reinstall everything that has an update in one go.
+
+  A Settings page gathers the language, theme and auto-start settings in one place.
+
+  **インストール済みと設定** — 「インストール済み」ページで、本体に入っている自作ソフトと版、更新の有無を1か所で確認でき、更新があるものをまとめて入れ直せます。
+
+  「設定」ページに、言語・テーマ・自動起動の設定をまとめました。
+- **Finding the console, and progress marks** — the prep block's Find the console button scans the local network and offers the addresses that answer like a console, so the IP does not have to be typed.
+
+  The autoloader page's step headings have checkboxes that remember how far you got.
+
+  When starting kaiHEN fails, the failure dialog also shows the end of the engine's log.
+
+  **本体を探す・進み具合の記録** — 準備ブロックの「本体を探す」ボタンで、ネットワーク内を調べて、本体らしいアドレスを候補として出します (IP を手で入れる必要がありません)。
+
+  オートローダーの手順の見出しにはチェックボックスがあり、どこまで終わったかを覚えます。
+
+  kaiHEN の起動に失敗したときは、失敗のダイアログにエンジンのログの最後も表示します。
 - **Self-update** — the app checks this repository's releases at startup.
+
+  The update dialog shows the new version's release notes, and the download is split into parallel parts.
 
   On Windows it replaces itself and restarts (your settings and downloaded files are kept).
 
   On Android it downloads the new APK and opens the phone's standard installer.
 
   **自動更新** — 起動時にこのリポジトリの最新リリースを確認します。
+
+  更新の案内には新しい版のリリースノートも表示され、ダウンロードは分割して並列に行われます。
 
   Windows ではプログラムを入れ替えて自動で再起動します (設定やダウンロード済みのファイルは保持)。
 
