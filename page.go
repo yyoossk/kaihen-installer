@@ -684,7 +684,7 @@ function showPage(p, isBack) {
   var tq = document.getElementById("topquit");
   if (tq) tq.style.display = p === "home" ? "" : "none";
   var tbk = document.getElementById("topback");
-  if (tbk) tbk.style.display = p === "home" ? "none" : "";
+  if (tbk) tbk.style.display = (p === "home" || pageHist.length < 2) ? "none" : "";
   var thm = document.getElementById("tophome");
   if (thm) thm.style.display = p === "home" ? "none" : "";
   var ow = document.getElementById("owewrap");

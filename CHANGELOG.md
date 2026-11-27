@@ -5,8 +5,10 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
-## 20261128-0006
+## 20261128-0043
 
+- The top navigation now shows only the Home button on pages opened from the home screen; pages opened from another page show both Back and Home.
+- 上のナビゲーションを変更しました。ホームから開いたページではホームボタンだけを表示し、他のページから開いたページでは戻るとホームの両方を表示します。
 - The update history page now also shows the update history of the catalog software and apps: pick kaiHEN itself or any catalog app to see its release history (versions, dates, and notes) from the publisher.
 - 更新履歴のページで、カタログのソフトとアプリの更新履歴も見られるようにしました。kaiHEN 本体やカタログのアプリを選ぶと、公開元のリリース履歴 (バージョン・日付・説明) が表示されます。
 
