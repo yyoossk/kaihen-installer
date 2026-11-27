@@ -358,6 +358,8 @@ If a newer build exists, a dialog offers the update:
 
   App data is kept, as with any APK update.
 
+  On its first launch, the app asks you to allow installs from this app in the system settings, which Android requires for the in-app update to work.
+
 起動時に、このリポジトリの最新リリースを確認します。
 
 新しい版があるとダイアログが出ます。
@@ -370,6 +372,8 @@ If a newer build exists, a dialog offers the update:
 - **Android** — 新しい APK をアプリ内でダウンロードし、完了するとスマホ標準のインストール画面が開くので、そこでインストールします。
 
   アプリのデータは通常の APK 更新と同じく保持されます。
+
+  初回起動時に、システムの設定でこのアプリからのインストールを許可するよう案内します。アプリ内更新には Android の仕様でこの許可が必要です。
 
 ## Requirements / 前提
 

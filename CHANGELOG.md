@@ -5,6 +5,17 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261127-1744
+
+- On Android, the app now asks for the install permission its self-update needs the first time it starts, instead of when an update is found.
+- The prompt explains why the permission is needed and opens the system settings; it appears only once.
+- If the permission is skipped, the update flow still opens the same settings screen when an update actually runs.
+- No other changes.
+- Android 版で、自動更新に必要なインストール許可を、更新が見つかったときではなく初回起動時に求めるようにしました。
+- 許可がなぜ必要かを説明してからシステムの設定を開く案内を、初回に1回だけ出します。
+- 許可しなかった場合も、実際に更新するときに従来どおり同じ設定画面を開きます。
+- 他の変更はありません。
+
 ## 20261127-1715
 
 - The kaiHEN page now lets you choose the kaiHEN type: stock or patched.
