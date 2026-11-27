@@ -168,12 +168,6 @@ const pageHTML = `<!DOCTYPE html>
 <h2 data-i18n="al_home_h">オートローダー (PC なしで起動)</h2>
 <p><button class="widebtn" onclick="showPage('auto')" data-i18n="al_home_h">オートローダー (PC なしで起動)</button></p>
 
-<h2 data-i18n="app_open_stock">自作ソフトをインストール（純正用）</h2>
-<p><button class="widebtn" onclick="showPage('backup')" data-i18n="app_open_stock">自作ソフトをインストール（純正用）</button></p>
-
-<h2 data-i18n="app_open_patched">自作ソフトをインストール（パッチ版用）</h2>
-<p><button class="widebtn" onclick="showPage('backup2')" data-i18n="app_open_patched">自作ソフトをインストール（パッチ版用）</button></p>
-
 <h2 data-i18n="gal_title">ギャラリー</h2>
 <p><button class="widebtn" onclick="showPage('gallery')" data-i18n="gal_title">ギャラリー</button></p>
 
@@ -280,7 +274,8 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 <p class="note" id="autostat"></p>
 
 <h2 data-i18n="app_open">自作ソフトをインストール</h2>
-<p><button class="widebtn" onclick="showPage('backup')">kaiHEN</button></p>
+<p><button class="widebtn" onclick="showPage('backup')" data-i18n="app_open_stock">自作ソフトをインストール（純正用）</button></p>
+<p><button class="widebtn" onclick="showPage('backup2')" data-i18n="app_open_patched">自作ソフトをインストール（パッチ版用）</button></p>
 </div>
 <div id="page-auto" style="display:none">
 <h2 data-i18n="al_h">オートローダー</h2>
@@ -315,7 +310,8 @@ FS の取得はタイミング勝負のため、何回も失敗するのは普�
 <p class="note" data-i18n="al_s3">成功の合図: "CANARY FLIPPED" と出たら、canary のチェックを通過しています。そのまま待ってください。その後 "AUTOLOADER: kaiHEN installation complete. You can close Civ7 now." と出たら成功です。シヴィライゼーション7 を終了し (電源は切らないでください)、Switch 2 のゲームを R を押しながら起動してください (1回目は記録のみ)。もう一度 R を押しながら起動すると hbmenu が開きます。"AUTOLOADER: TIMING: winning schedule recorded" と出ていたら、成功したタイミングを学習して記録した合図です。"Stopped after" で始まる行が出たら、今回は失敗です。シヴィライゼーション7 を終了して起動し直し、「ゲームをロード」してください。繰り返す場合は本体の電源を完全に切って入れ直し、それでもダメならこのページでセーブを入れ直してください。"AUTOLOADER: kaiHEN prepare failed" と出たら、SD カードのファイルが読み取れていません。手順1のファイルを SD カードのルートに入れたか確認してください。</p>
 
 <h2 data-i18n="app_open">自作ソフトをインストール</h2>
-<p><button class="widebtn" onclick="showPage('backup')">kaiHEN</button></p>
+<p><button class="widebtn" onclick="showPage('backup')" data-i18n="app_open_stock">自作ソフトをインストール（純正用）</button></p>
+<p><button class="widebtn" onclick="showPage('backup2')" data-i18n="app_open_patched">自作ソフトをインストール（パッチ版用）</button></p>
 </div>
 <div id="page-mig" style="display:none">
 <div class="migip">
