@@ -729,6 +729,36 @@ func appsListHandler(w http.ResponseWriter, r *http.Request) {
 	force := r.URL.Query().Get("force") == "1"
 	appsMu.Lock()
 	defer appsMu.Unlock()
+	// Latest-release checks for stale entries run in parallel (up to
+	// six at a time): one by one, they made opening the catalog wait
+	// on dozens of sequential web fetches. Each goroutine refreshes a
+	// distinct entry while appsMu is held, exactly as the loop below
+	// did on its own, so the results are the same — just faster. A
+	// refreshed entry's LastCheck is current afterwards, so the loop
+	// below does not check it again.
+	var stale []*appEntry
+	for _, a := range appsList {
+		if a.Kind != "nro" || (kind != "" && a.Kind != kind) || (cat == "patched") != a.Patched {
+			continue
+		}
+		if force || a.LastCheck == 0 || time.Since(time.Unix(a.LastCheck, 0)) > 10*time.Minute {
+			stale = append(stale, a)
+		}
+	}
+	if len(stale) > 1 {
+		sem := make(chan struct{}, 6)
+		var wg sync.WaitGroup
+		for _, a := range stale {
+			wg.Add(1)
+			go func(a *appEntry) {
+				defer wg.Done()
+				sem <- struct{}{}
+				refreshAppLocked(a, false, nil)
+				<-sem
+			}(a)
+		}
+		wg.Wait()
+	}
 	out := []map[string]any{}
 	for _, a := range appsList {
 		if kind != "" && a.Kind != kind {

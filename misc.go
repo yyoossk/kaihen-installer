@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -54,18 +55,35 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 		jsonOK(w, map[string]any{"ok": false, "conn": false, "ping": false, "ftp": false, "detail": tr(body.Lang, "ipInvalid")})
 		return
 	}
+	// The three probes are independent, so they run in parallel: one
+	// after another, their timeouts stacked up and made the check
+	// take seconds to report a console that is simply off.
 	// Homebrew installs talk to OunceShell's FTP server (port 1337),
 	// falling back to the FTPD plugin (port 5000); the homebrew page
 	// reports whether either is listening.
-	ftp := false
-	for _, port := range []string{"1337", "5000"} {
-		if c, err := lanDialTimeout("tcp", net.JoinHostPort(body.IP, port), 1500*time.Millisecond); err == nil {
-			c.Close()
-			ftp = true
-			break
+	var ftp, ok, ping bool
+	var why string
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		for _, port := range []string{"1337", "5000"} {
+			if c, err := lanDialTimeout("tcp", net.JoinHostPort(body.IP, port), 1500*time.Millisecond); err == nil {
+				c.Close()
+				ftp = true
+				break
+			}
 		}
-	}
-	ok, why := probeLoader(body.IP)
+	}()
+	go func() {
+		defer wg.Done()
+		ok, why = probeLoader(body.IP)
+	}()
+	go func() {
+		defer wg.Done()
+		ping = pingHost(body.IP)
+	}()
+	wg.Wait()
 	detail := ""
 	if !ok {
 		switch {
@@ -77,7 +95,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 			detail = tr(body.Lang, "chkDetailDiff", strings.TrimPrefix(why, "mismatch:"))
 		}
 	}
-	jsonOK(w, map[string]any{"ok": ok, "conn": ok, "ping": pingHost(body.IP), "ftp": ftp, "detail": detail})
+	jsonOK(w, map[string]any{"ok": ok, "conn": ok, "ping": ping, "ftp": ftp, "detail": detail})
 }
 
 func quitHandler(w http.ResponseWriter, r *http.Request) {

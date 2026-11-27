@@ -372,3 +372,44 @@ func TestGalHelpers(t *testing.T) {
 		t.Errorf("suffix range = %d-%d %v", a, b, ok)
 	}
 }
+
+func TestGalPoolReuse(t *testing.T) {
+	f := newFakeGalFTP(t, map[string][]byte{"/Nintendo/Album/2026/0101.jpg": []byte("x")}, false)
+	connects := 0
+	old := galResolveFn
+	galResolveFn = func(ip, src string) (*galSession, string, error) {
+		connects++
+		s, err := galConnect(ip, f.port())
+		return s, "oz", err
+	}
+	defer func() { galResolveFn = old }()
+	// Two sequential acquire/release cycles reuse one connection.
+	for i := 0; i < 2; i++ {
+		s, _, release, err := galAcquire("127.0.0.1", "pooltest")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.walk(); err != nil {
+			t.Fatal(err)
+		}
+		release()
+	}
+	if connects != 1 {
+		t.Fatalf("connects = %d, want 1 (pooled reuse)", connects)
+	}
+	// A broken session is dropped at release and reconnected.
+	s, _, release, err := galAcquire("127.0.0.1", "pooltest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.broken = true
+	release()
+	_, _, release2, err := galAcquire("127.0.0.1", "pooltest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	release2()
+	if connects != 2 {
+		t.Fatalf("connects = %d, want 2 after the broken drop", connects)
+	}
+}

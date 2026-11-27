@@ -5,6 +5,11 @@ Each entry is the GitHub release tag.
 kaiHEN Installer の主な変更履歴です (新しい順)。
 見出しは GitHub リリースのタグです。
 
+## 20261128-0212
+
+- Faster catalog, gallery and connection check. The catalog's latest-version checks now run in parallel instead of one by one, so opening the catalog is much quicker. The gallery reuses its FTP connection instead of reconnecting for every thumbnail and file. The connection check now probes the FTP ports, the loader and ping at the same time, so a console that is off is reported sooner.
+- カタログ・ギャラリー・接続確認を速くしました。カタログの最新版チェックを1つずつ順番から並列に変えたため、カタログを開くのが大幅に速くなりました。ギャラリーはサムネイルやファイルのたびに FTP をつなぎ直さず、接続を使い回すようになりました。接続確認は FTP・ローダー・ping を同時に行うため、本体の電源が落ちている場合に結果が早く出ます。
+
 ## 20261128-0142
 
 - Smaller downloads. The Windows package no longer bundles Node.js (94 MB): it is downloaded once, with hash verification, the first time you start kaiHEN, so the Windows zip drops from about 44 MB to about 9 MB. The Android app no longer carries the Pico UF2 files. On Android, Node.js stays bundled, because Android does not allow running downloaded program code.

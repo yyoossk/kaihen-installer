@@ -54,6 +54,11 @@ type galSession struct {
 	ctrl   net.Conn
 	rd     *ftpReader
 	prefix string // "/sdmc:" or ""
+	// broken is set when the control connection's state can no
+	// longer be trusted (a transport failure, a cut transfer).
+	// Reply-code failures (a refused MLSD, a missing file) do NOT
+	// set it: the session stays in sync and reusable.
+	broken bool
 }
 
 func galConnect(ip string, port int) (*galSession, error) {
@@ -94,7 +99,11 @@ func galConnect(ip string, port int) (*galSession, error) {
 
 func (s *galSession) cmd(c string) (int, string) {
 	fmt.Fprintf(s.ctrl, "%s\r\n", c)
-	return s.rd.readReply()
+	code, line := s.rd.readReply()
+	if code == 0 { // readReply reports transport failures as 0
+		s.broken = true
+	}
+	return code, line
 }
 
 func (s *galSession) close() {
@@ -126,7 +135,11 @@ func (s *galSession) pasv() (net.Conn, error) {
 		n[k] = v
 	}
 	host := fmt.Sprintf("%d.%d.%d.%d", n[0], n[1], n[2], n[3])
-	return lanDialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(n[4]*256+n[5])), 10*time.Second)
+	dc, err := lanDialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(n[4]*256+n[5])), 10*time.Second)
+	if err != nil {
+		s.broken = true
+	}
+	return dc, err
 }
 
 // transfer runs a data command and returns the data connection; the
@@ -145,7 +158,9 @@ func (s *galSession) transfer(cmd string) (net.Conn, error) {
 }
 
 func (s *galSession) finish() {
-	s.rd.readReply() // 226/250; content not needed
+	if code, _ := s.rd.readReply(); code == 0 { // 226/250 normally
+		s.broken = true
+	}
 }
 
 type galEntry struct {
@@ -171,6 +186,7 @@ func (s *galSession) listCmd(cmd string) ([]galEntry, error) {
 	dc.Close()
 	s.finish()
 	if err != nil {
+		s.broken = true
 		return nil, err
 	}
 	var out []galEntry
@@ -259,6 +275,11 @@ func (s *galSession) retr(abs string, offset int64, w io.Writer) error {
 	_, err = io.Copy(w, dc)
 	dc.Close()
 	s.finish()
+	if err != nil {
+		// The data stream was cut short; whether the control side
+		// is still in sync is uncertain, so do not reuse it.
+		s.broken = true
+	}
 	return err
 }
 
@@ -383,6 +404,97 @@ func galResolve(ip, src string) (*galSession, string, error) {
 	}
 }
 
+var galResolveFn = galResolve
+
+// ---------- gallery session pool ----------
+
+// Connecting and logging in for every gallery request — every
+// thumbnail in the grid — was the gallery's main cost, so sessions
+// are pooled per (console, source) and reused. An FTP control
+// connection is strictly sequential, so a pooled session serves one
+// request at a time; a request that finds the pool busy opens a
+// short-lived session of its own, and parallel thumbnail loads
+// still proceed (the console's servers accept a few clients).
+type galPoolKey struct{ ip, src string }
+
+type galPoolSlot struct {
+	mu   sync.Mutex // held while the pooled session is checked out
+	sess *galSession
+	used string
+	idle time.Time
+}
+
+var (
+	galPoolMu    sync.Mutex
+	galPoolSlots = map[galPoolKey]*galPoolSlot{}
+)
+
+func galSlot(ip, src string) *galPoolSlot {
+	galPoolMu.Lock()
+	defer galPoolMu.Unlock()
+	k := galPoolKey{ip, src}
+	slot, ok := galPoolSlots[k]
+	if !ok {
+		slot = &galPoolSlot{}
+		galPoolSlots[k] = slot
+	}
+	return slot
+}
+
+// galPoolAlive checks a pooled session that has been idle a while:
+// servers drop idle connections, so prove it with NOOP first.
+func galPoolAlive(s *galSession, idle time.Time) bool {
+	if time.Since(idle) < 15*time.Second {
+		return true
+	}
+	code, _ := s.cmd("NOOP")
+	return code >= 200 && code < 300 && !s.broken
+}
+
+// galAcquire returns a session for one gallery request and the
+// source it resolved to. The release function must be called once:
+// it returns a healthy session to the pool for the next request and
+// closes anything else.
+func galAcquire(ip, src string) (*galSession, string, func(), error) {
+	slot := galSlot(ip, src)
+	if slot.mu.TryLock() {
+		sess, used := slot.sess, slot.used
+		slot.sess = nil
+		if sess != nil {
+			// The connect-time deadline still applies; renew it.
+			sess.ctrl.SetDeadline(time.Now().Add(300 * time.Second))
+			if sess.broken || !galPoolAlive(sess, slot.idle) {
+				sess.close()
+				sess = nil
+			}
+		}
+		if sess == nil {
+			var err error
+			sess, used, err = galResolveFn(ip, src)
+			if err != nil {
+				slot.mu.Unlock()
+				return nil, "", nil, err
+			}
+		}
+		return sess, used, func() {
+			if sess.broken {
+				sess.close()
+			} else {
+				slot.sess = sess
+				slot.used = used
+				slot.idle = time.Now()
+			}
+			slot.mu.Unlock()
+		}, nil
+	}
+	// Pool busy: a private session, closed on release.
+	sess, used, err := galResolveFn(ip, src)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	return sess, used, func() { sess.close() }, nil
+}
+
 // galCleanRel validates a client-supplied album-relative path: no
 // traversal segments, and the result stays under the album root.
 func galCleanRel(rel string) (string, bool) {
@@ -445,12 +557,12 @@ func galleryListHandler(w http.ResponseWriter, r *http.Request) {
 		galWriteErr(w, lang, http.StatusBadRequest)
 		return
 	}
-	s, used, err := galResolve(ip, src)
+	s, used, release, err := galAcquire(ip, src)
 	if err != nil {
 		galWriteErr(w, lang, http.StatusBadGateway)
 		return
 	}
-	defer s.close()
+	defer release()
 	items, err := s.walk()
 	if err != nil {
 		galWriteErr(w, lang, http.StatusBadGateway)
@@ -473,21 +585,21 @@ func galleryListHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// galSessionFor resolves one request's session and absolute path.
-func galSessionFor(w http.ResponseWriter, r *http.Request) (*galSession, string, bool) {
+// galSessionFor acquires one request's session and absolute path.
+func galSessionFor(w http.ResponseWriter, r *http.Request) (*galSession, string, func(), bool) {
 	q := r.URL.Query()
 	ip, src, lang := q.Get("ip"), q.Get("src"), q.Get("lang")
 	rel, ok := galCleanRel(q.Get("path"))
 	if !validIP(ip) || !ok || galMediaType(rel) == "" {
 		galWriteErr(w, lang, http.StatusBadRequest)
-		return nil, "", false
+		return nil, "", nil, false
 	}
-	s, _, err := galResolve(ip, src)
+	s, _, release, err := galAcquire(ip, src)
 	if err != nil {
 		galWriteErr(w, lang, http.StatusBadGateway)
-		return nil, "", false
+		return nil, "", nil, false
 	}
-	return s, s.prefix + galAlbumRoot + "/" + rel, true
+	return s, s.prefix + galAlbumRoot + "/" + rel, release, true
 }
 
 func galContentType(name string) string {
@@ -503,11 +615,11 @@ func galContentType(name string) string {
 }
 
 func galleryFileHandler(w http.ResponseWriter, r *http.Request) {
-	s, abs, ok := galSessionFor(w, r)
+	s, abs, release, ok := galSessionFor(w, r)
 	if !ok {
 		return
 	}
-	defer s.close()
+	defer release()
 	name := path.Base(abs)
 	w.Header().Set("Content-Type", galContentType(name))
 	if r.URL.Query().Get("dl") == "1" {
@@ -579,12 +691,12 @@ func galleryZipHandler(w http.ResponseWriter, r *http.Request) {
 		galWriteErr(w, lang, http.StatusBadRequest)
 		return
 	}
-	s, _, err := galResolve(ip, src)
+	s, _, release, err := galAcquire(ip, src)
 	if err != nil {
 		galWriteErr(w, lang, http.StatusBadGateway)
 		return
 	}
-	defer s.close()
+	defer release()
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", "attachment; filename=\"album.zip\"")
 	_ = galWriteZip(w, s, rels) // headers are sent; a failure just truncates the archive
@@ -773,11 +885,11 @@ func bilerp(src *image.RGBA, x0, y0, x1, y1 int, tx, ty float64) color.RGBA {
 }
 
 func galleryThumbHandler(w http.ResponseWriter, r *http.Request) {
-	s, abs, ok := galSessionFor(w, r)
+	s, abs, release, ok := galSessionFor(w, r)
 	if !ok {
 		return
 	}
-	defer s.close()
+	defer release()
 	if galMediaType(abs) != "photo" {
 		http.NotFound(w, r)
 		return
